@@ -64,8 +64,10 @@ typedef struct {
     JNode *countries;
     JNode **clubs, **comps;
     int nclubs, ncomps;
+    void *stinfo;               /* StageInfo[], all stages in order */
+    int nstinfo;
     /* output */
-    Buf strs, names, club, comp, stag, entr, tieb, deci, roun, outc, reg, meta, fixt;
+    Buf strs, names, club, comp, stag, entr, tieb, deci, roun, outc, reg, meta, fixt, grps, srce;
     uint32_t arena;
 } C;
 
@@ -423,17 +425,27 @@ static void do_clubs(C *c, JNode *arr)
 }
 
 /* ---- positions: "3", "3-6"; references: "stage#3-6", "comp.id:stage#1" ------------------------------------------ */
+/* Positions "N", "N-M" (1-based) or counted from the bottom "LN" (L1 = the last): encoded 1..127, or 128 + N for
+   "LN" (the binary keeps the encoding: docs/format.md). */
+static int pos_one(const char *s, char **e, int *v)
+{
+    int last = *s == 'L';
+    long x = strtol(s + last, e, 10);
+    if (*e == s + last || x < 1 || x > 127) return 0;
+    *v = (int)x + (last ? 128 : 0);
+    return 1;
+}
+
 static int positions(const char *s, int *a, int *b)
 {
     char *e;
-    long x = strtol(s, &e, 10), y = x;
-    if (e == s || x < 1) return 0;
-    if (*e == '-') { const char *f = e + 1; y = strtol(f, &e, 10); if (e == f) return 0; }
-    if (*e || y < x || y > 255) return 0;
-    *a = (int)x;
-    *b = (int)y;
-    return 1;
+    if (!pos_one(s, &e, a)) return 0;
+    *b = *a;
+    if (*e == '-' && !pos_one(e + 1, &e, b)) return 0;
+    return !*e;
 }
+
+static int pos_res(int enc, int size) { return enc > 128 ? size - (enc - 128) + 1 : enc; }
 
 /* ---- competitions ------------------------------------------------------------------------------------------------ */
 static const char *const KINDS[] = { NULL, "league", "cup", "league-cup", "supercup", "continental", "playoff", "tournament" };
@@ -481,7 +493,7 @@ static uint16_t code_list(C *c, Buf *b, JNode *arr, const char *key, const char 
 }
 
 /* stage teams, for range checks of outcomes / entrants (0 = unknown yet) */
-typedef struct { const char *id; int teams, first, n; } StageInfo;
+typedef struct { const char *id; int teams, first, n, type, groups, gmin, gmax, per_group, last_ties; } StageInfo;
 
 static int stage_index(StageInfo *si, int n, const char *id)
 {
@@ -516,6 +528,10 @@ static void do_comp(C *c, int ci, StageInfo *all_st, int *nall)
         rec.country = str_add(c, country->str);
     }
     if ((level = opt(c, cp, "level", J_NUM, path)) && int_in(c, level, "level", path, 1, 32, &x)) rec.level = (uint8_t)x;
+    if ((v = opt(c, cp, "refill", J_STR, path))) {
+        if (strcmp(v->str, "pool")) ERR(v, path, "refill must be \"pool\" (clubs that leave the world are replaced from an off-world pool)");
+        rec.flags |= 1;
+    }
     if (rec.kind == SWC_K_LEAGUE && !level) ERR(cp, path, "a league needs its pyramid 'level'");
     names = need(c, cp, "names", J_OBJ, path);
     rec.name = names_rec(c, names, country ? country->str : NULL, path, rec.id);
@@ -527,6 +543,15 @@ static void do_comp(C *c, int ci, StageInfo *all_st, int *nall)
         if (int_in(c, cnt, "count", p2, 2, c->max_teams, &x)) teams = (int)x;
         if (!list == !from) ERR(parts, p2, "give either 'clubs' (a fixed list) or 'from': \"link\"");
         if (from && strcmp(from->str, "link")) ERR(from, p2, "'from' must be \"link\" (entrants come from other competitions' outcomes)");
+        {
+            JNode *src = opt(c, parts, "source", J_ARR, p2), *q;
+            if (src && !from) ERR(src, p2, "'source' goes with \"from\": \"link\"");
+            for (q = src ? src->child : NULL; q; q = q->next) {
+                int k2 = q->type == J_STR ? find_comp(c, q->str) : -1;
+                if (k2 < 0) ERR(q, p2, "source: no competition \"%s\"", q->type == J_STR ? q->str : "?");
+                else { uint16_t pr2[2] = { (uint16_t)ci, (uint16_t)k2 }; bput(&c->srce, pr2, 4); }
+            }
+        }
         if (list) {
             JNode *m;
             int i = 0;
@@ -583,31 +608,66 @@ static void do_comp(C *c, int ci, StageInfo *all_st, int *nall)
             type = need(c, st, "type", J_STR, sp);
             t = enum_member(c, type, "type", sp, STYPES, NE(STYPES));
             if (t > 0) s.type = (uint8_t)t;
+            all_st[*nall].groups = 1;
             if ((entrants = opt(c, st, "entrants", J_STR, sp))) {           /* "table#3-6" inside this competition */
                 char *hash = strchr(entrants->str, '#');
                 int a, b, ix;
-                if (!hash || !positions(hash + 1, &a, &b)) ERR(entrants, sp, "entrants \"%s\": write 'stage#N' or 'stage#N-M'", entrants->str);
+                if (!hash || !positions(hash + 1, &a, &b)) ERR(entrants, sp, "entrants \"%s\": write 'stage#N', 'stage#N-M' or 'stage#LN-LM' (from the bottom)", entrants->str);
                 else {
                     *hash = 0;
                     ix = stage_index(all_st + first_stage, *nall - first_stage, entrants->str);
                     if (ix < 0) ERR(entrants, sp, "entrants: no earlier stage \"%s\" in this competition", entrants->str);
-                    else if (all_st[first_stage + ix].teams && b > all_st[first_stage + ix].teams)
-                        ERR(entrants, sp, "entrants: position %d, stage \"%s\" has %d clubs", b, entrants->str, all_st[first_stage + ix].teams);
+                    else {
+                        StageInfo *src = &all_st[first_stage + ix];
+                        int lo = src->gmin ? src->gmin : src->teams, hi = src->gmax ? src->gmax : src->teams;
+                        int n1 = pos_res(b, lo) - pos_res(a, lo) + 1, n2 = pos_res(b, hi) - pos_res(a, hi) + 1;
+                        JNode *pg = opt(c, st, "per_group", J_BOOL, sp);
+                        if (lo && (pos_res(a, lo) < 1 || pos_res(b, lo) > lo || n1 < 1))
+                            ERR(entrants, sp, "entrants: positions outside stage \"%s\" (%d clubs per table)", entrants->str, lo);
+                        else if (n1 != n2)
+                            ERR(entrants, sp, "entrants: the range has %d clubs in a group of %d and %d in a group of %d: count both ends from the same side", n1, lo, n2, hi);
+                        if (src->groups > 1 && (pg ? pg->b : t == SWC_ST_PLAYOFF)) {   /* one play-off per group */
+                            all_st[*nall].per_group = 1;
+                            all_st[*nall].groups = src->groups;
+                            s.groups = (uint16_t)src->groups;
+                            s.flags |= 1;
+                            s.teams = (uint16_t)n1;
+                        } else s.teams = (uint16_t)(n1 * src->groups);
+                    }
                     *hash = '#';
-                    s.teams = (uint16_t)(b - a + 1);
                 }
             }
             legs = opt(c, st, "legs", J_NUM, sp);
             if (legs && int_in(c, legs, "legs", sp, 1, 4, &x)) s.legs = (uint8_t)x;
             groups = opt(c, st, "groups", J_NUM, sp);
             if (groups && int_in(c, groups, "groups", sp, 1, 64, &x)) s.groups = (uint16_t)x;
+            if (t == SWC_ST_GROUPS || t == SWC_ST_ROUND_ROBIN) {
+                JNode *sz = opt(c, st, "sizes", J_ARR, sp), *q;
+                int g = s.groups ? s.groups : 1;
+                all_st[*nall].groups = g;
+                if (sz) {
+                    int sum = 0, mn = 999, mx = 0;
+                    if (sz->n != g) ERR(sz, sp, "sizes: %d listed, 'groups' says %d", sz->n, g);
+                    for (q = sz->child; q; q = q->next) {
+                        long k = 0;
+                        if (!int_in(c, q, "sizes[]", sp, 2, 255, &k)) continue;
+                        sum += (int)k; mn = k < mn ? (int)k : mn; mx = k > mx ? (int)k : mx;
+                        { uint16_t gr[2] = { (uint16_t)(c->stag.n / sizeof(SwcStage)), (uint16_t)k }; bput(&c->grps, gr, 4); }
+                    }
+                    if (s.teams && sum != s.teams) ERR(sz, sp, "sizes add up to %d, the stage has %d clubs", sum, s.teams);
+                    all_st[*nall].gmin = mn; all_st[*nall].gmax = mx;
+                } else {
+                    if (g > 1 && s.teams % g) ERR(st, sp, "%d clubs do not split into %d equal groups: give 'sizes'", s.teams, g);
+                    all_st[*nall].gmin = all_st[*nall].gmax = s.teams / g;
+                }
+            }
             if (t == SWC_ST_ROUND_ROBIN || t == SWC_ST_GROUPS) {
                 int per;
                 if (!legs) ERR(st, sp, "a %s stage needs 'legs' (meetings per pair)", STYPES[t]);
                 tb = need(c, st, "tiebreakers", J_ARR, sp);
                 s.tieb = code_list(c, &c->tieb, tb, "tie-breaker", sp, TIEBS, NE(TIEBS), &ntb);
                 if (tb && !ntb) ERR(tb, sp, "tiebreakers: at least one criterion");
-                per = s.groups ? (s.teams + s.groups - 1) / s.groups : s.teams;
+                per = all_st[*nall].gmax;
                 if (per > c->long_table_rows)
                     ERR(st, sp, "%d clubs in one table: the host shows at most %d", per, c->long_table_rows);
                 else if (per > c->table_rows && !(json_get(st, "long_table") && json_get(st, "long_table")->b))
@@ -677,6 +737,7 @@ static void do_comp(C *c, int ci, StageInfo *all_st, int *nall)
                     if (left && ties * 2 + byes != left)
                         ERR(r, rp, "%ld ties + %ld byes take %ld clubs, %d reach this round", ties, byes, ties * 2 + byes, left);
                     left = (int)(ties + byes);
+                    all_st[*nall].last_ties = (int)ties;
                     rr.ties = (uint16_t)ties;
                     rr.legs = (uint8_t)rl;
                     rr.home = (uint8_t)(h < 0 ? 0 : h);
@@ -686,13 +747,16 @@ static void do_comp(C *c, int ci, StageInfo *all_st, int *nall)
                     s.nrounds++;
                 }
                 if (rounds && !rounds->n) ERR(rounds, sp, "rounds: at least one");
-                if (rounds && left != 1 && s.teams) ERR(rounds, sp, "the rounds end with %d clubs, not one winner", left);
+                if (rounds && left != 1 && s.teams && t == SWC_ST_KNOCKOUT)    /* (a play-off may qualify several) */
+                    ERR(rounds, sp, "the rounds end with %d clubs, not one winner", left);
             }
             json_get(st, "long_table");
+            json_get(st, "per_group");
             unknown_keys(c, st, sp);
             bput(&c->stag, &s, sizeof s);
             all_st[*nall].id = sid ? sid->str : "";
             all_st[*nall].teams = s.teams;
+            all_st[*nall].type = t;
             (*nall)++;
             rec.nstages++;
             c->arena += 64u + (uint32_t)s.teams * 32u + (uint32_t)s.nrounds * 16u;
@@ -719,16 +783,19 @@ static void do_comp(C *c, int ci, StageInfo *all_st, int *nall)
             season = opt(c, o, "season", J_STR, op);
             sx = st ? stage_index(all_st + first_stage, *nall - first_stage, st->str) : -1;
             if (st && sx < 0) ERR(st, op, "stage \"%s\" is not a stage of this competition", st->str);
-            if (pos && !positions(pos->str, &a, &b)) ERR(pos, op, "positions \"%s\": write 'N' or 'N-M' (1-based)", pos->str);
+            if (pos && !positions(pos->str, &a, &b)) ERR(pos, op, "positions \"%s\": write 'N', 'N-M' (1-based) or 'LN' (from the bottom)", pos->str);
             else if (pos && sx >= 0) {
-                int n = all_st[first_stage + sx].teams;
-                const SwcStage *ss = (const SwcStage *)c->stag.p + (rec.first_stage + sx);
-                if (ss->type == SWC_ST_KNOCKOUT || ss->type == SWC_ST_PLAYOFF) n = 2;   /* winner 1, runner-up 2 */
-                if (n && b > n) ERR(pos, op, "position %d, stage \"%s\" ranks %d clubs", b, st->str, n);
+                StageInfo *si = &all_st[first_stage + sx];
+                int ko = si->type == SWC_ST_KNOCKOUT || si->type == SWC_ST_PLAYOFF;
+                int lo = ko ? 2 : (si->gmin ? si->gmin : si->teams), hi = ko ? 2 : (si->gmax ? si->gmax : si->teams);
+                if (ko && (a > 2 || b > 2)) ERR(pos, op, "positions \"%s\": a knockout stage ranks 1 (winners) and 2 (losers of the last round)", pos->str);
+                else if (lo && (pos_res(a, lo) < 1 || pos_res(b, hi) > hi || pos_res(b, lo) < pos_res(a, lo)))
+                    ERR(pos, op, "position %d, stage \"%s\" ranks %d clubs", pos_res(b, hi), st->str, hi);
             }
             tg = enum_member(c, tag, "tag", op, TAGS, NE(TAGS));
             z = zone ? enum_member(c, zone, "zone", op, ZONES, NE(ZONES)) : 0;
-            if (to) {
+            if (to && !strcmp(to->str, "out")) r.target = 0xFFFE;         /* leaves the world */
+            else if (to) {
                 int t2 = find_comp(c, to->str);
                 if (t2 < 0) ERR(to, op, "'to': no competition \"%s\" in this world", to->str);
                 else if (t2 == ci && !season) ERR(to, op, "'to' its own competition needs \"season\": \"next\"");
@@ -765,29 +832,36 @@ static void do_comp(C *c, int ci, StageInfo *all_st, int *nall)
 /* ---- link checks across competitions ----------------------------------------------------------------------------- */
 static void check_links(C *c)
 {
-    /* a league fed only by links must receive clubs from somewhere; the pyramid moves balance per pair of levels */
-    int i;
+    /* every league keeps its size: the clubs that leave it (promoted, relegated, out of the world) = the clubs that
+       come in; a league with "refill": "pool" is refilled from outside, so only its out-side is counted. A play-off
+       whose participants come "from": "link" with a "source" counts its moves for its source leagues. */
     const SwcOutcome *o = (const SwcOutcome *)c->outc.p;
-    int no = (int)(c->outc.n / sizeof *o);
     const SwcComp *cm = (const SwcComp *)c->comp.p;
-    for (i = 0; i < c->ncomps && i < (int)(c->comp.n / sizeof *cm); i++) {
-        int j, up_out = 0, down_out = 0, in_down = 0, in_up = 0;
-        for (j = 0; j < no; j++) {
-            int n = o[j].to - o[j].from + 1;
-            const SwcStage *ss = (const SwcStage *)c->stag.p + o[j].stage;
-            if (ss->type == SWC_ST_PLAYOFF || ss->type == SWC_ST_KNOCKOUT) n = 1;   /* a play-off moves its winner */
-            if (ss->comp == i && o[j].tag == SWC_TAG_PROMOTED) up_out += n;
-            if (ss->comp == i && o[j].tag == SWC_TAG_RELEGATED) down_out += n;
-            if (o[j].target == i && o[j].tag == SWC_TAG_RELEGATED) in_down += n;
-            if (o[j].target == i && o[j].tag == SWC_TAG_PROMOTED) in_up += n;
-        }
-        if (cm[i].kind == SWC_K_LEAGUE && in_up + in_down + up_out + down_out && up_out + down_out != in_up + in_down) {
-            JNode *at = c->comps[i];
-            ERR(at, swc_str(&(SwcSpec){ .strs = (const char *)c->strs.p, .nstrs = (uint32_t)c->strs.n }, cm[i].id),
-                "the league loses %d clubs (%d up, %d down) and gains %d (%d promoted in, %d relegated in): its size would change",
-                up_out + down_out, up_out, down_out, in_up + in_down, in_up, in_down);
-        }
+    const SwcStage *sg = (const SwcStage *)c->stag.p;
+    const StageInfo *si = (const StageInfo *)c->stinfo;
+    const uint16_t *src = (const uint16_t *)c->srce.p;
+    int no = (int)(c->outc.n / sizeof *o), nsrc = (int)(c->srce.n / 4), i, j, k;
+    int *out = calloc((size_t)c->ncomps + 1, sizeof *out), *in = calloc((size_t)c->ncomps + 1, sizeof *in);
+    for (j = 0; j < no; j++) {
+        const StageInfo *x = &si[o[j].stage];
+        int ko = x->type == SWC_ST_KNOCKOUT || x->type == SWC_ST_PLAYOFF, n, from = sg[o[j].stage].comp, any = 0;
+        if (o[j].tag != SWC_TAG_PROMOTED && o[j].tag != SWC_TAG_RELEGATED) continue;
+        if (ko) n = ((o[j].from <= 1 && o[j].to >= 1) + (o[j].from <= 2 && o[j].to >= 2)) * x->last_ties * (x->per_group ? x->groups : 1);
+        else n = (pos_res(o[j].to, x->gmin) - pos_res(o[j].from, x->gmin) + 1) * x->groups;
+        for (k = 0; k < nsrc; k++)
+            if (src[2 * k] == from && cm[src[2 * k + 1]].kind == SWC_K_LEAGUE) { out[src[2 * k + 1]] += n; any = 1; }
+        if (!any) out[from] += n;
+        if (o[j].target < c->ncomps) in[o[j].target] += n;
     }
+    for (i = 0; i < c->ncomps; i++) {
+        if (cm[i].kind != SWC_K_LEAGUE || (!in[i] && !out[i])) continue;
+        if (cm[i].flags & 1 ? in[i] > out[i] : in[i] != out[i])
+            ERR(c->comps[i], swc_str(&(SwcSpec){ .strs = (const char *)c->strs.p, .nstrs = (uint32_t)c->strs.n }, cm[i].id),
+                "the league loses %d clubs and gains %d: its size would change%s", out[i], in[i],
+                cm[i].flags & 1 ? " (more clubs come in than leave, even with its refill)" : "");
+    }
+    free(out);
+    free(in);
 }
 
 /* ---- writer ------------------------------------------------------------------------------------------------------ */
@@ -818,8 +892,10 @@ static uint8_t *write_bin(C *c, int world, size_t *len)
         { SWC_S_STRS, &c->strs }, { SWC_S_NAME, &c->names }, { SWC_S_CLUB, &c->club }, { SWC_S_COMP, &c->comp },
         { SWC_S_STAG, &c->stag }, { SWC_S_ENTR, &c->entr }, { SWC_S_TIEB, &c->tieb }, { SWC_S_DECI, &c->deci },
         { SWC_S_ROUN, &c->roun }, { SWC_S_OUTC, &c->outc }, { SWC_S_REG, &c->reg }, { SWC_S_META, &c->meta },
-        { SWC_S_FIXT, &c->fixt } };
+        { SWC_S_FIXT, &c->fixt }, { SWC_S_GRPS, &c->grps }, { SWC_S_SRCE, &c->srce } };
     int ns = (int)(sizeof sec / sizeof sec[0]), i;
+    while (ns > 13 && !sec[ns - 1].b->n) ns--;           /* sections added after the first release: only when used */
+    if (ns > 13 && !sec[13].b->n && sec[14].b->n) ns = 15;
     Buf out = { 0 };
     uint8_t *h;
     size_t body;
@@ -942,6 +1018,7 @@ int swcc_compile(const char *spec, size_t len, const char *name, const char *pro
                     total += s && s->type == J_ARR ? s->n : 0;
                 }
                 st = calloc((size_t)total + 1, sizeof *st);
+                c->stinfo = st;
                 for (i = 0; i < c->ncomps; i++) do_comp(c, i, st, &nst);
                 if (c->errors == 0) check_links(c);
             }
@@ -962,7 +1039,7 @@ int swcc_compile(const char *spec, size_t len, const char *name, const char *pro
     json_free(proot);
     free(c->clubs); free(c->comps); free(st);
     free(c->strs.p); free(c->names.p); free(c->club.p); free(c->comp.p); free(c->stag.p); free(c->entr.p);
-    free(c->tieb.p); free(c->deci.p); free(c->roun.p); free(c->outc.p); free(c->reg.p); free(c->meta.p); free(c->fixt.p);
+    free(c->tieb.p); free(c->deci.p); free(c->roun.p); free(c->outc.p); free(c->reg.p); free(c->meta.p); free(c->fixt.p); free(c->grps.p); free(c->srce.p);
     return c->errors;
 }
 

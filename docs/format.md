@@ -51,10 +51,12 @@ into this binary; an engine decodes it once when it opens a world (reference rea
 | `ENTR` | club index | `2` |
 | `TIEB`, `DECI` | bytes: code lists ending with 0 | — |
 | `ROUN` | ties, legs, home, deciders, pairing, pad | `211211` |
-| `OUTC` | stage, from, to, tag, zone, target, season, pad | `21111211` |
+| `OUTC` | stage, from, to (positions: 1..127, or 128 + N = N-th from the bottom), tag, zone, target (0xFFFE = out of the world), season, pad | `21111211` |
 | `REG ` | competition, game modes | `22` |
 | `META` | pack id, pack version (string offsets) | `44` |
 | `FIXT` | round, home club, away club (fixed draws) | `222` |
+| `GRPS` | stage, size (one record per group; only with unequal groups) | `22` |
+| `SRCE` | competition, source competition | `22` |
 
 Unknown tags are skipped (a newer compiler may add sections a reader can ignore); a format that changes a layout
 bumps `format`. `tests/golden/sample.swc` is the reference file (the sample pack, byte for byte).

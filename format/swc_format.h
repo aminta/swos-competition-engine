@@ -108,6 +108,8 @@ typedef struct { uint32_t tag, off, len; } SwcSection;       /* directory entry,
 #define SWC_S_REG   SWC_TAG('R','E','G',' ')   /* SwcReg records: which competitions each game mode offers */
 #define SWC_S_META  SWC_TAG('M','E','T','A')   /* SwcMeta: the pack's id and version (saves record them) */
 #define SWC_S_FIXT  SWC_TAG('F','I','X','T')   /* SwcFixed records: fixed draws (pairing "fixed") */
+#define SWC_S_GRPS  SWC_TAG('G','R','P','S')   /* SwcGroup records: group sizes of a stage with unequal groups */
+#define SWC_S_SRCE  SWC_TAG('S','R','C','E')   /* SwcSource records: a linked competition's source competitions */
 
 #define SWC_LANGS   4                          /* it, en, fr, de: the order of SwcName.str */
 
@@ -165,6 +167,8 @@ typedef enum { SWC_M_CAREER = 1, SWC_M_SEASON = 2, SWC_M_PRESET = 4, SWC_M_FRIEN
 typedef struct { uint16_t comp; uint16_t modes; } SwcReg;
 typedef struct { uint32_t id, version; } SwcMeta;                 /* STRS offsets */
 typedef struct { uint16_t round, home, away; } SwcFixed;           /* ROUN index; ENTR-style club indices */
+typedef struct { uint16_t stage, size; } SwcGroup;                 /* one per group, in order */
+typedef struct { uint16_t comp, source; } SwcSource;
 
 /* Tie-breaker criteria (TIEB) and deciders (DECI): dense codes shared with swcc. 0 ends a list. */
 typedef enum { SWC_TB_END = 0, SWC_TB_POINTS, SWC_TB_GOAL_DIFFERENCE, SWC_TB_GOALS_FOR, SWC_TB_GOALS_AGAINST,
@@ -193,6 +197,8 @@ typedef struct {
     const SwcReg *reg;      uint32_t nreg;
     const SwcMeta *meta;    uint32_t nmeta;
     const SwcFixed *fixt;   uint32_t nfixt;
+    const SwcGroup *grps;   uint32_t ngrps;
+    const SwcSource *srce;  uint32_t nsrce;
 } SwcSpec;
 
 /* Checks the header, the directory, the hash and every section's bounds and record size, and decodes the records
