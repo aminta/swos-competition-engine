@@ -1,6 +1,6 @@
-/* swc core: arena, PCG32, FNV-1a, the binary spec reader. Freestanding: no library calls (the 1996 exe's linker
-   refuses any undefined symbol), no 64-bit division (it would need __udivdi3), no floats. */
-#include "swc.h"
+/* swc_format: arena, PCG32, FNV-1a, the reference reader of the compiled spec (big-endian, docs/format.md).
+   Freestanding: no library calls, no 64-bit division, no floats. */
+#include "swc_format.h"
 
 static void zero(uint8_t *p, uint32_t n) { while (n--) *p++ = 0; }
 
@@ -81,19 +81,66 @@ uint32_t swc_fnv1a_more(uint32_t h, const void *p, uint32_t n)
 uint32_t swc_fnv1a(const void *p, uint32_t n) { return swc_fnv1a_more(2166136261u, p, n); }
 
 /* ---- spec reader ------------------------------------------------------------------------------------------------ */
-static uint32_t rd32(const uint8_t *p) { return p[0] | (uint32_t)p[1] << 8 | (uint32_t)p[2] << 16 | (uint32_t)p[3] << 24; }
-
-static SwcStatus section(const SwcSpec *s, uint32_t tag, uint32_t rec, const void **out, uint32_t *n, int required)
+const char *swc_layout(uint32_t tag)
 {
-    const uint8_t *dir = s->bin + sizeof(SwcHeader);
+    switch (tag) {
+    case SWC_S_NAME: return "444444444";
+    case SWC_S_CLUB: return "442222";
+    case SWC_S_COMP: return "421142222221111";
+    case SWC_S_STAG: return "44211222222";
+    case SWC_S_ENTR: return "2";
+    case SWC_S_ROUN: return "211211";
+    case SWC_S_OUTC: return "21111211";
+    case SWC_S_REG:  return "22";
+    case SWC_S_META: return "44";
+    case SWC_S_FIXT: return "222";
+    default:         return 0;
+    }
+}
+
+uint32_t swc_layout_size(const char *l)
+{
+    uint32_t n = 0;
+    while (*l) n += (uint32_t)(*l++ - '0');
+    return n;
+}
+
+/* Decodes n big-endian records of layout l from src into native records at dst (aligned, same offsets). */
+static void decode(uint8_t *dst, const uint8_t *src, uint32_t n, const char *l)
+{
+    uint32_t rec = swc_layout_size(l), i;
+    for (i = 0; i < n; i++) {
+        const char *f = l;
+        uint32_t off = 0;
+        for (; *f; f++) {
+            uint8_t *d = dst + i * rec + off;
+            const uint8_t *p = src + i * rec + off;
+            if (*f == '1') *d = *p;
+            else if (*f == '2') *(uint16_t *)(void *)d = SWC_BE_READ_U16(p);
+            else *(uint32_t *)(void *)d = SWC_BE_READ_U32(p);
+            off += (uint32_t)(*f - '0');
+        }
+    }
+}
+
+static SwcStatus section(SwcSpec *s, SwcArena *a, uint32_t tag, uint32_t rec, const void **out, uint32_t *n, int required)
+{
+    const uint8_t *dir = s->bin + 32;
+    const char *l = swc_layout(tag);
     uint32_t i;
-    for (i = 0; i < s->h->nsect; i++) {
-        const uint8_t *e = dir + i * sizeof(SwcSection);
-        uint32_t off = rd32(e + 4), len = rd32(e + 8);
-        if (rd32(e) != tag) continue;
-        if (off > s->len || len > s->len - off || (off & 3u) || len % rec) return SWC_E_TRUNC;
-        *out = s->bin + off;
+    if (l && swc_layout_size(l) != rec) return SWC_E_FORMAT;       /* this compiler pads the struct: refuse */
+    for (i = 0; i < s->h.nsect; i++) {
+        const uint8_t *e = dir + i * 12u;
+        uint32_t off = SWC_BE_READ_U32(e + 4), len = SWC_BE_READ_U32(e + 8);
+        void *native;
+        if (SWC_BE_READ_U32(e) != tag) continue;
+        if (off > s->len || len > s->len - off || len % rec) return SWC_E_TRUNC;
         *n = len / rec;
+        if (!l) { *out = s->bin + off; return SWC_OK; }             /* bytes: in place */
+        native = swc_alloc(a, len ? len : 4);
+        if (!native) return SWC_E_NOMEM;
+        decode((uint8_t *)native, s->bin + off, *n, l);
+        *out = native;
         return SWC_OK;
     }
     *out = 0;
@@ -101,26 +148,35 @@ static SwcStatus section(const SwcSpec *s, uint32_t tag, uint32_t rec, const voi
     return required ? SWC_E_MISSING : SWC_OK;
 }
 
-SwcStatus swc_spec_open(SwcSpec *s, const void *bin, uint32_t len)
+SwcStatus swc_spec_open(SwcSpec *s, const void *bin, uint32_t len, SwcArena *a)
 {
     const uint8_t *b = (const uint8_t *)bin;
     uint32_t body, i;
     SwcStatus st;
-    if (!s || !bin) return SWC_E_ARG;
+    if (!s || !bin || !a) return SWC_E_ARG;
     zero((uint8_t *)s, sizeof *s);
-    if (len < sizeof(SwcHeader) || ((uintptr_t)b & 3u)) return SWC_E_TRUNC;
+    if (len < 32) return SWC_E_TRUNC;
     s->bin = b;
     s->len = len;
-    s->h = (const SwcHeader *)b;
-    if (s->h->magic != SWC_MAGIC) return SWC_E_MAGIC;
-    if (s->h->format != SWC_FORMAT) return SWC_E_FORMAT;
-    if (s->h->engine_min > SWC_VERSION) return SWC_E_ENGINE;
-    if (s->h->length != len) return SWC_E_TRUNC;
-    body = sizeof(SwcHeader) + s->h->nsect * (uint32_t)sizeof(SwcSection);
+    s->h.magic = SWC_BE_READ_U32(b);
+    s->h.format = SWC_BE_READ_U16(b + 4);
+    s->h.engine_min = SWC_BE_READ_U16(b + 6);
+    s->h.flags = SWC_BE_READ_U32(b + 8);
+    s->h.world = SWC_BE_READ_U16(b + 12);
+    s->h.nsect = SWC_BE_READ_U16(b + 14);
+    s->h.hash = SWC_BE_READ_U32(b + 16);
+    s->h.arena = SWC_BE_READ_U32(b + 20);
+    s->h.length = SWC_BE_READ_U32(b + 24);
+    s->h.reserved = SWC_BE_READ_U32(b + 28);
+    if (s->h.magic != SWC_MAGIC) return SWC_E_MAGIC;
+    if (s->h.format != SWC_FORMAT) return SWC_E_FORMAT;
+    if (s->h.engine_min > SWC_VERSION) return SWC_E_ENGINE;
+    if (s->h.length != len) return SWC_E_TRUNC;
+    body = 32u + s->h.nsect * 12u;
     if (body > len) return SWC_E_TRUNC;
-    if (swc_fnv1a(b + body, len - body) != s->h->hash) return SWC_E_HASH;
+    if (swc_fnv1a(b + body, len - body) != s->h.hash) return SWC_E_HASH;
 #define SEC(tag, T, ptr, cnt, req) \
-    if ((st = section(s, tag, sizeof(T), (const void **)&s->ptr, &s->cnt, req)) != SWC_OK) return st;
+    if ((st = section(s, a, tag, sizeof(T), (const void **)&s->ptr, &s->cnt, req)) != SWC_OK) return st;
     SEC(SWC_S_STRS, char, strs, nstrs, 1)
     SEC(SWC_S_NAME, SwcName, names, nnames, 1)
     SEC(SWC_S_CLUB, SwcClub, clubs, nclubs, 1)
@@ -132,6 +188,8 @@ SwcStatus swc_spec_open(SwcSpec *s, const void *bin, uint32_t len)
     SEC(SWC_S_ROUN, SwcRound, rounds, nrounds, 0)
     SEC(SWC_S_OUTC, SwcOutcome, outc, noutc, 0)
     SEC(SWC_S_REG,  SwcReg, reg, nreg, 0)
+    SEC(SWC_S_META, SwcMeta, meta, nmeta, 0)
+    SEC(SWC_S_FIXT, SwcFixed, fixt, nfixt, 0)
 #undef SEC
     if (!s->nstrs || s->strs[s->nstrs - 1]) return SWC_E_TRUNC;       /* the string table ends with a NUL */
     for (i = 0; i < s->ncomps; i++) {                                  /* cross-references in range */
@@ -146,6 +204,11 @@ SwcStatus swc_spec_open(SwcSpec *s, const void *bin, uint32_t len)
             return SWC_E_TRUNC;
     for (i = 0; i < s->nentr; i++)
         if (s->entr[i] >= s->nclubs) return SWC_E_TRUNC;
+    for (i = 0; i < s->nfixt; i++)
+        if (s->fixt[i].round >= s->nrounds || s->fixt[i].home >= s->nclubs || s->fixt[i].away >= s->nclubs)
+            return SWC_E_TRUNC;
+    for (i = 0; i < s->nreg; i++)
+        if (s->reg[i].comp >= s->ncomps) return SWC_E_TRUNC;
     for (i = 0; i < s->noutc; i++)
         if (s->outc[i].stage >= s->nstages || (s->outc[i].target != 0xFFFF && s->outc[i].target >= s->ncomps))
             return SWC_E_TRUNC;

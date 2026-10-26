@@ -1,11 +1,11 @@
 /* swcc: the spec compiler and validator. Spec JSON (schema swc/1) + a host profile -> diagnostics, and when there
-   is no error, the binary spec (.SWC, engine/swc.h) the engine reads in place.
+   is no error, the binary spec (.SWC, big-endian, docs/format.md).
 
    Library: swcc_compile() (ctypes from Python, later WASM in the patcher page). CLI: swcc_main.c.
    Every diagnostic is "file:line:col: error|warning: <json path>: message". */
 #include "swcc.h"
 #include "json.h"
-#include "../engine/swc.h"
+#include "../format/swc_format.h"
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -21,6 +21,8 @@ _Static_assert(sizeof(SwcStage) == 24, "stage");
 _Static_assert(sizeof(SwcRound) == 8, "round");
 _Static_assert(sizeof(SwcOutcome) == 10, "outcome");
 _Static_assert(sizeof(SwcReg) == 4, "reg");
+_Static_assert(sizeof(SwcMeta) == 8, "meta");
+_Static_assert(sizeof(SwcFixed) == 6, "fixed");
 
 /* ---- growable buffers -------------------------------------------------------------------------------------------- */
 typedef struct { uint8_t *p; size_t n, cap; } Buf;
@@ -50,6 +52,10 @@ typedef struct {
     char langs[SWC_LANGS][4];
     int nlangs;
     unsigned char charset[256];
+    int latin1;                 /* encoding: 0 = ascii, 1 = latin1 (+ overrides) */
+    uint32_t over_cp[32];       /* codepoints above 0xFF mapped to a host byte (OpenSWOS: Œ 0x8C, Ÿ 0x9E, € 0x9D) */
+    uint8_t over_b[32];
+    int nover;
     int width[256];
     int title_max, title_px, short_px, club_name_max, clubs_per_file, table_rows, long_table_rows, max_teams;
     uint32_t arena_max;
@@ -59,7 +65,7 @@ typedef struct {
     JNode **clubs, **comps;
     int nclubs, ncomps;
     /* output */
-    Buf strs, names, club, comp, stag, entr, tieb, deci, roun, outc, reg;
+    Buf strs, names, club, comp, stag, entr, tieb, deci, roun, outc, reg, meta, fixt;
     uint32_t arena;
 } C;
 
@@ -170,25 +176,52 @@ static uint32_t str_add(C *c, const char *s)
     return (uint32_t)i;
 }
 
-/* A display text in the host's font: every byte in the charset (reports the first bad UTF-8 character), its width. */
-static int text_ok(C *c, JNode *at, const char *path, const char *what, const char *s)
+/* UTF-8 -> the host's bytes (profile "encoding": ascii, or latin1 + "overrides"). Returns 0 and the first codepoint
+   that has no host byte in *bad; out holds at most 255 bytes + NUL. */
+static int host_conv(C *c, const char *s, char *out, size_t room, uint32_t *bad)
 {
     const unsigned char *p = (const unsigned char *)s;
-    for (; *p; p++)
-        if (!c->charset[*p]) {
-            unsigned cp = *p;
-            if (*p >= 0xC0) {                                  /* decode for the message */
-                int extra = *p >= 0xF0 ? 3 : *p >= 0xE0 ? 2 : 1, i;
-                cp = *p & (0x3F >> extra);
-                for (i = 1; i <= extra && p[i]; i++) cp = cp << 6 | (p[i] & 63);
-            }
-            if (cp >= 0x20 && cp < 0x7F)
-                ERR(at, path, "%s \"%s\": character '%c' is not in the host font (allowed: the profile's charset)", what, s, (int)cp);
-            else
-                ERR(at, path, "%s \"%s\": character U+%04X is not in the host font (write it without accents, upper case)", what, s, cp);
-            return 0;
+    size_t k = 0;
+    while (*p) {
+        uint32_t cp = *p;
+        int extra = cp >= 0xF0 ? 3 : cp >= 0xE0 ? 2 : cp >= 0xC0 ? 1 : 0, i, j, b = -1;
+        if (extra) {
+            cp &= 0x3Fu >> extra;
+            for (i = 1; i <= extra; i++) { if ((p[i] & 0xC0) != 0x80) { *bad = 0xFFFD; return 0; } cp = cp << 6 | (p[i] & 63); }
         }
+        p += 1 + extra;
+        for (j = 0; j < c->nover; j++) if (c->over_cp[j] == cp) b = c->over_b[j];
+        if (b < 0 && (cp < 0x80 || (c->latin1 && cp <= 0xFF))) b = (int)cp;
+        if (b < 0 || k + 1 >= room) { *bad = cp; return 0; }
+        out[k++] = (char)b;
+    }
+    out[k] = 0;
     return 1;
+}
+
+/* A display text: converted to the host's bytes, every byte in the host font. Returns the converted text (valid until
+   the next call) or NULL after reporting the error. */
+static const char *text_ok(C *c, JNode *at, const char *path, const char *what, const char *s)
+{
+    static char out[256];
+    uint32_t cp = 0;
+    const unsigned char *q;
+    if (!host_conv(c, s, out, sizeof out, &cp)) {
+        if (cp >= 0x20 && cp < 0x7F) ERR(at, path, "%s \"%s\": character '%c' is not in the host font", what, s, (int)cp);
+        else ERR(at, path, "%s \"%s\": character U+%04X has no byte in the host's encoding (%s)", what, s, cp,
+                 c->latin1 ? "latin1 + overrides" : "ascii: write it without accents, upper case");
+        return NULL;
+    }
+    for (q = (const unsigned char *)out; *q; q++)
+        if (!c->charset[*q]) {
+            uint32_t u = *q;
+            if (u >= 0x20 && u < 0x7F)
+                ERR(at, path, "%s \"%s\": character '%c' is not in the host font (allowed: the profile's charset)", what, s, (int)u);
+            else
+                ERR(at, path, "%s \"%s\": character U+%04X is not in the host font (write it without accents, upper case)", what, s, u);
+            return NULL;
+        }
+    return out;
 }
 
 static int text_px(C *c, const char *s)
@@ -213,16 +246,38 @@ static int load_profile(C *c, JNode *p)
             strcpy(c->langs[c->nlangs++], m->str);
         }
     }
-    if ((v = need(c, p, "charset", J_STR, path)))
-        for (i = 0; v->str[i]; i++) c->charset[(unsigned char)v->str[i]] = 1;
+    if ((v = opt(c, p, "encoding", J_STR, path))) {
+        if (!strcmp(v->str, "latin1")) c->latin1 = 1;
+        else if (strcmp(v->str, "ascii")) ERR(v, path, "encoding \"%s\": ascii or latin1", v->str);
+    }
+    if ((v = opt(c, p, "overrides", J_OBJ, path)))
+        for (m = v->child; m; m = m->next) {
+            const unsigned char *k = (const unsigned char *)m->key;     /* the key's one codepoint */
+            uint32_t cp = *k;
+            int ex = cp >= 0xF0 ? 3 : cp >= 0xE0 ? 2 : cp >= 0xC0 ? 1 : 0, t;
+            if (c->nover == 32 || !int_in(c, m, m->key, path, 0x80, 0xFF, &x)) continue;
+            cp &= 0x3Fu >> ex;
+            for (t = 1; t <= ex; t++) cp = cp << 6 | (k[t] & 63);
+            c->over_cp[c->nover] = cp;
+            c->over_b[c->nover++] = (uint8_t)x;
+        }
+    if ((v = need(c, p, "charset", J_STR, path))) {
+        char hb[512];
+        uint32_t bad = 0;
+        if (!host_conv(c, v->str, hb, sizeof hb, &bad)) ERR(v, path, "charset: U+%04X has no byte in the profile's encoding", bad);
+        else for (i = 0; hb[i]; i++) c->charset[(unsigned char)hb[i]] = 1;
+    }
     if ((v = need(c, p, "widths", J_OBJ, path))) {
         long def = 6;
         int_in(c, json_get(v, "default"), "default", path, 0, 64, &def);
         for (i = 0; i < 256; i++) c->width[i] = (int)def;
         for (m = v->child; m; m = m->next)
             if (strcmp(m->key, "default")) {
-                if (strlen(m->key) != 1 || !int_in(c, m, m->key, path, 0, 64, &x)) { ERR(m, path, "bad width entry"); continue; }
-                c->width[(unsigned char)m->key[0]] = (int)x;
+                char hb[8];
+                uint32_t bad = 0;
+                if (!host_conv(c, m->key, hb, sizeof hb, &bad) || strlen(hb) != 1 || !int_in(c, m, m->key, path, 0, 64, &x)) {
+                    ERR(m, path, "bad width entry"); continue; }
+                c->width[(unsigned char)hb[0]] = (int)x;
             }
     }
 #define PI(key, field, lo, hi) x = 0; if (int_in(c, need(c, p, key, J_NUM, path), key, path, lo, hi, &x)) c->field = (int)x;
@@ -258,24 +313,30 @@ static uint16_t names_rec(C *c, JNode *names, const char *country_code, const ch
             ERR(v, p2, "a name is [\"LONG NAME\", \"SHORT\"]");
             continue;
         }
+        char hc[256] = "", hl[256], hs[256];
+        const char *t;
+        uint32_t bad;
         if (country_code && c->countries) {
             JNode *cnames = json_get(json_get(c->countries, country_code), "names");
             JNode *cl = cnames ? json_get(cnames, c->langs[i]) : NULL;
-            if (cl && cl->type == J_STR) country = cl->str;
+            if (cl && cl->type == J_STR && host_conv(c, cl->str, hc, sizeof hc, &bad)) country = hc;
         }
-        if (text_ok(c, lg, p2, "long name", lg->str) && text_ok(c, sh, p2, "short name", sh->str)) {
-            size_t tl = strlen(country) + (*country ? 1 : 0) + strlen(lg->str);
-            char title[512];
-            snprintf(title, sizeof title, "%s%s%s", country, *country ? " " : "", lg->str);
+        hl[0] = hs[0] = 0;
+        if ((t = text_ok(c, lg, p2, "long name", lg->str))) strcpy(hl, t);
+        if (t && (t = text_ok(c, sh, p2, "short name", sh->str))) strcpy(hs, t);
+        if (t) {
+            size_t tl = strlen(country) + (*country ? 1 : 0) + strlen(hl);
+            char title[600];
+            snprintf(title, sizeof title, "%s%s%s", country, *country ? " " : "", hl);
             if ((int)tl > c->title_max)
                 ERR(lg, p2, "title \"%s\" is %zu characters, the host's title field holds %d", title, tl, c->title_max);
             if (text_px(c, title) > c->title_px)
                 ERR(lg, p2, "title \"%s\" is %d px wide, the host's buttons show %d", title, text_px(c, title), c->title_px);
-            if (text_px(c, sh->str) > c->short_px)
-                ERR(sh, p2, "short name \"%s\" is %d px wide, the calendar label holds %d", sh->str, text_px(c, sh->str), c->short_px);
+            if (text_px(c, hs) > c->short_px)
+                ERR(sh, p2, "short name \"%s\" is %d px wide, the calendar label holds %d", sh->str, text_px(c, hs), c->short_px);
         }
-        rec.str[i][0] = str_add(c, lg->str);
-        rec.str[i][1] = str_add(c, sh->str);
+        rec.str[i][0] = str_add(c, hl);
+        rec.str[i][1] = str_add(c, hs);
     }
     unknown_keys(c, names, path);
     bput(&c->names, &rec, sizeof rec);
@@ -329,9 +390,10 @@ static void do_clubs(C *c, JNode *arr)
             rec.id = str_add(c, id->str);
         }
         if (name) {
-            if (text_ok(c, name, path, "club name", name->str) && (int)strlen(name->str) > c->club_name_max)
-                ERR(name, path, "club name \"%s\" is %zu characters, the host holds %d", name->str, strlen(name->str), c->club_name_max);
-            rec.name = str_add(c, name->str);
+            const char *hn = text_ok(c, name, path, "club name", name->str);
+            if (hn && (int)strlen(hn) > c->club_name_max)
+                ERR(name, path, "club name \"%s\" is %zu characters, the host holds %d", name->str, strlen(hn), c->club_name_max);
+            rec.name = str_add(c, hn ? hn : "");
         }
         if (country) {
             if (!c->countries || !json_get(c->countries, country->str)) ERR(country, path, "country \"%s\" is not in 'countries'", country->str);
@@ -575,6 +637,43 @@ static void do_comp(C *c, int ci, StageInfo *all_st, int *nall)
                     else if (dec->type != J_ARR) ERR(dec, rp, "'decider' must be an array");
                     rr.deci = code_list(c, &c->deci, dec, "decider", rp, DECIS, NE(DECIS), &nd);
                     if (dec && dec->type == J_ARR && !nd) ERR(dec, rp, "decider: at least one entry");
+                    if (pr == 3) {                          /* pairing "fixed": the draw as really made */
+                        JNode *fx = need(c, r, "fixed", J_ARR, rp), *pair;
+                        int fi = 0;
+                        if (fx && fx->n != ties) ERR(fx, rp, "fixed: %d pairs listed, 'ties' says %ld", fx->n, ties);
+                        for (pair = fx ? fx->child : NULL; pair; pair = pair->next, fi++) {
+                            JNode *h1 = json_at(pair, 0), *a1 = json_at(pair, 1);
+                            SwcFixed f;
+                            int hx, ax;
+                            if (pair->type != J_ARR || pair->n != 2 || h1->type != J_STR || a1->type != J_STR) {
+                                ERR(pair, rp, "fixed[%d]: a pair is [\"home club id\", \"away club id\"]", fi);
+                                continue;
+                            }
+                            hx = find_club(c, h1->str);
+                            ax = find_club(c, a1->str);
+                            if (hx < 0) ERR(h1, rp, "fixed[%d]: club \"%s\" is not in 'clubs'", fi, h1->str);
+                            if (ax < 0) ERR(a1, rp, "fixed[%d]: club \"%s\" is not in 'clubs'", fi, a1->str);
+                            if (hx >= 0 && hx == ax) ERR(a1, rp, "fixed[%d]: a club cannot play itself", fi);
+                            if (ri == 0 && hx >= 0 && ax >= 0) {   /* first round: both must be participants, once */
+                                const uint16_t *en = (const uint16_t *)c->entr.p + rec.entr;
+                                int k2, inh = 0, ina = 0;
+                                JNode *q;
+                                for (k2 = 0; k2 < rec.nentr; k2++) { inh |= en[k2] == hx; ina |= en[k2] == ax; }
+                                if (rec.nentr && (!inh || !ina)) ERR(pair, rp, "fixed[%d]: both clubs must be participants of the competition", fi);
+                                for (q = fx->child; q != pair; q = q->next) {
+                                    JNode *qh = json_at(q, 0), *qa = json_at(q, 1);
+                                    if (q->type == J_ARR && q->n == 2 && qh->type == J_STR && qa->type == J_STR &&
+                                        (!strcmp(qh->str, h1->str) || !strcmp(qa->str, h1->str) ||
+                                         !strcmp(qh->str, a1->str) || !strcmp(qa->str, a1->str)))
+                                        ERR(pair, rp, "fixed[%d]: a club is drawn twice in this round", fi);
+                                }
+                            }
+                            f.round = (uint16_t)(c->roun.n / sizeof(SwcRound));
+                            f.home = (uint16_t)(hx < 0 ? 0 : hx);
+                            f.away = (uint16_t)(ax < 0 ? 0 : ax);
+                            bput(&c->fixt, &f, sizeof f);
+                        }
+                    } else if (json_get(r, "fixed")) ERR(json_get(r, "fixed"), rp, "'fixed' pairs need \"pairing\": \"fixed\"");
                     if (left && ties * 2 + byes != left)
                         ERR(r, rp, "%ld ties + %ld byes take %ld clubs, %d reach this round", ties, byes, ties * 2 + byes, left);
                     left = (int)(ties + byes);
@@ -694,38 +793,66 @@ static void check_links(C *c)
 /* ---- writer ------------------------------------------------------------------------------------------------------ */
 static void pad4(Buf *b) { while (b->n & 3) bput(b, NULL, 1); }
 
+/* Encodes n native records of layout l at src into big-endian bytes at dst (docs/format.md). */
+static void encode(uint8_t *dst, const uint8_t *src, size_t n, const char *l)
+{
+    uint32_t rec = swc_layout_size(l);
+    size_t i;
+    for (i = 0; i < n; i++) {
+        const char *f;
+        uint32_t off = 0;
+        for (f = l; *f; f++) {
+            const uint8_t *q = src + i * rec + off;
+            uint8_t *d = dst + i * rec + off;
+            if (*f == '1') *d = *q;
+            else if (*f == '2') { uint16_t v; memcpy(&v, q, 2); SWC_BE_WRITE_U16(d, v); }
+            else { uint32_t v; memcpy(&v, q, 4); SWC_BE_WRITE_U32(d, v); }
+            off += (uint32_t)(*f - '0');
+        }
+    }
+}
+
 static uint8_t *write_bin(C *c, int world, size_t *len)
 {
     struct { uint32_t tag; Buf *b; } sec[] = {
         { SWC_S_STRS, &c->strs }, { SWC_S_NAME, &c->names }, { SWC_S_CLUB, &c->club }, { SWC_S_COMP, &c->comp },
         { SWC_S_STAG, &c->stag }, { SWC_S_ENTR, &c->entr }, { SWC_S_TIEB, &c->tieb }, { SWC_S_DECI, &c->deci },
-        { SWC_S_ROUN, &c->roun }, { SWC_S_OUTC, &c->outc }, { SWC_S_REG, &c->reg } };
+        { SWC_S_ROUN, &c->roun }, { SWC_S_OUTC, &c->outc }, { SWC_S_REG, &c->reg }, { SWC_S_META, &c->meta },
+        { SWC_S_FIXT, &c->fixt } };
     int ns = (int)(sizeof sec / sizeof sec[0]), i;
     Buf out = { 0 };
-    SwcHeader h;
+    uint8_t *h;
     size_t body;
-    bput(&out, NULL, sizeof h + (size_t)ns * sizeof(SwcSection));
+    bput(&out, NULL, 32 + (size_t)ns * 12);
     body = out.n;
     for (i = 0; i < ns; i++) {
-        SwcSection e;
+        const char *l = swc_layout(sec[i].tag);
+        uint8_t *e;
+        size_t at;
         pad4(&out);
-        e.tag = sec[i].tag;
-        e.off = (uint32_t)out.n;
-        e.len = (uint32_t)sec[i].b->n;
-        if (sec[i].b->n) bput(&out, sec[i].b->p, sec[i].b->n);
-        memcpy(out.p + sizeof h + (size_t)i * sizeof e, &e, sizeof e);
+        at = out.n;
+        bput(&out, NULL, sec[i].b->n);
+        if (sec[i].b->n) {
+            if (l) encode(out.p + at, sec[i].b->p, sec[i].b->n / swc_layout_size(l), l);
+            else memcpy(out.p + at, sec[i].b->p, sec[i].b->n);
+        }
+        e = out.p + 32 + (size_t)i * 12;
+        SWC_BE_WRITE_U32(e, sec[i].tag);
+        SWC_BE_WRITE_U32(e + 4, at);
+        SWC_BE_WRITE_U32(e + 8, sec[i].b->n);
     }
     pad4(&out);
-    memset(&h, 0, sizeof h);
-    h.magic = SWC_MAGIC;
-    h.format = SWC_FORMAT;
-    h.engine_min = SWC_VERSION;
-    h.world = (uint16_t)world;
-    h.nsect = (uint16_t)ns;
-    h.arena = c->arena;
-    h.length = (uint32_t)out.n;
-    h.hash = swc_fnv1a(out.p + body, (uint32_t)(out.n - body));
-    memcpy(out.p, &h, sizeof h);
+    h = out.p;
+    SWC_BE_WRITE_U32(h, SWC_MAGIC);
+    SWC_BE_WRITE_U16(h + 4, SWC_FORMAT);
+    SWC_BE_WRITE_U16(h + 6, SWC_VERSION);
+    SWC_BE_WRITE_U32(h + 8, 0);
+    SWC_BE_WRITE_U16(h + 12, world);
+    SWC_BE_WRITE_U16(h + 14, ns);
+    SWC_BE_WRITE_U32(h + 20, c->arena);
+    SWC_BE_WRITE_U32(h + 24, out.n);
+    SWC_BE_WRITE_U32(h + 28, 0);
+    SWC_BE_WRITE_U32(h + 16, swc_fnv1a(out.p + body, (uint32_t)(out.n - body)));
     *len = out.n;
     return out.p;
 }
@@ -767,6 +894,13 @@ int swcc_compile(const char *spec, size_t len, const char *name, const char *pro
                 ERR(v, "", "schema \"%s\": this compiler reads \"swc/1\"", v->str);
             if ((v = need(c, c->root, "id", J_STR, "")) && !id_ok(v->str, NULL)) ERR(v, "", "world id \"%s\": lower-case words joined by '.', '-' or '_'", v->str);
             int_in(c, opt(c, c->root, "host_world", J_NUM, ""), "host_world", "", 0, 65535, &world);
+            {
+                SwcMeta me;
+                JNode *ver = opt(c, c->root, "version", J_STR, "");
+                me.id = str_add(c, v && v->type == J_STR ? v->str : "");
+                me.version = str_add(c, ver ? ver->str : "0");
+                bput(&c->meta, &me, sizeof me);
+            }
             if ((v = opt(c, c->root, "languages", J_ARR, ""))) {
                 for (i = 0; i < c->nlangs; i++) {
                     int found = 0;
@@ -828,7 +962,7 @@ int swcc_compile(const char *spec, size_t len, const char *name, const char *pro
     json_free(proot);
     free(c->clubs); free(c->comps); free(st);
     free(c->strs.p); free(c->names.p); free(c->club.p); free(c->comp.p); free(c->stag.p); free(c->entr.p);
-    free(c->tieb.p); free(c->deci.p); free(c->roun.p); free(c->outc.p); free(c->reg.p);
+    free(c->tieb.p); free(c->deci.p); free(c->roun.p); free(c->outc.p); free(c->reg.p); free(c->meta.p); free(c->fixt.p);
     return c->errors;
 }
 

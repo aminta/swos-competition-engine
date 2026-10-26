@@ -9,18 +9,22 @@ competitions of any country and era described as data (JSON specs), played by on
 > [SWOS 96/97 Mod](https://github.com/aminta/swos-9697-mod). Stato: progetto e specifiche; il codice arriva nelle
 > prossime settimane.
 
-**Status: S0 (foundation).** Schema v1 primitives frozen (`schema/v1.md`); engine core (arena, PCG32, binary spec
-reader) and the spec compiler / validator `swcc`. No season logic yet (S1 next). Not ready for use.
+**Status: the shared part.** The engine is first integrated into OpenSWOS by its maintainer, from this spec, and
+then extracted here as a library. This repository holds what every implementation shares: the spec schema
+(`schema/v1.md`, frozen), the spec compiler / validator `swcc`, the compiled spec format (`.SWC`, big-endian,
+`docs/format.md`) with its reference reader and the determinism primitives (`format/`), host profiles, a sample pack,
+and the **contract tests** both sides must pass (`docs/contract-tests.md`).
 
 ## Layout and build
 
 | Path | Content |
 |---|---|
-| `engine/` | the engine: C99 freestanding (`swc.h`, `swc_core.c`); compiled into each host and natively |
+| `format/` | the shared reference, C99 freestanding: `.SWC` big-endian accessors, record layouts, reference reader; PCG32, substreams, FNV-1a |
 | `swcc/` | the spec compiler / validator (hosted C11): JSON + host profile -> diagnostics + binary spec `.SWC` |
 | `schema/v1.md` | spec schema swc/1: the frozen primitives list, what S0 validates |
-| `profiles/` | host limits (`swos9697.json`: the 1996 DOS exe's font, title widths, clubs per file, table rows) |
-| `tests/` | engine unit tests, valid and broken specs (each with its expected message) |
+| `profiles/` | host limits: `swos9697.json` (the 1996 DOS exe), `openswos.json` (OpenSWOS SDL + Amiga, draft) |
+| `packs/sample/` | the reference data pack (invented clubs, CC0): one league + one cup with a fixed draw |
+| `tests/` | format tests, valid and broken specs (each with its expected message), golden outputs; `tests/contract/`: the scenarios |
 | `docs/` | design documents |
 
 ```
@@ -60,6 +64,8 @@ build/swcc dump     OUT.SWC
 
 | Document | Content |
 |---|---|
+| [docs/format.md](docs/format.md) | the compiled spec (.SWC): big-endian, one file for DOS, SDL and Amiga; layouts; C arrays |
+| [docs/contract-tests.md](docs/contract-tests.md) | **the contract tests**: YAML scenarios + golden files every engine implementation must pass |
 | [docs/competition-engine-proposal.md](docs/competition-engine-proposal.md) | spec model, API, determinism, persistence, four real formats (Liga MX, Serie C, UEFA Champions League, Argentina) |
 | [docs/rule-catalogue.md](docs/rule-catalogue.md) | modules and ports, every rule primitive (from the Mod's World 2026-27), entitlements and precedence, a complete CONCACAF module, the validator |
 | [docs/testing-strategy.md](docs/testing-strategy.md) | test pyramid: validation, unit tests per primitive, properties, forced scenarios, golden worlds, few end-to-end tests |
