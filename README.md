@@ -23,6 +23,7 @@ and the **contract tests** both sides must pass (`docs/contract-tests.md`).
 | `swcc/` | the spec compiler / validator (hosted C11): JSON + host profile -> diagnostics + binary spec `.SWC` |
 | `schema/v1.md` | spec schema swc/1: the frozen primitives list, what S0 validates |
 | `profiles/` | host limits: `swos9697.json` (the 1996 DOS exe), `openswos.json` (OpenSWOS SDL + Amiga, draft) |
+| `examples/` | specs of real competitions, club names only (Serie A + Serie B 2026-27) |
 | `packs/sample/` | the reference data pack (invented clubs, CC0): one league + one cup with a fixed draw |
 | `tests/` | format tests, valid and broken specs (each with its expected message), golden outputs; `tests/contract/`: the scenarios |
 | `docs/` | design documents |

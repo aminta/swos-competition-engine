@@ -2,11 +2,11 @@
 # Every tests/specs/ok/*.json must validate, compile and read back; every tests/specs/bad/*.json must fail with the
 # message in its "_expect" member (bad/syntax.json: a syntax error).
 SWCC=$1; TMP=${TMPDIR:-/tmp}/swcc-tests.$$; mkdir -p "$TMP"; fail=0
-for f in tests/specs/ok/*.json; do
+for f in tests/specs/ok/*.json examples/*.json; do
   if ! "$SWCC" compile "$f" -o "$TMP/out.swc" >/dev/null 2>"$TMP/err" || ! "$SWCC" dump "$TMP/out.swc" >/dev/null; then
     echo "FAIL (should be valid): $f"; cat "$TMP/err"; fail=1; fi
 done
-for f in tests/specs/ok-openswos/*.json packs/*/world.json; do       # the OpenSWOS profile (latin1 + overrides)
+for f in tests/specs/ok-openswos/*.json packs/*/world.json examples/*.json; do       # the OpenSWOS profile (latin1 + overrides)
   if ! "$SWCC" validate "$f" --profile profiles/openswos.json >/dev/null 2>"$TMP/err"; then
     echo "FAIL (should be valid for openswos): $f"; cat "$TMP/err"; fail=1; fi
 done
