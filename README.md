@@ -9,8 +9,26 @@ competitions of any country and era described as data (JSON specs), played by on
 > [SWOS 96/97 Mod](https://github.com/aminta/swos-9697-mod). Stato: progetto e specifiche; il codice arriva nelle
 > prossime settimane.
 
-**Status: design.** This repository holds the specification and the design documents. Code follows after the
-design is frozen (schema v1). Nothing here is ready for use yet.
+**Status: S0 (foundation).** Schema v1 primitives frozen (`schema/v1.md`); engine core (arena, PCG32, binary spec
+reader) and the spec compiler / validator `swcc`. No season logic yet (S1 next). Not ready for use.
+
+## Layout and build
+
+| Path | Content |
+|---|---|
+| `engine/` | the engine: C99 freestanding (`swc.h`, `swc_core.c`); compiled into each host and natively |
+| `swcc/` | the spec compiler / validator (hosted C11): JSON + host profile -> diagnostics + binary spec `.SWC` |
+| `schema/v1.md` | spec schema swc/1: the frozen primitives list, what S0 validates |
+| `profiles/` | host limits (`swos9697.json`: the 1996 DOS exe's font, title widths, clubs per file, table rows) |
+| `tests/` | engine unit tests, valid and broken specs (each with its expected message) |
+| `docs/` | design documents |
+
+```
+make            # build/swcc, build/libswcc.so, the tests, the i486 freestanding object check
+build/swcc validate SPEC.json [--profile profiles/swos9697.json]
+build/swcc compile  SPEC.json -o OUT.SWC
+build/swcc dump     OUT.SWC
+```
 
 ## Who uses it
 
