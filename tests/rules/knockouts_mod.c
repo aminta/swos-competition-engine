@@ -1,13 +1,14 @@
 /* The Mod's season end (dp_season, then gp_season) over random final tables (tables.h): each
  * season's moves, results, stage titles and SEASON WINNERS page, as knockouts_ours.c prints the
- * library's. Arguments: SPEC [SEASONS [SHAPE]] -- a shape ("20,24,24") is another league's
- * divisions, its knockouts only. */
+ * library's. Arguments: SPEC [SEASONS [SHAPE [ko]]] -- a shape ("20,24,24") is another league's
+ * divisions, its knockouts only; ko: the career club's contests too (ko_build, gp_need). */
 #include <stdio.h>
 #include <stdlib.h>
 #include "tables.h"
 void mod_dp(const unsigned short (*rows)[32][6], const int *n, unsigned short cupw, FILE *out);
 void mod_gp(const unsigned short (*rows)[32][6], const int *n, int nd, const unsigned char *sp, FILE *out);
 void mod_mgr(unsigned short team);
+void mod_ko_all(FILE *out);
 void mod_stages(const unsigned short (*r)[32][6], const int *n, int nk, const unsigned short (*keep)[6], int fresh);
 int main(int argc, char **argv)
 {
@@ -41,7 +42,8 @@ int main(int argc, char **argv)
             mod_mgr(n[d] ? t[d][(it / ND) % n[d]].team : 0);
         }
         mod_gp((const unsigned short (*)[32][6])rows, n, ND, spec, stdout);
-        mod_mgr(0);
+        mod_mgr(0);                             /* (the contests' checks below: as before) */
+        if (argc > 4) mod_ko_all(stdout);
         printf("\n");
     }
     return 0;

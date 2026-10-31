@@ -57,6 +57,10 @@ career club played itself comes back through `sr_host`'s callbacks (all optional
 | Function | The Mod's | What it does |
 |---|---|---|
 | `sr_italy` | `dplay.c` `dp_season` | Serie B's play-off and play-out, Serie C's play-off (the career club's played ties and the Coppa Italia Serie C winner given in `sr_season`) |
+| `sr_club_playoff` | `gplay.c` `gp_need` | the career club's play-off at its league's end, and the divisions to simulate early for it |
+| `sr_contest_entrants`, `sr_contest_seed`, `sr_contest_tie` | `gplay.c` `ko_build` | that play-off's entrants (ranks, points) for the game's contest, and its round-1 ties simulated at the build (presim) |
+| `sr_group_shape_of` | `gplay.c` `t2_shape` | a title of groups then knockouts (the Poule Scudetto): its shape, for a group contest |
+| `sr_spec_at` | `gplay.c` `po_at` | play-off pidx's bytes |
 | `sr_knockouts` | `gplay.c` `gp_season` | every pack's knockouts, whole: each kind and entrant, group rounds, the drawn pot, the promedio; titles, continental places and stage titles in `st.gp.res` / `st.gp.sres`; the SEASON WINNERS page |
 
 ## 4. Modules, one pull request each
@@ -65,6 +69,7 @@ career club played itself comes back through `sr_host`'s callbacks (all optional
 |---|---|---|---|
 | 1 | The Italian rules | `dplay.c` `dp_season` | 20,000 random seasons of Italy 2026-27's divisions: every move the Mod's |
 | 2 | The pack's knockouts | `gplay.c` `gp_season` | Italy's whole season end, 20,000 seasons; then each of the 34 leagues with knockouts, 2,000 seasons of its own shape with stage tables: every move, result, stage title and SEASON WINNERS page the Mod's |
+| 3 | The career club's contests | `gplay.c` `ko_build`, `gp_need`, `t2_shape` | the same seasons: each play-off's contest built for a waiting club (30,667: entrants, ranks, the round-1 ties simulated), every club's play-off chosen, the Mod's |
 
 ## 5. Tests
 

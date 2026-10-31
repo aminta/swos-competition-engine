@@ -143,6 +143,7 @@ typedef struct sr_state {
         const sr_season *se;
         sr_gs    ps[64], ms[SR_CLUBS];
         sr_promedio_club nx[SR_PROMEDIO_CLUBS];
+        int32_t  ce_club[64], ce_n; /* the last contest's entrants (sr_contest_entrants) */
     } gp;
 } sr_state;
 
@@ -167,5 +168,40 @@ int32_t sr_playoff_held(uint16_t pts3, uint16_t pts4);
  * st->gp.sres (the career club's division's stage titles); the SEASON WINNERS page in
  * se->winners when the career club is in the league. The count of moves it added. */
 int32_t sr_knockouts(sr_state *st, const sr_league *lg, const sr_season *se);
+
+/* ---- The career club's own play-off, played as a contest (gplay.c ko_build, gp_need, t2_shape)
+ * -- the contest itself is the game's ---- */
+
+#define SR_CONTEST_MAX 32           /* a contest's entrants */
+
+/* Play-off pidx of the league's knockouts (its bytes), 0: none. */
+const uint8_t *sr_spec_at(const sr_league *lg, int32_t pidx);
+
+/* The career club's play-off at its league's end (gp_need, a career): the first playable one in
+ * spec order with `club` (in division d's final table, best first) among its entrants -- its index,
+ * the other divisions its entrants come from (to simulate now: at most two; nine for a group
+ * contest) in other[9]; -2 - its index when it is a group contest; -1 none. Uses st->t. */
+int32_t sr_club_playoff(sr_state *st, const sr_league *lg, const sr_season *se, int32_t d, const sr_row *table,
+                        int32_t n, uint16_t club, uint8_t *other, int32_t *nother);
+
+/* Play-off pidx's entrants as the season end would resolve them (ko_build), from nt tables
+ * (divs[0] the club's division, then the ones simulated early) and the stage tables: in entrant
+ * order their team words, global numbers, points and ranks (a stage entrant: its stage place;
+ * 'host_by_record': by record), *spec its bytes; their count, 0 when one is not known. */
+int32_t sr_contest_entrants(sr_state *st, const sr_league *lg, const sr_season *se, int32_t nt,
+                            const int32_t *divs, const sr_row *const *tables, const int32_t *ns, int32_t pidx,
+                            uint16_t *team, uint16_t *glob, uint8_t *prio, uint16_t *pts, const uint8_t **spec);
+
+/* Right after sr_contest_entrants: a round-1 tie simulated at the contest's build, the career club
+ * waiting (ko_build's presim): the seed (hseed of game round 0), then each tie of entrants a, b
+ * (legs 3: a best of three); the winner, a or b. */
+void    sr_contest_seed(sr_state *st, int32_t pidx, const uint16_t *team, int32_t n);
+int32_t sr_contest_tie(sr_state *st, int32_t a, int32_t b, int32_t legs, int32_t host, int32_t level);
+
+/* A title of groups then knockouts (gplay.c t2_shape: the Poule Scudetto), played as a group
+ * contest: g groups of m entrants, meet meetings, then nk knockout stages of kt ties, the first
+ * taking q (the groups' winners and best runners-up), kb their round bytes. 0: not one. */
+typedef struct { uint8_t g, m, meet, nk, q, kt[4], kb[4]; } sr_group_shape;
+int32_t sr_group_shape_of(const uint8_t *spec, sr_group_shape *shape);
 
 #endif
