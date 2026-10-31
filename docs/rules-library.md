@@ -46,17 +46,25 @@ sr_state st;            /* the caller's memory */
 sr_reset(&st);          /* once */
 /* each season end: the final tables into st.t, then */
 sr_italy(&st, &league, &season);    /* Serie B, Serie C: st.mv[0 .. st.nmv) */
+sr_knockouts(&st, &league, &season);    /* the pack's knockouts: their moves after those */
 ```
+
+The caller keeps, between seasons and in its saves, what the Mod keeps in its state: a league's
+stage tables (`sr_stage_bank`, written at each fixture stage's end), Argentina's promedio history
+(`sr_promedio`) and the SEASON WINNERS page (`sr_winners`); `sr_season` points at them. What the
+career club played itself comes back through `sr_host`'s callbacks (all optional).
 
 | Function | The Mod's | What it does |
 |---|---|---|
 | `sr_italy` | `dplay.c` `dp_season` | Serie B's play-off and play-out, Serie C's play-off (the career club's played ties and the Coppa Italia Serie C winner given in `sr_season`) |
+| `sr_knockouts` | `gplay.c` `gp_season` | every pack's knockouts, whole: each kind and entrant, group rounds, the drawn pot, the promedio; titles, continental places and stage titles in `st.gp.res` / `st.gp.sres`; the SEASON WINNERS page |
 
 ## 4. Modules, one pull request each
 
 | # | Module | The Mod's | Test (`tests/rules/check.sh`) |
 |---|---|---|---|
 | 1 | The Italian rules | `dplay.c` `dp_season` | 20,000 random seasons of Italy 2026-27's divisions: every move the Mod's |
+| 2 | The pack's knockouts | `gplay.c` `gp_season` | Italy's whole season end, 20,000 seasons; then each of the 34 leagues with knockouts, 2,000 seasons of its own shape with stage tables: every move, result, stage title and SEASON WINNERS page the Mod's |
 
 ## 5. Tests
 
@@ -64,6 +72,11 @@ sr_italy(&st, &league, &season);    /* Serie B, Serie C: st.mv[0 .. st.nmv) */
 are and the library, gives both the same random seasons (`tests/rules/tables.h`: their own LCG, not
 `rand()`) and compares every result. Without a checkout it is skipped. `make test` checks the i486
 object.
+
+`tests/rules/specs/` holds each World 2026-27 league's knockouts as the Mod's `gplay.py
+compile_spec` makes them (`shapes.txt`: their divisions' sizes): bytes of the format only --
+entrant places, rounds, legs --, no names, made from the Mod's packs so the test needs no world
+data.
 
 ## 6. Licence and credits
 

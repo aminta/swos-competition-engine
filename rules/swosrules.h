@@ -39,6 +39,32 @@ typedef struct {
 enum { SR_RULE_ITALY = 1, SR_RULE_KNOCKOUT = 2 };
 typedef struct { uint16_t glob; int8_t delta; uint8_t rule; } sr_move;
 
+/* A league's stage tables (gplay.c's GP_SS bank: gp_stage / gp_keep), kept by the caller through
+ * the season and saved with it: r[k] a fixture stage's table (its 'table' k), fresh bit k when this
+ * season wrote it; a 'keep' stage's frozen table (Malta's Opening Round) in kept. */
+#define SR_STAGE_TABLES 4
+typedef struct {
+    uint8_t used, key, fresh, pad;  /* key: the caller's (its country) */
+    uint8_t n[SR_STAGE_TABLES];
+    sr_row  r[SR_STAGE_TABLES][SR_CLUBS];
+    uint8_t kept_div, n_kept;       /* the kept table's division; 0 clubs: none */
+    sr_row  kept[SR_CLUBS];
+} sr_stage_bank;
+
+/* Argentina's promedio history (gplay.c PR_STATE): each top-flight club's points and matches of
+ * the two seasons before; the caller's, saved. A new career starts from the league's seed. */
+#define SR_PROMEDIO_CLUBS 48
+typedef struct { uint16_t glob, p[2]; uint8_t m[2]; } sr_promedio_club;
+typedef struct { uint8_t init, n, pad[2]; sr_promedio_club c[SR_PROMEDIO_CLUBS]; } sr_promedio;
+typedef struct { uint16_t glob, points2, points1; uint8_t matches2, matches1; } sr_promedio_seed;
+
+/* The SEASON WINNERS page's last season (gplay.c WN_ST), written for the career club's league:
+ * 'M' the division the club played in, 'L' each division's 1st, 'K' each play-off's winner,
+ * 0x80 | play-off: a title play-off's last three ties' winners (idx: the tie); team words. */
+#define SR_WINNERS_MAX 40
+typedef struct { uint8_t type, idx; uint16_t team; } sr_winners_entry;
+typedef struct { uint8_t season, n, fresh, pad; sr_winners_entry e[SR_WINNERS_MAX]; } sr_winners;
+
 /* A league's rules: the pack's, as the Mod's tools compile them. */
 typedef struct {
     uint8_t        divisions;
@@ -48,7 +74,24 @@ typedef struct {
     uint8_t        serie_b;         /* Serie B's division, the first of Serie C's groups, */
     uint8_t        group_first;     /* how many groups (2..4) */
     uint8_t        groups;
+    const uint8_t *spec;            /* the pack's knockouts: gplay.py compile_spec's bytes, 0-ended */
+    const sr_promedio_seed *promedio_seed;  /* the promedio's history at a new career (gplay.c */
+    uint8_t        promedio_seeds;          /* GP_PROM_TAB, global numbers) */
 } sr_league;
+
+/* What the game around the rules knows (all optional, 0 for none): a tie, a title or a stage
+ * title the career club played itself; a line for the game's log. */
+typedef struct {
+    void *ctx;
+    /* the career club's play-off pidx, played: 1 and its winner when it holds the tie a v b */
+    int32_t (*played_tie)(void *ctx, int32_t pidx, uint16_t a, uint16_t b, uint16_t *winner);
+    /* a title play-off pidx played as a group contest: 1 and its champion, runner-up */
+    int32_t (*played_title)(void *ctx, int32_t pidx, uint16_t *champion, uint16_t *runner_up);
+    /* the career club's division's stage title k (0..2) decided mid-season: 1 and its champion,
+     * runner-up (team words, global numbers) */
+    int32_t (*stage_title)(void *ctx, int32_t k, uint16_t team[2], uint16_t glob[2]);
+    void    (*log)(void *ctx, const char *fmt, ...);
+} sr_host;
 
 /* The season: what the career club played itself (0: simulated) and the results the rules use. */
 typedef struct {
@@ -56,7 +99,20 @@ typedef struct {
     uint16_t cpo_win;               /* its Serie C play-off */
     uint16_t cup_winner;            /* the Coppa Italia Serie C winner, 0 unknown */
     uint8_t  test_held;             /* a test: Serie B's play-off and play-out held whatever the points */
+    uint16_t mgr;                   /* the career club (team word), 0 none */
+    uint16_t tie_a, tie_b, tie_w;   /* a group tie it played (gplay.c pl_w): its clubs, winner */
+    sr_stage_bank *bank;            /* the league's stage tables, 0 none */
+    sr_promedio   *promedio;        /* its promedio history, 0 none */
+    sr_winners    *winners;         /* the SEASON WINNERS page, 0 not kept */
+    const sr_host *host;            /* 0: none */
 } sr_season;
+
+/* A result the knockouts decide beside the moves: a title's champion and runner-up, a continental
+ * play-off's winner and loser, a stage title's (kind 5 title, 6 continental, 8 stage). */
+enum { SR_KIND_TITLE = 5, SR_KIND_CONTINENTAL = 6, SR_KIND_PROMEDIO = 7, SR_KIND_STAGE = 8 };
+typedef struct { uint8_t kind, div; uint16_t team[2], glob[2]; } sr_result;
+
+typedef struct { int32_t c, pts, gd, gf; } sr_gs;      /* a group table's row (gplay.c gs) */
 
 /* The library's working state: the caller's memory, zeroed once (sr_reset). The caller writes
  * the season's tables into `t`, then calls the season end; the moves come back in `mv`. */
@@ -74,6 +130,20 @@ typedef struct sr_state {
         uint8_t  lot[5 * 24];
         uint8_t  test_held;
     } dp;
+    /* gplay.c */
+    struct {
+        uint32_t rng;
+        int32_t  by_rec, pidx, ss_used, srl_div, wn_on;
+        uint16_t mgr, played_a, played_b, played_w;
+        sr_result res[4], sres[3], srl[3];
+        int32_t  nres;
+        uint8_t  nst[2];            /* the kept 'keep' tables (gp_keep) */
+        sr_row   st[2][SR_CLUBS];
+        sr_stage_bank *ssb, no_bank;
+        const sr_season *se;
+        sr_gs    ps[64], ms[SR_CLUBS];
+        sr_promedio_club nx[SR_PROMEDIO_CLUBS];
+    } gp;
 } sr_state;
 
 void     sr_reset(sr_state *st);
@@ -88,5 +158,14 @@ int32_t sr_italy(sr_state *st, const sr_league *lg, const sr_season *se);
  * unless the 3rd leads the 4th by more than 14 (dplay.c OUT_HELD and its play-off rule). */
 int32_t sr_out_held(uint16_t pts16, uint16_t pts17);
 int32_t sr_playoff_held(uint16_t pts3, uint16_t pts4);
+
+/* The season end's second step: the pack's knockouts (gplay.c gp_season, whole: promotion,
+ * play-out, placement, title, continental, promedio and stage-title play-offs; every entrant kind
+ * -- by place, the stage tables, the Trofeo's finalists, the title deciders' seeds, the previous
+ * play-off's loser --, group rounds, the drawn pot) over st->t: their moves after the Italian ones
+ * (rule SR_RULE_KNOCKOUT), the results in st->gp.res[0 .. nres) (titles, continental places) and
+ * st->gp.sres (the career club's division's stage titles); the SEASON WINNERS page in
+ * se->winners when the career club is in the league. The count of moves it added. */
+int32_t sr_knockouts(sr_state *st, const sr_league *lg, const sr_season *se);
 
 #endif
