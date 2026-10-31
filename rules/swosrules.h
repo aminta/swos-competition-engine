@@ -9,14 +9,18 @@
  *
  * Freestanding C99 for the DOS build (clang -target i686, -march=i486, no libc): no globals --
  * one caller-owned state passed by pointer --, no library calls, no compiler-generated
- * memcpy / memset. <stdint.h> is the one include.
+ * memcpy / memset. <stdint.h> is the one include -- or none, when the host's own header has
+ * given int8_t .. uint32_t already and says so with SWOSRULES_HAVE_STDINT (the Amiga's toolchain
+ * has no <stdint.h>: OpenSWOS defines them itself).
  *
  * Copyright (c) 2026 Davide Lorigliola, Ben Baker. MIT licence (LICENSE).
  */
 #ifndef SWOSRULES_H
 #define SWOSRULES_H
 
+#ifndef SWOSRULES_HAVE_STDINT
 #include <stdint.h>
+#endif
 
 #define SWOSRULES_VERSION 1
 
