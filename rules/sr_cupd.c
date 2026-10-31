@@ -76,7 +76,7 @@ static void cd_pair(u32 *rng, u16 *side, u8 *sg, int32_t m, int32_t at, sr_cupd_
     }
 }
 
-void sr_cupd_make(const sr_cupd_end *e, uint32_t season, uint8_t rounds, uint8_t first, uint8_t groups,
+int32_t sr_cupd_make(const sr_cupd_end *e, uint32_t season, uint8_t rounds, uint8_t first, uint8_t groups,
                   int32_t nslots, const uint8_t *division, const uint16_t *word, sr_cupd_rounds *out)
 {
     const int32_t df = first, dc = groups;
@@ -129,4 +129,5 @@ void sr_cupd_make(const sr_cupd_end *e, uint32_t season, uint8_t rounds, uint8_t
     for (int32_t k = 2 * p; k < n && m < 2 * n1; k++) { side[m] = word[ord[k]]; sg[m++] = grp[k]; }
     while (m < 2 * n1) { side[m] = 0; sg[m++] = 0xFF; }
     cd_pair(&rng, side, sg, m, 2 * p, out);
+    return n;
 }

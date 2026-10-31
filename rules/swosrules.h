@@ -278,8 +278,9 @@ void sr_cupd_note_arrival(sr_cupd_end *e, uint16_t slot);
  * FFh none) in entry order -- from the season end e (0: unknown, a random order) -- relegated
  * from Serie C and the pool's new clubs first, then from the bottom of each group --, paired
  * within their groups where they can. season: the Mod's season byte (the year from 1900), its
- * generator's seed; word[slot] a slot's team word; rounds the cup's. */
-void sr_cupd_make(const sr_cupd_end *e, uint32_t season, uint8_t rounds, uint8_t first, uint8_t groups,
+ * generator's seed; word[slot] a slot's team word; rounds the cup's. The number of Serie D's
+ * clubs. */
+int32_t sr_cupd_make(const sr_cupd_end *e, uint32_t season, uint8_t rounds, uint8_t first, uint8_t groups,
                   int32_t nslots, const uint8_t *division, const uint16_t *word, sr_cupd_rounds *out);
 
 #endif
