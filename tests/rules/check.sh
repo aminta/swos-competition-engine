@@ -80,3 +80,17 @@ else
     diff "$OUT/b_mod.txt" "$OUT/b_ours.txt" | head -4
     exit 1
 fi
+
+# A cup's clubs from the second season on (sr_cup_entrants = gplay.c cf_build, CF_SEED 1 as
+# released): Italy 2026-27's two cups over random moves, last season's places and career clubs.
+$C -DCF_SEED=1 -DGPLAY_C="\"$MOD/tools/gplay.c\"" -o "$OUT/cmod" $T/cups_mod.c
+$C -Irules -o "$OUT/cours" $T/cups_ours.c rules/sr_cups.c
+"$OUT/cmod" "$N" > "$OUT/c_mod.txt"
+"$OUT/cours" "$N" > "$OUT/c_ours.txt"
+if cmp -s "$OUT/c_mod.txt" "$OUT/c_ours.txt"; then
+    echo "PASS: cups, $N seasons, both cups' clubs the Mod's"
+else
+    echo "FAIL: cups: the first season that differs (Mod, then the library):"
+    diff "$OUT/c_mod.txt" "$OUT/c_ours.txt" | head -4
+    exit 1
+fi
