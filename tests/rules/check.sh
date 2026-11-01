@@ -74,6 +74,19 @@ else
     exit 1
 fi
 
+# The season-end preview (gplay.c GP_PRE, 4.0.5 rc19): before each season end, the same knockouts
+# previewed -- play-off 0 the career club's own every other season --: moves, titles and the
+# SEASON WINNERS entries it appends, Italy and every pack.
+KO_PRE=1 "$OUT/kmod" $T/specs/ita.spec "$N" > "$OUT/pre_mod.txt"
+KO_PRE=1 "$OUT/kours" $T/specs/ita.spec "$N" > "$OUT/pre_ours.txt"
+cmp -s "$OUT/pre_mod.txt" "$OUT/pre_ours.txt" || { echo "FAIL: Italy's season-end preview"; diff "$OUT/pre_mod.txt" "$OUT/pre_ours.txt" | head -4; exit 1; }
+while read -r code shape; do
+    KO_PRE=1 "$OUT/kmod" "$T/specs/$code.spec" "$PN" "$shape" > "$OUT/pre_mod.txt"
+    KO_PRE=1 "$OUT/kours" "$T/specs/$code.spec" "$PN" "$shape" > "$OUT/pre_ours.txt"
+    cmp -s "$OUT/pre_mod.txt" "$OUT/pre_ours.txt" || { echo "FAIL: $code's season-end preview"; exit 1; }
+done < $T/specs/shapes.txt
+echo "PASS: the season-end preview, Italy ($N seasons) and every pack ($PN each): the Mod's"
+
 # B teams as play-off entrants (gplay.c place_club / sec_inelig): tables.h's two B teams and their
 # first teams at random places (-DKO_BT), passed over by place unless they may play play-offs and go
 # up -- Italy's levels on Italy's knockouts, a level per division on every pack's (the contests too:

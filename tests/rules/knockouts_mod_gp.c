@@ -43,6 +43,38 @@ void mod_stages(const unsigned short (*r)[32][6], const int *n, int nk, const un
     }
 }
 void mod_mgr(unsigned short team) { GP_IN.mgr = team; }   /* (the career club at the season end) */
+void mod_gp(const unsigned short (*rows)[32][6], const int *n, int nd, const u8 *sp, FILE *out);
+/* The season-end preview (GP_PRE, 4.0.5 rc19) over the same tables first: own = the career club's
+   play-off (0xFF none); the SEASON WINNERS entries it appends (after an empty page here). */
+void mod_pre(const unsigned short (*rows)[32][6], const int *n, int nd, const u8 *sp, int own, FILE *out)
+{
+    GP_PRE = 1;
+    GP_IN.pi[0] = (u8)own; GP_IN.pi[1] = 0xFF;
+    WN_ST.magic = WN_MAGIC; WN_ST.n = 0;
+    GP_IN.nd = (u8)nd;
+    for (int d = 0; d < nd; d++) {
+        GP_IN.n[d] = (u8)n[d];
+        for (int k = 0; k < n[d]; k++) {
+            struct gp_row *r = &GP_IN.t[d][k];
+            r->team = rows[d][k][0]; r->glob = rows[d][k][1]; r->won = rows[d][k][2];
+            r->gf = rows[d][k][3]; r->ga = rows[d][k][4]; r->pts = rows[d][k][5];
+        }
+    }
+    GP_IN.spec = sp;
+    gp_season();
+    fprintf(out, " P");
+    for (int i = 0; i < GP_OUT.nmv; i++) fprintf(out, " g%u:%d", GP_OUT.mv[i].glob, GP_OUT.mv[i].delta);
+    for (int i = 0; i < GP_OUT.nres; i++)
+        fprintf(out, " T%u:%u/%u", GP_OUT.res[i].kind, GP_OUT.res[i].glob[0], GP_OUT.res[i].glob[1]);
+    for (int k = 0; k < 3; k++)
+        if (GP_OUT.sres[k].kind) fprintf(out, " S%d:%u/%u", k, GP_OUT.sres[k].glob[0], GP_OUT.sres[k].glob[1]);
+    fprintf(out, " w");
+    for (int i = 0; i < WN_ST.n; i++) fprintf(out, "%02X.%u.%04X,", WN_ST.e[i].type, WN_ST.e[i].idx, WN_ST.e[i].team);
+    WN_ST.magic = 0; WN_ST.n = 0;
+    GP_PRE = 0;
+    GP_IN.pi[0] = GP_IN.pi[1] = 0xFF;
+    fprintf(out, " |");
+}
 void mod_gp(const unsigned short (*rows)[32][6], const int *n, int nd, const u8 *sp, FILE *out)
 {
     GP_IN.nd = (u8)nd;

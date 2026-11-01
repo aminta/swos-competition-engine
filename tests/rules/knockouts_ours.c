@@ -87,6 +87,7 @@ int main(int argc, char **argv)
 {
     unsigned N = argc > 2 ? (unsigned)atoi(argv[2]) : 20000;
     struct trow t[16][32]; int n[16];
+    int pre_it = 0;                             /* (the season's number printed with its preview) */
     sr_league lg = { 14, PROM, REL, 1, 1, 2, 3, spec, 0, 0 };
 #ifdef KO_BT                                    /* (tables.h's B teams: knockouts_mod_gp.c's SEC_TAB) */
     static const uint8_t SECOND[2][2] = { { 20, 0 }, { 21, 1 } };
@@ -138,9 +139,30 @@ int main(int argc, char **argv)
 #endif
         se.promedio = &prom;
         se.winners = &wn;
+        if (getenv("KO_PRE")) {                 /* (the preview first, as knockouts_mod.c) */
+            sr_season pre = se;
+            pre.preview = 1;
+            pre.own_pi[0] = (int8_t)(it % 2 ? -1 : 0); pre.own_pi[1] = -1;
+            wn.n = 0;
+            st.nmv = st.dp_moves = 0;
+            sr_knockouts(&st, &lg, &pre);
+            printf("%u P", it);
+            pre_it = 1;
+            for (int i = 0; i < st.nmv; i++) printf(" g%u:%d", st.mv[i].glob, st.mv[i].delta);
+            for (int i = 0; i < st.gp.nres; i++)
+                printf(" T%u:%u/%u", st.gp.res[i].kind, st.gp.res[i].glob[0], st.gp.res[i].glob[1]);
+            for (int k = 0; k < 3; k++)
+                if (st.gp.sres[k].kind) printf(" S%d:%u/%u", k, st.gp.sres[k].glob[0], st.gp.sres[k].glob[1]);
+            printf(" w");
+            for (int i = 0; i < wn.n; i++) printf("%02X.%u.%04X,", wn.e[i].type, wn.e[i].idx, wn.e[i].team);
+            printf(" |");
+            wn.n = 0; wn.fresh = 0;
+            st.nmv = st.dp_moves = 0;
+        }
         sr_italy(&st, &lg, &se);
         sr_knockouts(&st, &lg, &se);
-        printf("%u", it);
+        if (!pre_it) printf("%u", it);
+        pre_it = 0;
         for (int i = 0; i < st.nmv; i++)
             printf(" %c%u:%d", i < st.dp_moves ? 'd' : 'g', st.mv[i].glob, st.mv[i].delta);
         for (int i = 0; i < st.gp.nres; i++)
