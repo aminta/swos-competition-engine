@@ -64,6 +64,7 @@ career club played itself comes back through `sr_host`'s callbacks (all optional
 | `sr_spec_at` | `gplay.c` `po_at` | play-off pidx's bytes |
 | `sr_final_moves` | -- | each club's one-level move: the record's by place, the play-offs' on top, then the B-team rules |
 | `sr_cup_entrants` | `gplay.c` `cf_build` (4.0.1) | a cup's clubs from the second season: the real list's shape per division, taken from where the clubs are now |
+| `sr_cupd_keep_place`, `sr_cupd_note_arrival`, `sr_cupd_make` | `gplay.c` `cd_rank`, `cd_season`, `cd_make` | the Coppa Italia Serie D's later seasons: the entry order from the season end, the preliminary round and the first round of 64 |
 | `sr_b_teams` | `gplay.c` `sec_post` | the B-team rules alone (in levels, a level of groups counting as one; the Mod's division deltas are the same moves) |
 | `sr_knockouts` | `gplay.c` `gp_season` | every pack's knockouts, whole: each kind and entrant, group rounds, the drawn pot, the promedio; titles, continental places and stage titles in `st.gp.res` / `st.gp.sres`; the SEASON WINNERS page |
 
@@ -76,6 +77,17 @@ career club played itself comes back through `sr_host`'s callbacks (all optional
 | 3 | The career club's contests | `gplay.c` `ko_build`, `gp_need`, `t2_shape` | the same seasons: each play-off's contest built for a waiting club (30,667: entrants, ranks, the round-1 ties simulated), every club's play-off chosen, the Mod's |
 | 4 | B teams, the season's moves | `gplay.c` `sec_post` | 5 built cases, then 20,000 random ones in each of Italy (levels of groups), Spain, Germany, the Netherlands, Portugal: every move the Mod's |
 | 5 | The cups' clubs from the second season | `gplay.c` `cf_build` (`CF_SEED` 1) | Italy 2026-27's two cups over 20,000 random seasons (moves, last season's places, career clubs): both lists the Mod's |
+| 6 | The Coppa Italia Serie D's later seasons | `gplay.c` `cd_rank`, `cd_season`, `cd_make` | 20,000 random season ends of Italy 2026-27: every later season's first two rounds the Mod's |
+
+**Not in yet**, each waiting for its comparison:
+
+- the rest of the Coppa D's pure part -- the table walk (`cd_side`, `cd_raw`), the hosts, the
+  simulated ties (`cd_str`, `cd_sim`), a round's draw: to be checked against the Mod's 4.0.3, which
+  has the drawn-round fix (OpenSWOS `docs/RULES_LIBRARY.md` §5); 4.0.2 still reads a drawn round's
+  sides below its draw;
+- the parallel groups (OpenSWOS `src/league_groups.c`, the only C version): once compared with the
+  Mod's `pgroups` on random seasons;
+- the pool's queue (OpenSWOS `src/team_pool.c`): once compared with the Mod's RI section.
 
 ## 5. Tests
 

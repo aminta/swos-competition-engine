@@ -94,3 +94,18 @@ else
     diff "$OUT/c_mod.txt" "$OUT/c_ours.txt" | head -4
     exit 1
 fi
+
+# The Coppa Italia Serie D's later seasons (sr_cupd_make = gplay.c cd_rank, cd_season, cd_make):
+# random season ends of Italy 2026-27 (moves, Serie D's tables, the pool's arrivals), each later
+# season's preliminary round and first round of 64.
+$C -DGPLAY_C="\"$MOD/tools/gplay.c\"" -o "$OUT/dmod" $T/cupd_mod.c
+$C -Irules -o "$OUT/dours" $T/cupd_ours.c rules/sr_cupd.c
+"$OUT/dmod" "$N" > "$OUT/d_mod.txt"
+"$OUT/dours" "$N" > "$OUT/d_ours.txt"
+if cmp -s "$OUT/d_mod.txt" "$OUT/d_ours.txt"; then
+    echo "PASS: the Coppa Italia Serie D, $N later seasons, every first two rounds the Mod's"
+else
+    echo "FAIL: the Coppa Italia Serie D: the first season that differs (Mod, then the library):"
+    diff "$OUT/d_mod.txt" "$OUT/d_ours.txt" | head -4 | cut -c1-200
+    exit 1
+fi

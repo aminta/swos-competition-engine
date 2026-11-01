@@ -9,14 +9,18 @@
  *
  * Freestanding C99 for the DOS build (clang -target i686, -march=i486, no libc): no globals --
  * one caller-owned state passed by pointer --, no library calls, no compiler-generated
- * memcpy / memset. <stdint.h> is the one include.
+ * memcpy / memset. <stdint.h> is the one include -- or none, when the host's own header has
+ * given int8_t .. uint32_t already and says so with SWOSRULES_HAVE_STDINT (the Amiga's toolchain
+ * has no <stdint.h>: OpenSWOS defines them itself).
  *
  * Copyright (c) 2026 Davide Lorigliola, Ben Baker. MIT licence (LICENSE).
  */
 #ifndef SWOSRULES_H
 #define SWOSRULES_H
 
+#ifndef SWOSRULES_HAVE_STDINT
 #include <stdint.h>
+#endif
 
 #define SWOSRULES_VERSION 1
 
@@ -246,5 +250,41 @@ typedef struct { uint8_t division, clubs, byes; } sr_quota;
 int32_t sr_cup_entrants(const sr_quota *q, int32_t nq, int32_t n, int32_t nclubs, const uint16_t *slot,
                         const uint8_t *division, const uint8_t *place, const uint8_t *level,
                         int32_t career_slot, uint16_t *out);
+
+/* ---- The Coppa Italia Serie D: a later season's first two rounds (sr_cupd.c: gplay.c cd_rank,
+ * cd_season, cd_make) ---- */
+
+#define SR_CUPD_PRE 41              /* a generated preliminary round's ties at most (gplay.c CDP) */
+#define SR_CUPD_R1  64              /* a generated first round's ties (CD1) */
+
+/* The season end the entry order is made from: each slot's division and, in Serie D, its place
+ * from the bottom of its group + 2; the slots that took a pool club. The caller's, one season. */
+typedef struct {
+    uint8_t last_div[SR_CLUB_SLOTS];    /* FFh: in no table */
+    uint8_t place[SR_CLUB_SLOTS];       /* 0 none */
+    uint8_t arrival[SR_CLUB_SLOTS / 8];
+} sr_cupd_end;
+
+/* The cup's rounds 0-1 generated: np preliminary ties, then the first round's 64; tie t's sides
+ * side[2t], side[2t + 1] -- a team word, 0 (a bye), or a preliminary tie's winner (t << 8 | FFh). */
+typedef struct {
+    uint8_t  np;
+    uint16_t side[2 * (SR_CUPD_PRE + SR_CUPD_R1)];
+} sr_cupd_rounds;
+
+void sr_cupd_end_reset(sr_cupd_end *e);
+/* A club's final place (0 the top of `clubs`) in `division` (Serie D: first .. first + groups - 1). */
+void sr_cupd_keep_place(sr_cupd_end *e, uint8_t first, uint8_t groups, uint16_t division, uint16_t slot,
+                        int32_t place, int32_t clubs);
+void sr_cupd_note_arrival(sr_cupd_end *e, uint16_t slot);
+
+/* A later season's rounds 0-1: Serie D's clubs this season (base[slot] + their move: division[slot],
+ * FFh none) in entry order -- from the season end e (0: unknown, a random order) -- relegated
+ * from Serie C and the pool's new clubs first, then from the bottom of each group --, paired
+ * within their groups where they can. season: the Mod's season byte (the year from 1900), its
+ * generator's seed; word[slot] a slot's team word; rounds the cup's. The number of Serie D's
+ * clubs. */
+int32_t sr_cupd_make(const sr_cupd_end *e, uint32_t season, uint8_t rounds, uint8_t first, uint8_t groups,
+                  int32_t nslots, const uint8_t *division, const uint16_t *word, sr_cupd_rounds *out);
 
 #endif
