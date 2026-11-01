@@ -1,6 +1,6 @@
 /* The library's season end (sr_italy, then sr_knockouts) over the same random final tables
  * (tables.h): each season's moves, results, stage titles and SEASON WINNERS page, as
- * knockouts_mod.c prints the Mod's. Arguments: SPEC [SEASONS [SHAPE]]. */
+ * knockouts_mod.c prints the Mod's. Arguments: SPEC [SEASONS [SHAPE [ko]]]. */
 #include <stdio.h>
 #include <stdlib.h>
 #include "tables.h"
@@ -14,6 +14,74 @@ static sr_winners wn;
 static void copy_row(sr_row *y, const struct trow *x)
 {
     y->team = x->team; y->glob = x->glob; y->won = x->won; y->gf = x->gf; y->ga = x->ga; y->pts = x->pts;
+}
+
+/* The game's "selected team" as OpenSWOS's check drove it: the career club at the season end,
+ * then the contests' clubs; what each contest call takes as the career club. */
+static uint16_t sel;
+
+/* The career club's contest for each play-off (sr_contest_entrants and its presim), the club the
+ * first entrant that waits in round 1; then each club's play-off (sr_club_playoff): as mod_ko_all. */
+static void ours_ko(const sr_league *lg, sr_season *se, struct trow (*t)[32], const int *n)
+{
+    static sr_row tab[16][32];
+    const sr_row *tabs[3];
+    int32_t divs[3], ns[3];
+    for (int d = 0; d < ND; d++)
+        for (int k = 0; k < n[d]; k++) copy_row(&tab[d][k], &t[d][k]);
+    const uint8_t *s;
+    for (int pi = 0; (s = sr_spec_at(lg, pi)) != 0; pi++) {
+        int ne = s[1], grp = 0, wait = -1, in0[64] = { 0 };
+        const uint8_t *r = s + 6 + 4 * ne, *r0 = r, *sp = 0;
+        uint16_t team[64], glob[64], pts[64];
+        uint8_t prio[64];
+        for (int k = 0; k < s[2]; k++) { grp |= r[1] & 0x80; r += 6 + 2 * r[0]; }
+        int dv[3], nd = 0;
+        for (int i = 0; i < ne && !grp; i++) {  /* (its entrants' divisions: at most three) */
+            int j = 0;
+            while (j < nd && dv[j] != s[7 + 4 * i]) j++;
+            if (j == nd) { if (nd < 3) dv[nd++] = s[7 + 4 * i]; else grp = 1; }
+        }
+        if (grp || r0[4] || ne > 64) continue;
+        sel = 0xFFFF;
+        se->mgr = sel;
+        for (int j = 0; j < nd; j++) { divs[j] = dv[j]; tabs[j] = tab[dv[j]]; ns[j] = n[dv[j]]; }
+        if (dv[0] >= ND || sr_contest_entrants(&st, lg, se, nd, divs, tabs, ns, pi, team, glob, prio, pts, &sp) != ne)
+            continue;
+        for (int i = 0; i < r0[0]; i++)
+            for (int x = 0; x < 2; x++) if (r0[6 + 2 * i + x] < ne) in0[r0[6 + 2 * i + x]] = 1;
+        for (int i = 0; i < ne && wait < 0; i++) {
+            if (in0[i]) continue;
+            wait = i;
+            for (int j = 0; j < ne; j++) if (j != i && team[j] == team[i]) wait = -1;
+        }
+        if (wait < 0) continue;
+        sel = team[wait];
+        se->mgr = sel;
+        sr_contest_entrants(&st, lg, se, nd, divs, tabs, ns, pi, team, glob, prio, pts, &sp);
+        sr_contest_seed(&st, pi, team, ne);
+        printf(" K%d:", pi);
+        for (int i = 0; i < r0[0]; i++) {
+            const int a = r0[6 + 2 * i], b = r0[7 + 2 * i];
+            int w = -1;
+            if (a < ne && b < ne)
+                w = team[a] == team[b] ? a : sr_contest_tie(&st, a, b, r0[1], r0[2] & 0x7F, r0[3]);
+            printf("%04X,", w >= 0 ? team[w] : 0);
+        }
+        if (s[5] & 2)
+            for (int p = 0; p < 256; p++)
+                for (int j = 0; j < ne; j++) if (prio[j] == p) printf("r%04X", team[j]);
+    }
+    se->mgr = sel;
+    for (int d = 0; d < ND; d++)                /* (the club's play-off: gp_need, each club) */
+        for (int k = 0; k < n[d]; k++) {
+            uint8_t other[9];
+            int32_t no = 0;
+            const int32_t pi = sr_club_playoff(&st, lg, se, d, tab[d], n[d], tab[d][k].team, other, &no);
+            if (pi == -1) continue;
+            printf(" N%d.%d:%d", d, k, pi < -1 ? -2 - pi : pi);
+            for (int j = 0; pi >= 0 && j < no; j++) printf("/%d", other[j]);
+        }
 }
 int main(int argc, char **argv)
 {
@@ -46,9 +114,11 @@ int main(int argc, char **argv)
                 bank.kept[i].won = bank.kept[i].gf = bank.kept[i].ga = 0; bank.kept[i].pts = s.keep[i].pts;
             }
         }
+        const uint16_t saved = sel;
         {                                       /* (the career club: a club of each division in turn) */
             const int d = (int)(it % ND);
-            se.mgr = n[d] ? t[d][(it / ND) % n[d]].team : 0;
+            sel = n[d] ? t[d][(it / ND) % n[d]].team : 0;
+            se.mgr = sel;
         }
         se.bank = &bank;
         se.promedio = &prom;
@@ -67,6 +137,8 @@ int main(int argc, char **argv)
             for (int i = 0; i < wn.n; i++) printf("%02X.%u.%04X,", wn.e[i].type, wn.e[i].idx, wn.e[i].team);
             wn.fresh = 0;
         }
+        sel = saved;
+        if (argc > 4) ours_ko(&lg, &se, t, n);
         printf("\n");
     }
     return 0;

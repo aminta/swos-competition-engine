@@ -667,3 +667,210 @@ int32_t sr_knockouts(sr_state *st, const sr_league *lg, const sr_season *se)
     gp_season(st, lg);
     return st->nmv - before;
 }
+
+/* =====================================================================
+ * The career club's own play-off (ko_build, gp_need, t2_shape)
+ * ===================================================================== */
+
+const uint8_t *sr_spec_at(const sr_league *lg, int32_t pidx)
+{
+    if (!lg || !lg->spec || pidx < 0)
+        return 0;
+    const u8 *s = lg->spec;
+    for (int32_t i = 0; i < pidx && *s; i++) {
+        const u8 *r = s + 6 + 4 * s[1];
+        if (s[0] != K_PROM)
+            for (int k = 0; k < s[2]; k++) r += 6 + 2 * r[0];
+        s = r;
+    }
+    return *s ? s : 0;
+}
+
+/* The tables a career has at its league's end (the club's division d first, then the ones simulated
+ * early) as the season end's input: no other division. */
+static int ce_tables(sr_state *st, const sr_season *se, int32_t nt, const int32_t *divs, const sr_row *const *tables,
+                     const int32_t *ns)
+{
+    const int32_t d = divs[0];
+    int32_t nd = 0;
+    for (int32_t t = 0; t < nt; t++) {
+        if (divs[t] < 0 || divs[t] >= GD || ns[t] < (t ? 1 : 2) || ns[t] > GT)
+            return 0;
+        if (divs[t] + 1 > nd)
+            nd = divs[t] + 1;
+    }
+    st->t.nd = (u8)nd;
+    for (int32_t j = 0; j < nd; j++)
+        st->t.n[j] = 0;
+    for (int32_t t = 0; t < nt; t++) {
+        st->t.n[divs[t]] = (u8)ns[t];
+        for (int32_t k = 0; k < ns[t]; k++) {
+            sr_row *r = &st->t.t[divs[t]][k];
+            r->team = tables[t][k].team; r->glob = tables[t][k].glob; r->won = tables[t][k].won;
+            r->gf = tables[t][k].gf; r->ga = tables[t][k].ga; r->pts = tables[t][k].pts;
+        }
+    }
+    gp_begin(st, se);
+    st->gp.nst[0] = st->gp.nst[1] = 0;
+    if (se->bank && se->bank->n_kept && se->bank->kept_div == d) {
+        for (int32_t i = 0; i < se->bank->n_kept; i++) {
+            const sr_row *x = &se->bank->kept[i];
+            sr_row *y = &st->gp.st[0][i];
+            y->team = x->team; y->glob = x->glob; y->won = x->won; y->gf = x->gf; y->ga = x->ga; y->pts = x->pts;
+        }
+        st->gp.nst[0] = se->bank->n_kept;
+    }
+    return 1;
+}
+
+int32_t sr_contest_entrants(sr_state *st, const sr_league *lg, const sr_season *se, int32_t nt,
+                            const int32_t *divs, const sr_row *const *tables, const int32_t *ns, int32_t pidx,
+                            uint16_t *team, uint16_t *glob, uint8_t *prio, uint16_t *pts, const uint8_t **spec)
+{
+    const u8 *s = sr_spec_at(lg, pidx);
+    if (!s || nt < 1 || nt > 10 || !ce_tables(st, se, nt, divs, tables, ns))
+        return 0;
+    int *club = st->gp.ce_club;
+    const u8 fresh = st->gp.ssb->fresh;
+    st->gp.by_rec = s[5] & 2;
+    const int ok = s[1] <= SR_CONTEST_MAX && resolve_entrants(st, s, -1, club);
+    st->gp.ssb->fresh = fresh;                  /* (read only: the season end uses them again) */
+    if (!ok)
+        return 0;
+    const u8 *e = s + 6;
+    for (int32_t i = 0; i < s[1]; i++) {
+        team[i] = gp_row(st, club[i])->team;
+        glob[i] = gp_row(st, club[i])->glob;
+        pts[i] = gp_row(st, club[i])->pts;
+        prio[i] = (u8)(e[4 * i] == 3 ? e[4 * i + 2] - 1 : club[i] > 255 ? 255 : club[i]);
+    }
+    if (st->gp.by_rec)                          /* (the better record hosts: the ranks by it, ko_build) */
+        for (int32_t i = 0; i < s[1]; i++) {
+            prio[i] = 0;
+            for (int32_t j = 0; j < s[1]; j++)
+                if (j != i && gp_better(st, club[j], club[i])) prio[i]++;
+        }
+    st->gp.ce_n = s[1];
+    *spec = s;
+    return s[1];
+}
+
+/* gplay.c playable: a knockout a career club can play (promotion, placement, play-out, title,
+ * continental, stage; entrants by place or stage, members entrants / W / L, no group round, a
+ * best-of-three not last). */
+static int gp_playable(const u8 *s)
+{
+    int n = s[1], nr = s[2], nt = 0;
+    const u8 *e = s + 6, *r = e + 4 * n;
+    if ((s[0] < 1 || (s[0] > 6 && s[0] != K_STAGE) || s[0] == 2) || n > 24 || nr > 8 || nr < 1)
+        return 0;
+    for (int i = 0; i < n; i++)
+        if (e[4 * i] != 0 && e[4 * i] != 3 && e[4 * i] != 5 && e[4 * i] != 6) return 0;
+    for (int k = 0; k < nr; k++) {
+        if (r[1] < 1 || r[1] > 3 || (r[1] == 3 && k == nr - 1)) return 0;
+        for (int i = 0; i < 2 * r[0]; i++)
+            if ((r[6 + i] >= BEST_LOSER && r[6 + i] < 0x80) || (k == 0 && r[6 + i] >= 0x80)) return 0;
+        nt += r[0];
+        r += 6 + 2 * r[0];
+    }
+    return nt <= 24;
+}
+
+int32_t sr_group_shape_of(const uint8_t *s, sr_group_shape *o)
+{
+    sr_group_shape x;
+    int n, nr, k = 0, ent = 0;
+    const u8 *r;
+    if (!s) return 0;
+    n = s[1]; nr = s[2]; r = s + 6 + 4 * n;
+    if (s[0] != K_TITLE || nr < 2) return 0;
+    for (int i = 0; i < n; i++) if (s[6 + 4 * i] != 0) return 0;
+    x.g = 0; x.m = 0; x.meet = 0; x.nk = 0; x.q = 0;
+    for (; k < nr && (r[1] & 0x80) && (r[1] & 0x7F); k++) {
+        if (x.g && (r[0] != x.m || (r[1] & 0x7F) != x.meet)) return 0;
+        x.m = r[0]; x.meet = r[1] & 0x7F; x.g++;
+        for (int i = 0; i < r[0]; i++) if (r[6 + i] != ent++) return 0;
+        r += 6 + 2 * r[0];
+    }
+    for (; k < nr && r[1] == 0x80; k++) r += 6 + 2 * r[0];
+    for (; k < nr; k++) {
+        if ((r[1] & 0x80) || r[1] < 1 || r[1] > 2 || x.nk >= 4) return 0;
+        if (!x.nk) x.q = 2 * r[0];
+        x.kt[x.nk] = r[0];
+        x.kb[x.nk++] = (u8)((r[1] == 2 ? 0x80 : 0x01) | (r[3] == LV_PENS ? 0x04 : r[3] == LV_ET_PENS ? 0x14 :
+                                                       r[3] == LV_ET_BETTER ? 0x10 : 0));
+        r += 6 + 2 * r[0];
+    }
+    if (x.g < 2 || !x.nk || ent != n || x.q < x.g || x.q > 2 * x.g || x.g * x.m > 24) return 0;
+    if (o) {
+        o->g = x.g; o->m = x.m; o->meet = x.meet; o->nk = x.nk; o->q = x.q;
+        for (int i = 0; i < 4; i++) { o->kt[i] = i < x.nk ? x.kt[i] : 0; o->kb[i] = i < x.nk ? x.kb[i] : 0; }
+    }
+    return 1;
+}
+
+int32_t sr_club_playoff(sr_state *st, const sr_league *lg, const sr_season *se, int32_t d, const sr_row *table,
+                        int32_t n, uint16_t club, uint8_t *other, int32_t *nother)
+{
+    const sr_row *tables[1] = { table };
+    const int32_t divs[1] = { d }, ns[1] = { n };
+    int m = -1;
+    *nother = 0;
+    if (!ce_tables(st, se, 1, divs, tables, ns))
+        return -1;
+    for (int32_t k = 0; k < n; k++)
+        if (table[k].team == club) m = k;
+    if (m < 0)
+        return -1;
+    const u8 fresh = st->gp.ssb->fresh;
+    int32_t found = -1;
+    for (int32_t pidx = 0; found < 0; pidx++) {
+        const u8 *s = sr_spec_at(lg, pidx), *e = s ? s + 6 : 0;
+        if (!s)
+            break;
+        const int t2 = sr_group_shape_of(s, 0);
+        if ((!gp_playable(s) && !t2) || s[0] == K_STAGE)
+            continue;                           /* (stage titles: built mid-season) */
+        int in = 0, ok = 1, no = 0;
+        st->gp.by_rec = s[5] & 2;
+        for (int i = 0; i < s[1]; i++) {
+            const int c = ent_code(st, e + 4 * i, -1);
+            if (c == d * GT + m) in = 1;
+        }
+        if (!in)
+            continue;
+        for (int i = 0; i < s[1] && ok; i++) {  /* the other divisions: simulated now (at most 2; a group */
+            const int dd = e[4 * i + 1];        /*  contest's at most 9) */
+            int j = 0;
+            if (dd == d) continue;
+            while (j < no && other[j] != dd) j++;
+            if (j == no) { if (no < (t2 ? 9 : 2)) other[no++] = (u8)dd; else ok = 0; }
+        }
+        if (!ok)
+            continue;
+        *nother = no;
+        found = t2 ? -2 - pidx : pidx;
+    }
+    st->gp.ssb->fresh = fresh;                  /* (read only) */
+    return found;
+}
+
+/* The contest's round-1 ties simulated at its build, the career club waiting in round 1 (the
+ * Mod's ko_build 'presim', build_game): its draw seeded as hseed (the play-off index, the
+ * entrants' team words), entrants a, b of the last sr_contest_entrants; the winner (a or b). */
+void sr_contest_seed(sr_state *st, int32_t pidx, const uint16_t *team, int32_t n)
+{
+    u32 h = (u32)pidx;
+    for (int32_t i = 0; i < n; i++)
+        h = h * 31 + team[i];
+    st->gp.rng = h;
+}
+
+int32_t sr_contest_tie(sr_state *st, int32_t a, int32_t b, int32_t legs, int32_t host, int32_t level)
+{
+    if (a < 0 || b < 0 || a >= st->gp.ce_n || b >= st->gp.ce_n)
+        return a;
+    const int ca = st->gp.ce_club[a], cb = st->gp.ce_club[b];
+    const int w = legs == 3 ? gp_series(st, ca, cb, level) : gp_tie(st, ca, cb, legs, host, level);
+    return w == ca ? a : b;
+}

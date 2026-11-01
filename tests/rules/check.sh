@@ -50,15 +50,16 @@ else
 fi
 PN=$((N / 10)); np=0; bad=""
 while read -r code shape; do
-    "$OUT/kmod" "$T/specs/$code.spec" "$PN" "$shape" > "$OUT/p_mod.txt"
-    "$OUT/kours" "$T/specs/$code.spec" "$PN" "$shape" > "$OUT/p_ours.txt"
+    "$OUT/kmod" "$T/specs/$code.spec" "$PN" "$shape" ko > "$OUT/p_mod.txt"
+    "$OUT/kours" "$T/specs/$code.spec" "$PN" "$shape" ko > "$OUT/p_ours.txt"
+    cat "$OUT/p_ours.txt" >> "$OUT/p_all.txt"
     if cmp -s "$OUT/p_mod.txt" "$OUT/p_ours.txt"; then np=$((np + 1)); else
         bad="$bad $code"
         [ -n "${VERBOSE:-}" ] && { echo "  $code ($shape):"; diff "$OUT/p_mod.txt" "$OUT/p_ours.txt" | head -3; }
     fi
 done < $T/specs/shapes.txt
 if [ -z "$bad" ]; then
-    echo "PASS: every pack's knockouts ($np leagues), $PN seasons each: every move, champion, stage title and SEASON WINNERS page the Mod's"
+    echo "PASS: every pack's knockouts ($np leagues), $PN seasons each: every move, champion, stage title and SEASON WINNERS page the Mod's; the career club's contest built as its ko_build ($(grep -o "K[0-9]*:" "$OUT"/p_all.txt | wc -l) contests, their round-1 ties simulated at the build), every club's play-off chosen as its gp_need"
 else
     echo "FAIL: the knockouts of$bad differ from the Mod's ($np equal; VERBOSE=1 for the first seasons)"
     exit 1
