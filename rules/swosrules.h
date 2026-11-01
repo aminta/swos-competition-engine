@@ -88,6 +88,8 @@ typedef struct {
     const uint16_t *second_team;    /* each B team's team word, or 0: a row is found by it as well as by
                                        its global number (the Mod 4.0.5's SEC_TAB: rows of a division
                                        simulated early may carry no global number) */
+    uint32_t        spec_len;       /* spec's bytes: given, the rules check it first (sr_spec_check) and
+                                       refuse it if it is not sound; 0 -- a spec the game compiled in itself */
 } sr_league;
 
 /* A league's levels when some are groups of parallel divisions (Serie C's, Serie D's): where each
@@ -268,6 +270,31 @@ int32_t sr_cup_entrants(const sr_quota *q, int32_t nq, int32_t n, int32_t nclubs
                         const uint8_t *division, const uint8_t *place, const uint8_t *level,
                         int32_t career_slot, uint16_t *out);
 
+/* ---- Untrusted input (sr_check.c): a spec written by hand, a damaged save -- checked once, up
+ * front, so the rules' code (the Mod's, line for line, its fixed buffers) needs no check ---- */
+
+enum {
+    SR_CHECK_OK = 0,
+    SR_CHECK_TRUNCATED,     /* the bytes end inside a field */
+    SR_CHECK_COUNT,         /* a count over its buffer (entrants, ties, a table's clubs ...) */
+    SR_CHECK_INDEX,         /* an index past what exists (a division, a member, a stage table ...) */
+    SR_CHECK_VALUE          /* a byte with no meaning (a kind, an entrant type, legs, host, level ...) */
+};
+typedef struct {
+    int32_t     code;       /* SR_CHECK_* */
+    int32_t     pidx;       /* the play-off, -1 none */
+    uint32_t    offset;     /* the byte (spec) or the element (state) */
+    const char *field;      /* its name */
+} sr_check_error;
+
+/* A pack's knockouts, len bytes, for a league of `divisions` (0: any up to SR_DIVS): SR_CHECK_OK, or
+ * the first fault (err, optional). */
+int32_t sr_spec_check(const uint8_t *spec, uint32_t len, int32_t divisions, sr_check_error *err);
+/* A league's rules (its spec too when spec_len is given) and a season's saved state (the stage
+ * tables, the promedio, the SEASON WINNERS page, the levels). */
+int32_t sr_league_check(const sr_league *lg, sr_check_error *err);
+int32_t sr_season_check(const sr_season *se, sr_check_error *err);
+
 /* ---- The Coppa Italia Serie D: a later season's first two rounds (sr_cupd.c: gplay.c cd_rank,
  * cd_season, cd_make) ---- */
 
@@ -303,5 +330,7 @@ void sr_cupd_note_arrival(sr_cupd_end *e, uint16_t slot);
  * clubs. */
 int32_t sr_cupd_make(const sr_cupd_end *e, uint32_t season, uint8_t rounds, uint8_t first, uint8_t groups,
                   int32_t nslots, const uint8_t *division, const uint16_t *word, sr_cupd_rounds *out);
+/* (-1: rounds outside 2..8 -- a first round of more than 64 ties --, or first + groups past the
+ * league's divisions: nothing made) */
 
 #endif

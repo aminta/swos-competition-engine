@@ -84,6 +84,8 @@ int32_t sr_cupd_make(const sr_cupd_end *e, uint32_t season, uint8_t rounds, uint
     u8 grp[SR_CLUB_SLOTS], sg[256], pg[SR_CUPD_PRE];
     int32_t n = 0;
     u32 rng = season * 104729u + 17;
+    if (rounds < 2 || rounds > 8 || first + groups > SR_DIVS)   /* (sr_check.c: 1 << (rounds - 2) ties fit) */
+        return -1;
     if (nslots > SR_CLUB_SLOTS)
         nslots = SR_CLUB_SLOTS;
     for (int32_t i = 0; i < nslots; i++) {

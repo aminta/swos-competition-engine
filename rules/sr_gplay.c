@@ -752,6 +752,8 @@ static void gp_season(sr_state *st, const sr_league *lg)
 int32_t sr_knockouts(sr_state *st, const sr_league *lg, const sr_season *se)
 {
     const int32_t before = st->nmv;
+    if (sr_league_check(lg, 0) || sr_season_check(se, 0))
+        return -1;                              /* (not sound: nothing played) */
     gp_begin(st, se);
     st->gp.nst[0] = st->gp.nst[1] = 0;          /* (the kept 'keep' table, if any) */
     {
@@ -828,7 +830,7 @@ int32_t sr_contest_entrants(sr_state *st, const sr_league *lg, const sr_season *
                             const int32_t *divs, const sr_row *const *tables, const int32_t *ns, int32_t pidx,
                             uint16_t *team, uint16_t *glob, uint8_t *prio, uint16_t *pts, const uint8_t **spec)
 {
-    const u8 *s = sr_spec_at(lg, pidx);
+    const u8 *s = sr_league_check(lg, 0) || sr_season_check(se, 0) ? 0 : sr_spec_at(lg, pidx);
     if (!s || nt < 1 || nt > 10 || !ce_tables(st, se, nt, divs, tables, ns))
         return 0;
     int *club = st->gp.ce_club;
@@ -918,7 +920,7 @@ int32_t sr_club_playoff(sr_state *st, const sr_league *lg, const sr_season *se, 
     const int32_t divs[1] = { d }, ns[1] = { n };
     int m = -1;
     *nother = 0;
-    if (!ce_tables(st, se, 1, divs, tables, ns))
+    if (sr_league_check(lg, 0) || sr_season_check(se, 0) || !ce_tables(st, se, 1, divs, tables, ns))
         return -1;
     for (int32_t k = 0; k < n; k++)
         if (table[k].team == club) m = k;

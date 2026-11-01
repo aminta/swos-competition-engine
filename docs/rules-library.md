@@ -67,7 +67,34 @@ career club played itself comes back through `sr_host`'s callbacks (all optional
 | `sr_cup_entrants` | `gplay.c` `cf_build` (4.0.1) | a cup's clubs from the second season: the real list's shape per division, taken from where the clubs are now |
 | `sr_cupd_keep_place`, `sr_cupd_note_arrival`, `sr_cupd_make` | `gplay.c` `cd_rank`, `cd_season`, `cd_make` | the Coppa Italia Serie D's later seasons: the entry order from the season end, the preliminary round and the first round of 64 |
 | `sr_b_teams` | `gplay.c` `sec_post` | the B-team rules alone (in levels, a level of groups counting as one; the Mod's division deltas are the same moves) |
+| `sr_spec_check`, `sr_league_check`, `sr_season_check` | -- | untrusted input, checked once: a spec written by hand, a damaged save (§3a) |
 | `sr_knockouts` | `gplay.c` `gp_season` | every pack's knockouts, whole: each kind and entrant, group rounds, the drawn pot, the promedio; titles, continental places and stage titles in `st.gp.res` / `st.gp.sres`; the SEASON WINNERS page |
+
+### 3a. Untrusted input (`rules/sr_check.c`)
+
+The rules are the Mod's code with the Mod's fixed buffers: a play-off's entrants in 64 slots, a
+round's members in 128, a group's rows in 32, a stage table's in 32. The Mod's own tools never
+exceed them; a spec a user wrote, or a damaged save, can. So the input is checked once, up front,
+and the play code stays the Mod's line for line:
+
+- `sr_spec_check(spec, len, divisions, &err)`: a pack's knockouts -- cut short, a count over its
+  buffer (entrants, ties, group members, placings), an index past what exists (a division, a
+  member: an entrant, a placing, a tie's winner or loser not there yet), a byte with no meaning
+  (kind, entrant type, legs, host, level) -- refused with `SR_CHECK_TRUNCATED` / `COUNT` / `INDEX` /
+  `VALUE`, the play-off, the byte and the field's name;
+- `sr_league.spec_len`: given, every entry point (`sr_italy`, `sr_knockouts`, `sr_club_playoff`,
+  `sr_contest_entrants`) checks the league first (`sr_league_check`, the spec included) and the
+  season's saved state (`sr_season_check`: the stage tables' and the kept table's clubs, the
+  promedio's, the SEASON WINNERS entries, the levels) and refuses what is not sound -- nothing is
+  played (`sr_knockouts` returns -1); 0, a spec the game compiled in itself, as before;
+- `sr_cupd_make`: rounds outside 2..8 (a first round of more than 64 ties) refused (-1).
+
+`make test` runs `tests/rules/spec_check.c` under AddressSanitizer and UBSan: every real spec
+accepted; each cut short anywhere, and targeted faults, refused with their codes; random faults --
+what the check lets through is played (the season end, the contests, each club's play-off) over
+random tables, within every buffer (31,312 of them over the 4.0.5 and 4.0.2 specs, once, at ten
+times `make test`'s count). The i486 check builds one object per module (no `-r` link: macOS has no
+ELF linker) and requires every symbol one needs to be another's.
 
 ## 4. Modules, one pull request each
 
