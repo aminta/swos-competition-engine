@@ -228,7 +228,7 @@ static void dp_season(sr_state *st)
 int32_t sr_italy(sr_state *st, const sr_league *lg, const sr_season *se)
 {
     st->nmv = st->dp_moves = 0;         /* (the season end's first rules: the moves start here) */
-    if (!lg->italy)
+    if (!lg->italy || sr_league_check(lg, 0))
         return 0;
     st->dp.ng = lg->groups;
     st->dp.po_win = se->po_win;
