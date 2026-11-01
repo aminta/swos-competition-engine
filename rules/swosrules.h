@@ -227,4 +227,24 @@ void sr_final_moves(sr_state *st, const sr_league *lg, const sr_levels *lv, uint
  * into its level, the best placed relegated of its division staying. */
 void sr_b_teams(sr_state *st, const sr_league *lg, const sr_levels *lv, uint16_t base);
 
+/* ---- A cup's clubs from the second season on (sr_cups.c: gplay.c cf_build, the Mod 4.0.1) ---- */
+
+#define SR_CUP_CLUBS 64             /* a cup's entrants */
+#define SR_CLUB_SLOTS 512           /* a country's clubs (its slots: two team files' at most) */
+
+/* From the cup's real (first-season) list: per division, how many of its clubs, how many of
+ * them with a bye. */
+typedef struct { uint8_t division, clubs, byes; } sr_quota;
+
+/* A cup's clubs this season. The league's nclubs clubs are each a slot and this season's division
+ * (after the moves); place[slot] is last season's (place | level << 5, 0 none) or the whole table 0
+ * when last season's places are not this league's last season; level[d] a division's level (a
+ * level of groups one). Each division's quota is taken in order -- relegated into it, stayed,
+ * promoted, without a place; then the place, the slot --, the career club first when it is in it.
+ * The slots in order (round 1's clubs, then the byes); their count, or 0 when it must play the
+ * real list (a division with fewer clubs than its quota, or not n in all). */
+int32_t sr_cup_entrants(const sr_quota *q, int32_t nq, int32_t n, int32_t nclubs, const uint16_t *slot,
+                        const uint8_t *division, const uint8_t *place, const uint8_t *level,
+                        int32_t career_slot, uint16_t *out);
+
 #endif
