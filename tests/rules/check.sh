@@ -17,9 +17,18 @@ T=tests/rules
 OUT=$(mktemp -d)
 trap 'rm -rf "$OUT"' EXIT
 C="$CC -O1 -w"
+# The Mod's own C, built as it is -- with its automatic variables given a value where the compiler
+# can: the Mod 4.0.5's per-play-off seed (gplay.c gp_season, rc19) reads club[i] of an entrant that
+# failed its check and never set it (San Marino's 'europe' entrants past its 6 clubs), which here
+# was a random address -- a crash, once in a few runs. Pattern-filled it is negative, i.e. what the
+# library does (no club). Reported to the Mod (2026-11-01).
+MC="$C"
+if echo 'int main(void){return 0;}' | $CC -ftrivial-auto-var-init=pattern -x c -o /dev/null - 2>/dev/null; then
+    MC="$C -ftrivial-auto-var-init=pattern"
+fi
 
 # The Italian rules (sr_italy = dplay.c dp_season): Serie B and Serie C's play-offs, play-outs.
-$C -DDPLAY_C="\"$MOD/tools/dplay.c\"" -o "$OUT/italy_mod" $T/italy_mod.c
+$MC -DDPLAY_C="\"$MOD/tools/dplay.c\"" -o "$OUT/italy_mod" $T/italy_mod.c
 $C -Irules -o "$OUT/italy_ours" $T/italy_ours.c rules/sr_dplay.c
 "$OUT/italy_mod" "$N" > "$OUT/italy_mod.txt"
 "$OUT/italy_ours" "$N" > "$OUT/italy_ours.txt"
@@ -35,8 +44,8 @@ fi
 # both steps, every move, result, stage title and SEASON WINNERS page --, then every pack's
 # knockouts (tests/rules/specs: the Mod's compile_spec bytes of each World 2026-27 league, no
 # names) over random tables of that league's shape, its stage tables given.
-$C -DDPLAY_C="\"$MOD/tools/dplay.c\"" -c -o "$OUT/kmod_dp.o" $T/knockouts_mod_dp.c
-$C -DGPLAY_C="\"$MOD/tools/gplay.c\"" -c -o "$OUT/kmod_gp.o" $T/knockouts_mod_gp.c
+$MC -DDPLAY_C="\"$MOD/tools/dplay.c\"" -c -o "$OUT/kmod_dp.o" $T/knockouts_mod_dp.c
+$MC -DGPLAY_C="\"$MOD/tools/gplay.c\"" -c -o "$OUT/kmod_gp.o" $T/knockouts_mod_gp.c
 $C -o "$OUT/kmod" $T/knockouts_mod.c "$OUT/kmod_dp.o" "$OUT/kmod_gp.o"
 $C -Irules -o "$OUT/kours" $T/knockouts_ours.c rules/sr_dplay.c rules/sr_gplay.c
 "$OUT/kmod" $T/specs/ita.spec "$N" > "$OUT/k_mod.txt"
@@ -65,10 +74,54 @@ else
     exit 1
 fi
 
+# The season-end preview (gplay.c GP_PRE, 4.0.5 rc19): before each season end, the same knockouts
+# previewed -- play-off 0 the career club's own every other season --: moves, titles and the
+# SEASON WINNERS entries it appends, Italy and every pack.
+KO_PRE=1 "$OUT/kmod" $T/specs/ita.spec "$N" > "$OUT/pre_mod.txt"
+KO_PRE=1 "$OUT/kours" $T/specs/ita.spec "$N" > "$OUT/pre_ours.txt"
+cmp -s "$OUT/pre_mod.txt" "$OUT/pre_ours.txt" || { echo "FAIL: Italy's season-end preview"; diff "$OUT/pre_mod.txt" "$OUT/pre_ours.txt" | head -4; exit 1; }
+while read -r code shape; do
+    KO_PRE=1 "$OUT/kmod" "$T/specs/$code.spec" "$PN" "$shape" > "$OUT/pre_mod.txt"
+    KO_PRE=1 "$OUT/kours" "$T/specs/$code.spec" "$PN" "$shape" > "$OUT/pre_ours.txt"
+    cmp -s "$OUT/pre_mod.txt" "$OUT/pre_ours.txt" || { echo "FAIL: $code's season-end preview"; exit 1; }
+done < $T/specs/shapes.txt
+echo "PASS: the season-end preview, Italy ($N seasons) and every pack ($PN each): the Mod's"
+
+# B teams as play-off entrants (gplay.c place_club / sec_inelig): tables.h's two B teams and their
+# first teams at random places (-DKO_BT), passed over by place unless they may play play-offs and go
+# up -- Italy's levels on Italy's knockouts, a level per division on every pack's (the contests too:
+# the Mod given the tables the game has then, its club's divisions only); three settings each:
+# play-offs allowed no higher than level 1, not allowed, allowed at any level.
+nbt=0
+for lv in 2 1; do
+    for v in "1 1" "255 0" "255 1"; do
+        set -- $v
+        D="-DKO_BT=$lv -DKO_BT_TOP=$1 -DKO_BT_FLAGS=$2"
+        $MC $D -DDPLAY_C="\"$MOD/tools/dplay.c\"" -c -o "$OUT/bt_dp.o" $T/knockouts_mod_dp.c
+        $MC $D -DGPLAY_C="\"$MOD/tools/gplay.c\"" -c -o "$OUT/bt_gp.o" $T/knockouts_mod_gp.c
+        $C $D -o "$OUT/btmod" $T/knockouts_mod.c "$OUT/bt_dp.o" "$OUT/bt_gp.o"
+        $C $D -Irules -o "$OUT/btours" $T/knockouts_ours.c rules/sr_dplay.c rules/sr_gplay.c
+        if [ $lv = 2 ]; then
+            "$OUT/btmod" $T/specs/ita.spec "$PN" > "$OUT/bt_mod.txt"
+            "$OUT/btours" $T/specs/ita.spec "$PN" > "$OUT/bt_ours.txt"
+            cmp -s "$OUT/bt_mod.txt" "$OUT/bt_ours.txt" || { echo "FAIL: B teams in Italy's knockouts (top $1, flags $2)"; exit 1; }
+            nbt=$((nbt + 1))
+        else
+            while read -r code shape; do
+                "$OUT/btmod" "$T/specs/$code.spec" "$PN" "$shape" ko > "$OUT/bt_mod.txt"
+                "$OUT/btours" "$T/specs/$code.spec" "$PN" "$shape" ko > "$OUT/bt_ours.txt"
+                cmp -s "$OUT/bt_mod.txt" "$OUT/bt_ours.txt" || { echo "FAIL: B teams in $code's knockouts (top $1, flags $2)"; exit 1; }
+                nbt=$((nbt + 1))
+            done < $T/specs/shapes.txt
+        fi
+    done
+done
+echo "PASS: B teams as play-off entrants, $nbt leagues and settings, $PN seasons each: every move, result and contest the Mod's"
+
 # The season's moves and the B-team rules (sr_final_moves, sr_b_teams = gplay.c sec_post): built
 # cases, then random ones against the Mod's sec_post -- Italy (levels of groups) and the other
 # countries with B teams (Spain, Germany, the Netherlands, Portugal).
-$C -DGPLAY_C="\"$MOD/tools/gplay.c\"" -o "$OUT/bmod" $T/bteams_mod.c
+$MC -DGPLAY_C="\"$MOD/tools/gplay.c\"" -o "$OUT/bmod" $T/bteams_mod.c
 $C -Irules -o "$OUT/bours" $T/bteams_ours.c rules/sr_post.c
 "$OUT/bours" || exit 1
 "$OUT/bmod" "$N" > "$OUT/b_mod.txt"
@@ -83,7 +136,7 @@ fi
 
 # A cup's clubs from the second season on (sr_cup_entrants = gplay.c cf_build, CF_SEED 1 as
 # released): Italy 2026-27's two cups over random moves, last season's places and career clubs.
-$C -DCF_SEED=1 -DGPLAY_C="\"$MOD/tools/gplay.c\"" -o "$OUT/cmod" $T/cups_mod.c
+$MC -DCF_SEED=1 -DGPLAY_C="\"$MOD/tools/gplay.c\"" -o "$OUT/cmod" $T/cups_mod.c
 $C -Irules -o "$OUT/cours" $T/cups_ours.c rules/sr_cups.c
 "$OUT/cmod" "$N" > "$OUT/c_mod.txt"
 "$OUT/cours" "$N" > "$OUT/c_ours.txt"
@@ -98,7 +151,7 @@ fi
 # The Coppa Italia Serie D's later seasons (sr_cupd_make = gplay.c cd_rank, cd_season, cd_make):
 # random season ends of Italy 2026-27 (moves, Serie D's tables, the pool's arrivals), each later
 # season's preliminary round and first round of 64.
-$C -DGPLAY_C="\"$MOD/tools/gplay.c\"" -o "$OUT/dmod" $T/cupd_mod.c
+$MC -DGPLAY_C="\"$MOD/tools/gplay.c\"" -o "$OUT/dmod" $T/cupd_mod.c
 $C -Irules -o "$OUT/dours" $T/cupd_ours.c rules/sr_cupd.c
 "$OUT/dmod" "$N" > "$OUT/d_mod.txt"
 "$OUT/dours" "$N" > "$OUT/d_ours.txt"

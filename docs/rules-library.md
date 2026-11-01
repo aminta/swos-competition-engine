@@ -5,7 +5,8 @@
 > Coppa Italia Serie D. Ognuna è il codice del Mod come OpenSWOS l'ha portato, confrontato con il C
 > del Mod stagione per stagione (`make rules-check MOD=...`).
 
-Status: 2026-10-31, version 1 being moved in, one module per pull request (§4).
+Status: 2026-11-01, version 1 being moved in, one module per pull request (§4); every module the
+Mod **4.0.5**'s (tag v4.0.5, main 77b3767; §4a).
 
 ## 1. What it is
 
@@ -73,20 +74,53 @@ career club played itself comes back through `sr_host`'s callbacks (all optional
 | # | Module | The Mod's | Test (`tests/rules/check.sh`) |
 |---|---|---|---|
 | 1 | The Italian rules | `dplay.c` `dp_season` | 20,000 random seasons of Italy 2026-27's divisions: every move the Mod's |
-| 2 | The pack's knockouts | `gplay.c` `gp_season` | Italy's whole season end, 20,000 seasons; then each of the 34 leagues with knockouts, 2,000 seasons of its own shape with stage tables: every move, result, stage title and SEASON WINNERS page the Mod's |
+| 2 | The pack's knockouts | `gplay.c` `gp_season` | Italy's whole season end, 20,000 seasons; then each of the 35 leagues with knockouts (4.0.5), 2,000 seasons of its own shape with stage tables: every move, result, stage title and SEASON WINNERS page the Mod's |
 | 3 | The career club's contests | `gplay.c` `ko_build`, `gp_need`, `t2_shape` | the same seasons: each play-off's contest built for a waiting club (30,667: entrants, ranks, the round-1 ties simulated), every club's play-off chosen, the Mod's |
 | 4 | B teams, the season's moves | `gplay.c` `sec_post` | 5 built cases, then 20,000 random ones in each of Italy (levels of groups), Spain, Germany, the Netherlands, Portugal: every move the Mod's |
 | 5 | The cups' clubs from the second season | `gplay.c` `cf_build` (`CF_SEED` 1) | Italy 2026-27's two cups over 20,000 random seasons (moves, last season's places, career clubs): both lists the Mod's |
 | 6 | The Coppa Italia Serie D's later seasons | `gplay.c` `cd_rank`, `cd_season`, `cd_make` | 20,000 random season ends of Italy 2026-27: every later season's first two rounds the Mod's |
 
+### 4a. The Mod 4.0.5 (pull request 7)
+
+`gplay.c` from v4.0.2 to v4.0.5, in the modules above (`dplay.c`, `cf_build` and the Coppa D's part
+were unchanged; d3c1221 was already in):
+
+- **86e23df (rc19)**: each play-off draws from its own random stream, seeded from its entrants (team
+  words and points) -- so the **season-end preview** (`sr_season.preview`, `own_pi`: the Mod's
+  `GP_PRE`, this season's titles decided at the career club's league end; no promedio, no new stage
+  tables, its SEASON WINNERS entries appended after the caller's marker) and the season end decide
+  the same.
+- **7c22855 (New Zealand)**: entrant type 8, a given club by its team word (absent from the tables:
+  left out of a group round -- NZ's A-League reserves); a knockout round after a group decides the
+  title (the Grand Final); `skip_second` (`PO_SKIP2`); `winners` in flag bits 4-6; a group shape of
+  one group; SEC_TAB's entries 8 bytes (+ the B team's team word: `sr_league.second_team`).
+- **PO_SUPER**: Mexico's Campeon de Campeones, the next season's supercup -- not played at the
+  season end, not a contest.
+- **B teams as play-off entrants** (`place_club` / `sec_inelig`, older than 4.0.2, never in the
+  library: the tests gave no B teams): a B team is passed over by place (not in a play-out) unless
+  its league's B teams may play play-offs and it may go up; `sr_season.base` and `levels` give it the
+  global numbers and the levels.
+
+Tested against the Mod's C at 77b3767 (`check.sh`: every part, the preview and 108 B-team leagues and
+settings besides), and against Davide's own 4.0.5 goldens (his C through these harnesses at d02210b,
+N = 20,000): the Italian rules, Italy's season end, the cups, the Coppa D and all 34 packs, every
+line the same.
+
+The Mod's C is built for the test with its locals pattern-filled where the compiler can
+(`-ftrivial-auto-var-init=pattern`): 4.0.5's per-play-off seed reads `club[i]` of an entrant whose
+check failed and never set it (San Marino's 'europe' entrants past its 6 clubs) -- a random address,
+a crash once in a few runs; pattern-filled it is negative, the library's "no club".
+
 **Not in yet**, each waiting for its comparison:
 
 - the rest of the Coppa D's pure part -- the table walk (`cd_side`, `cd_raw`), the hosts, the
-  simulated ties (`cd_str`, `cd_sim`), a round's draw: to be checked against the Mod's 4.0.3, which
-  has the drawn-round fix (OpenSWOS `docs/RULES_LIBRARY.md` §5); 4.0.2 still reads a drawn round's
-  sides below its draw;
+  simulated ties (`cd_str`, `cd_sim`), a round's draw: to be checked against the Mod 4.0.5, which
+  has the drawn-round fix (d3c1221);
 - the parallel groups (OpenSWOS `src/league_groups.c`, the only C version): once compared with the
-  Mod's `pgroups` on random seasons;
+  Mod 4.0.5's `pgroups` on random seasons (4.0.5: each region a first and a second choice, from the
+  real groups of the last ten seasons);
+- `sec_post`'s next-season flags (4.0.5 `SEC_BQ`: may each B team go up next season, the zone
+  colours): the game's, not yet the library's;
 - the pool's queue (OpenSWOS `src/team_pool.c`): once compared with the Mod's RI section.
 
 ## 5. Tests
@@ -96,10 +130,12 @@ are and the library, gives both the same random seasons (`tests/rules/tables.h`:
 `rand()`) and compares every result. Without a checkout it is skipped. `make test` checks the i486
 object.
 
-`tests/rules/specs/` holds each World 2026-27 league's knockouts as the Mod's `gplay.py
-compile_spec` makes them (`shapes.txt`: their divisions' sizes): bytes of the format only --
-entrant places, rounds, legs --, no names, made from the Mod's packs so the test needs no world
-data.
+`tests/rules/specs/` holds each World 2026-27 league's knockouts as the Mod's own tools build them
+(`shapes.txt`: their divisions' sizes): bytes of the format only -- entrant places, rounds, legs, team
+words --, no names, made from the Mod's packs so the test needs no world data. Compiled with
+`mkseason.py`'s `Pack.gplay` (`gplay.py compile_spec`, a 'club' entrant by its team word) from the
+Mod's World 2026-27 packs, 4.0.5 (data `world5tm-403c11`): `tests/rules/specs/make_specs.py MOD
+PACKS` rebuilds them (the packs are not in this repository).
 
 ## 6. Licence and credits
 

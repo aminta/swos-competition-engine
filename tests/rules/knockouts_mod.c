@@ -9,6 +9,7 @@ void mod_dp(const unsigned short (*rows)[32][6], const int *n, unsigned short cu
 void mod_gp(const unsigned short (*rows)[32][6], const int *n, int nd, const unsigned char *sp, FILE *out);
 void mod_mgr(unsigned short team);
 void mod_ko_all(FILE *out);
+void mod_pre(const unsigned short (*rows)[32][6], const int *n, int nd, const unsigned char *sp, int own, FILE *out);
 void mod_stages(const unsigned short (*r)[32][6], const int *n, int nk, const unsigned short (*keep)[6], int fresh);
 int main(int argc, char **argv)
 {
@@ -19,6 +20,9 @@ int main(int argc, char **argv)
     if (argc > 3) set_shape(argv[3]);
     for (unsigned it = 0; it < N; it++) {
         make_tables(it, t, n);
+#ifdef KO_BT
+        bt_place(it, t, n);
+#endif
         for (int d = 0; d < ND; d++) for (int k = 0; k < n[d]; k++) {
             rows[d][k][0] = t[d][k].team; rows[d][k][1] = t[d][k].glob; rows[d][k][2] = t[d][k].won;
             rows[d][k][3] = t[d][k].gf; rows[d][k][4] = t[d][k].ga; rows[d][k][5] = t[d][k].pts;
@@ -36,6 +40,11 @@ int main(int argc, char **argv)
             mod_stages((const unsigned short (*)[32][6])sr, st.n, st.nkeep, (const unsigned short (*)[6])kr, st.fresh);
         }
         printf("%u", it);
+        if (getenv("KO_PRE")) {                 /* (the preview first: play-off 0 the club's own every other season) */
+            const int d = (int)(it % ND);
+            mod_mgr(n[d] ? t[d][(it / ND) % n[d]].team : 0);
+            mod_pre((const unsigned short (*)[32][6])rows, n, ND, spec, it % 2 ? 0xFF : 0, stdout);
+        }
         if (!GP_ONLY) mod_dp((const unsigned short (*)[32][6])rows, n, cup_winner(it, t, n), stdout);
         {                                       /* (the career club: a club of each division in turn) */
             const int d = (int)(it % ND);
