@@ -19,6 +19,7 @@ and the **contract tests** both sides must pass (`docs/contract-tests.md`).
 
 | Path | Content |
 |---|---|
+| `rules/` | the rules library: the Mod's season-end and cup rules both games play, one C copy, freestanding (`docs/rules-library.md`) |
 | `format/` | the shared reference, C99 freestanding: `.SWC` big-endian accessors, record layouts, reference reader; PCG32, substreams, FNV-1a |
 | `swcc/` | the spec compiler / validator (hosted C11): JSON + host profile -> diagnostics + binary spec `.SWC` |
 | `schema/v1.md` | spec schema swc/1: the frozen primitives list, what S0 validates |
@@ -33,6 +34,7 @@ make            # build/swcc, build/libswcc.so, the tests, the i486 freestanding
 build/swcc validate SPEC.json [--profile profiles/swos9697.json]
 build/swcc compile  SPEC.json -o OUT.SWC
 build/swcc dump     OUT.SWC
+make rules-check MOD=../swos-9697-mod    # the rules library against the Mod's own C
 ```
 
 ## Who uses it
@@ -65,6 +67,7 @@ build/swcc dump     OUT.SWC
 
 | Document | Content |
 |---|---|
+| [docs/rules-library.md](docs/rules-library.md) | the rules library: the Mod's rules both games link, module by module, each checked against the Mod's C |
 | [docs/format.md](docs/format.md) | the compiled spec (.SWC): big-endian, one file for DOS, SDL and Amiga; layouts; C arrays |
 | [docs/contract-tests.md](docs/contract-tests.md) | **the contract tests**: YAML scenarios + golden files every engine implementation must pass |
 | [docs/competition-engine-proposal.md](docs/competition-engine-proposal.md) | spec model, API, determinism, persistence, four real formats (Liga MX, Serie C, UEFA Champions League, Argentina) |
