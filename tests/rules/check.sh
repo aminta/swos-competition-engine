@@ -74,6 +74,37 @@ else
     exit 1
 fi
 
+# B teams as play-off entrants (gplay.c place_club / sec_inelig): tables.h's two B teams and their
+# first teams at random places (-DKO_BT), passed over by place unless they may play play-offs and go
+# up -- Italy's levels on Italy's knockouts, a level per division on every pack's (the contests too:
+# the Mod given the tables the game has then, its club's divisions only); three settings each:
+# play-offs allowed no higher than level 1, not allowed, allowed at any level.
+nbt=0
+for lv in 2 1; do
+    for v in "1 1" "255 0" "255 1"; do
+        set -- $v
+        D="-DKO_BT=$lv -DKO_BT_TOP=$1 -DKO_BT_FLAGS=$2"
+        $MC $D -DDPLAY_C="\"$MOD/tools/dplay.c\"" -c -o "$OUT/bt_dp.o" $T/knockouts_mod_dp.c
+        $MC $D -DGPLAY_C="\"$MOD/tools/gplay.c\"" -c -o "$OUT/bt_gp.o" $T/knockouts_mod_gp.c
+        $C $D -o "$OUT/btmod" $T/knockouts_mod.c "$OUT/bt_dp.o" "$OUT/bt_gp.o"
+        $C $D -Irules -o "$OUT/btours" $T/knockouts_ours.c rules/sr_dplay.c rules/sr_gplay.c
+        if [ $lv = 2 ]; then
+            "$OUT/btmod" $T/specs/ita.spec "$PN" > "$OUT/bt_mod.txt"
+            "$OUT/btours" $T/specs/ita.spec "$PN" > "$OUT/bt_ours.txt"
+            cmp -s "$OUT/bt_mod.txt" "$OUT/bt_ours.txt" || { echo "FAIL: B teams in Italy's knockouts (top $1, flags $2)"; exit 1; }
+            nbt=$((nbt + 1))
+        else
+            while read -r code shape; do
+                "$OUT/btmod" "$T/specs/$code.spec" "$PN" "$shape" ko > "$OUT/bt_mod.txt"
+                "$OUT/btours" "$T/specs/$code.spec" "$PN" "$shape" ko > "$OUT/bt_ours.txt"
+                cmp -s "$OUT/bt_mod.txt" "$OUT/bt_ours.txt" || { echo "FAIL: B teams in $code's knockouts (top $1, flags $2)"; exit 1; }
+                nbt=$((nbt + 1))
+            done < $T/specs/shapes.txt
+        fi
+    done
+done
+echo "PASS: B teams as play-off entrants, $nbt leagues and settings, $PN seasons each: every move, result and contest the Mod's"
+
 # The season's moves and the B-team rules (sr_final_moves, sr_b_teams = gplay.c sec_post): built
 # cases, then random ones against the Mod's sec_post -- Italy (levels of groups) and the other
 # countries with B teams (Spain, Germany, the Netherlands, Portugal).

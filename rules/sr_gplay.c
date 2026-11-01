@@ -346,7 +346,9 @@ static void pot_perm(sr_state *st, const u8 *s, int *pm)
 /* A play-off's entrants -> clubs (division * GT + place), as gp_season resolves them; the
  * previous play-off's loser given. 0: one not known. */
 static int team_code(const sr_state *st, u16 team);
-static int ent_code(sr_state *st, const u8 *e, int prev_loser)     /* an entrant -> its club, or -1 */
+static int place_code(const sr_state *st, const sr_league *lg, int d, int p, int kind);
+/* an entrant of a play-off of kind `kind` -> its club, or -1 */
+static int ent_code(sr_state *st, const sr_league *lg, const u8 *e, int prev_loser, int kind)
 {
     const int ty = e[0], d = e[1], p = e[2];
     if (ty == 3) return stage_club(st, d, e[3], p);
@@ -355,18 +357,18 @@ static int ent_code(sr_state *st, const u8 *e, int prev_loser)     /* an entrant
     if (ty == 6) return split_seed(st, d, e[3], p);
     if (ty == 7) return title_seed(st, d, e[3], p);
     if (ty == 8) return team_code(st, (u16)(p | e[3] << 8));    /* (4.0.5: a given club, by its team word) */
-    if (ty != 0 || d >= st->t.nd || p < 1 || p > st->t.n[d]) return -1;
-    return d * GT + p - 1;
+    if (ty != 0) return -1;
+    return place_code(st, lg, d, p, kind);
 }
 
 /* absent: 1 -- the season end's: a club by team word not in these tables is ABSENT (left out of
  * a group round) and does not stop the play-off; 0 -- a contest's: every entrant must be here. */
-static int resolve_entrants(sr_state *st, const u8 *s, int prev_loser, int *club, int absent)
+static int resolve_entrants(sr_state *st, const sr_league *lg, const u8 *s, int prev_loser, int *club, int absent)
 {
     int n = s[1], ok = 1;
     const u8 *e = s + 6;
     for (int i = 0; i < n && i < GN; i++) {
-        club[i] = ent_code(st, e + 4 * i, prev_loser);
+        club[i] = ent_code(st, lg, e + 4 * i, prev_loser, s[0]);
         if (club[i] < 0 && absent && e[4 * i] == 8) club[i] = ABSENT;
         else if (club[i] < 0) ok = 0;
     }
@@ -469,12 +471,69 @@ static int team_code(const sr_state *st, u16 team)  /* a team word -> its club, 
     return -1;
 }
 
-/* gplay.c sec_inelig: a club skipped as a play-off entrant -- a B team, unless its league's B teams
- * may play play-offs and it may go up. (step 3 of the 4.0.5 port: none until the B teams are given) */
+/* ---- B teams as play-off entrants (gplay.c place_club, sec_inelig, sec_up_bad) ---- */
+
+static int lv_of(const sr_levels *lv, int d)    /* division d's level (sr_post.c level_of) */
+{
+    if (!lv || !lv->levels)
+        return d;
+    for (int l = lv->levels - 1; l >= 0; l--)
+        if (d >= lv->first[l])
+            return l;
+    return 0;
+}
+
+static int rec_move(const sr_league *lg, const sr_state *st, int d, int k)  /* the record's move, a level */
+{
+    if (lg->promoted && k < lg->promoted[d] && d > 0) return -1;
+    if (lg->relegated && k >= st->t.n[d] - lg->relegated[d]) return 1;
+    return 0;
+}
+
+static int b_index(const sr_state *st, const sr_league *lg, int c)    /* which B team row c is, or -1 */
+{
+    const sr_row *r = gp_row(st, c);
+    const u16 base = st->gp.se ? st->gp.se->base : 0;
+    for (int i = 0; i < lg->seconds; i++)
+        if (r->glob == (u16)(base + lg->second[i][0]) || (lg->second_team && r->team == lg->second_team[i]))
+            return i;
+    return -1;
+}
+
+/* a row skipped as a play-off entrant (not a play-out): a B team that may not play play-offs, or
+ * may not go up -- above second_top, or into or above its first team's level after the record */
 static int b_inelig(const sr_state *st, const sr_league *lg, int c)
 {
-    (void)st; (void)c;
-    return lg->seconds ? 0 : 0;
+    const int i = lg->seconds ? b_index(st, lg, c) : -1;
+    const sr_levels *lv = st->gp.se ? st->gp.se->levels : 0;
+    if (i < 0)
+        return 0;
+    if (!(lg->second_flags & 1))
+        return 1;
+    const int target = lv_of(lv, DV(c)) - 1;
+    if (lg->second_top != 0xFF && target < lg->second_top)
+        return 1;
+    if (lg->second[i][1] == 0xFF)
+        return 0;
+    const u16 gf = (u16)(st->gp.se->base + lg->second[i][1]);
+    for (int d = 0; d < st->t.nd && d < GD; d++)
+        for (int k = 0; k < st->t.n[d]; k++)
+            if (st->t.t[d][k].glob == gf)
+                return target <= lv_of(lv, d) + rec_move(lg, st, d, k);
+    return 0;
+}
+
+/* [div, place] -> its row, B teams passed over (gplay.c place_club) but in a play-out (kind 4) */
+static int place_code(const sr_state *st, const sr_league *lg, int d, int p, int kind)
+{
+    if (d >= st->t.nd || d >= GD || p < 1 || p > st->t.n[d])
+        return -1;
+    if (kind == 4 || !lg || !lg->seconds)
+        return d * GT + p - 1;
+    for (int k = 0; k < st->t.n[d]; k++)
+        if (!b_inelig(st, lg, d * GT + k) && !--p)
+            return d * GT + k;
+    return -1;
 }
 
 /* gplay.c's WN_ST (the SEASON WINNERS page's last season): written by gp_season's pass over the
@@ -550,7 +609,7 @@ static void gp_season(sr_state *st, const sr_league *lg)
         int W[GN], L[GN], nt = 0, last = -1, lastr = 0, nlast = 0, played_t2 = 0;
         int P[GN], np = 0, glast = -1, kog = 0, winners = s[5] >> 4 & 7 ? s[5] >> 4 & 7 : 1;
         /* (kog: a knockout round after a group -- its last tie decides: NZ's Grand Final, the Poule) */
-        if (!resolve_entrants(st, s, prev_loser, club, 1))
+        if (!resolve_entrants(st, lg, s, prev_loser, club, 1))
             ok = 0;
         {   /* each play-off's own random stream, from its entrants' rows (4.0.5 rc19: the preview at the
                league's end and the season end decide the same, whatever the other divisions' tables) */
@@ -775,7 +834,7 @@ int32_t sr_contest_entrants(sr_state *st, const sr_league *lg, const sr_season *
     int *club = st->gp.ce_club;
     const u8 fresh = st->gp.ssb->fresh;
     st->gp.by_rec = s[5] & 2;
-    const int ok = s[1] <= SR_CONTEST_MAX && resolve_entrants(st, s, -1, club, 0);
+    const int ok = s[1] <= SR_CONTEST_MAX && resolve_entrants(st, lg, s, -1, club, 0);
     st->gp.ssb->fresh = fresh;                  /* (read only: the season end uses them again) */
     if (!ok)
         return 0;
@@ -877,7 +936,7 @@ int32_t sr_club_playoff(sr_state *st, const sr_league *lg, const sr_season *se, 
         int in = 0, ok = 1, no = 0;
         st->gp.by_rec = s[5] & 2;
         for (int i = 0; i < s[1]; i++) {
-            const int c = ent_code(st, e + 4 * i, -1);
+            const int c = ent_code(st, lg, e + 4 * i, -1, s[0]);
             if (c == d * GT + m) in = 1;
         }
         if (!in)

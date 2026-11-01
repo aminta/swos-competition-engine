@@ -19,6 +19,9 @@ int main(int argc, char **argv)
     if (argc > 3) set_shape(argv[3]);
     for (unsigned it = 0; it < N; it++) {
         make_tables(it, t, n);
+#ifdef KO_BT
+        bt_place(it, t, n);
+#endif
         for (int d = 0; d < ND; d++) for (int k = 0; k < n[d]; k++) {
             rows[d][k][0] = t[d][k].team; rows[d][k][1] = t[d][k].glob; rows[d][k][2] = t[d][k].won;
             rows[d][k][3] = t[d][k].gf; rows[d][k][4] = t[d][k].ga; rows[d][k][5] = t[d][k].pts;

@@ -88,12 +88,23 @@ int main(int argc, char **argv)
     unsigned N = argc > 2 ? (unsigned)atoi(argv[2]) : 20000;
     struct trow t[16][32]; int n[16];
     sr_league lg = { 14, PROM, REL, 1, 1, 2, 3, spec, 0, 0 };
+#ifdef KO_BT                                    /* (tables.h's B teams: knockouts_mod_gp.c's SEC_TAB) */
+    static const uint8_t SECOND[2][2] = { { 20, 0 }, { 21, 1 } };
+    static const uint16_t SECOND_TEAM[2] = { 0x1420, 0x1421 };
+    static const uint8_t IT_FIRST[4] = { 0, 1, 2, 5 };
+    static const sr_levels IT_LV = { 4, IT_FIRST };
+    lg.seconds = 2; lg.second = SECOND; lg.second_top = KO_BT_TOP; lg.second_flags = KO_BT_FLAGS;
+    lg.second_team = SECOND_TEAM;
+#endif
     load_spec(argv[1]);
     if (argc > 3) { set_shape(argv[3]); lg.divisions = (uint8_t)ND; lg.italy = 0; }
     sr_reset(&st);
     for (unsigned it = 0; it < N; it++) {
         sr_season se = { 0 };
         make_tables(it, t, n);
+#ifdef KO_BT
+        bt_place(it, t, n);
+#endif
         se.cup_winner = cup_winner(it, t, n);
         st.t.nd = (uint8_t)ND;
         for (int d = 0; d < ND; d++) {
@@ -121,6 +132,10 @@ int main(int argc, char **argv)
             se.mgr = sel;
         }
         se.bank = &bank;
+#ifdef KO_BT
+        se.base = 424;
+        se.levels = KO_BT == 2 ? &IT_LV : 0;
+#endif
         se.promedio = &prom;
         se.winners = &wn;
         sr_italy(&st, &lg, &se);

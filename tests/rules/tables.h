@@ -32,6 +32,40 @@ static void make_tables(unsigned it, struct trow t[16][32], int n[16])
         }
     }
 }
+/* B teams (built with -DKO_BT): two B teams -- globals 444, 445, team words 1420h, 1421h, the
+ * second division's first two rows -- and their first teams (424, 425: the top division's), each
+ * season at random places of the tables, a B team in a division below its first team's; the
+ * rows' places, points and records stay where they were (their identities move). Both programs
+ * the same (their own hash). */
+#ifdef KO_BT
+static const unsigned short BT_B[2] = { 444, 445 }, BT_F[2] = { 424, 425 };
+static void bt_swap(struct trow t[16][32], int d1, int k1, int d2, int k2)
+{
+    struct trow *a = &t[d1][k1], *b = &t[d2][k2];
+    unsigned short x = a->team, y = a->glob;
+    a->team = b->team; a->glob = b->glob; b->team = x; b->glob = y;
+}
+static void bt_move(struct trow t[16][32], const int n[16], unsigned short g, int d, int k)
+{
+    for (int e = 0; e < ND; e++)
+        for (int j = 0; j < n[e]; j++)
+            if (t[e][j].glob == g) { bt_swap(t, e, j, d, k); return; }
+}
+static void bt_place(unsigned it, struct trow t[16][32], const int n[16])
+{
+    unsigned h = it * 2654435761u + 31u;
+    if (ND < 2)
+        return;
+    for (int i = 0; i < 2; i++) {
+        int df, db;
+        h = h * 1664525u + 1013904223u; df = (int)((h >> 8) % (unsigned)(ND - 1));
+        h = h * 1664525u + 1013904223u; db = df + 1 + (int)((h >> 8) % (unsigned)(ND - 1 - df));
+        h = h * 1664525u + 1013904223u; bt_move(t, n, BT_F[i], df, (int)((h >> 8) % (unsigned)n[df]));
+        h = h * 1664525u + 1013904223u; bt_move(t, n, BT_B[i], db, (int)((h >> 8) % (unsigned)n[db]));
+    }
+}
+#endif
+
 /* The season's stage tables (the kept 'keep' table and the four GP_SS ones) of the top
  * division: its clubs in a random order with random points, each table written in about
  * three seasons of four -- its own hash, so the tables above stay the ones they were. */

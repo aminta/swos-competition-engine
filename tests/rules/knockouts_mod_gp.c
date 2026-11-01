@@ -3,7 +3,22 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include GPLAY_C
+#ifndef KO_BT
 const u8 SEC_TAB[1] = { 0 };            /* (no second teams: play-outs take them anyway) */
+#else
+/* tables.h's two B teams (globals 444, 445, team words 1420h, 1421h) and their first teams (424,
+   425): -DKO_BT=1 a level per division, 2 Italy 2026-27's levels; top KO_BT_TOP, flags KO_BT_FLAGS
+   for both. The entries are the Mod 4.0.5's 8 bytes (+6: the team word). */
+#if KO_BT == 2
+#define BT_LEVELS 14, 0, 1, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3
+#else
+#define BT_LEVELS 16, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
+#endif
+const u8 SEC_TAB[] = { 1, BT_LEVELS, 2,
+                       0xBC, 0x01, 0xA8, 0x01, KO_BT_TOP, KO_BT_FLAGS, 0x20, 0x14,
+                       0xBD, 0x01, 0xA9, 0x01, KO_BT_TOP, KO_BT_FLAGS, 0x21, 0x14 };
+static const u8 BT_LV[] = { BT_LEVELS };
+#endif
 s8 SEC_SLT[4096], SEC_COPY[4096];
 const u8 GP_PROM_TAB[1] = { 0 };
 u16 GP_TOPW[9];
@@ -40,6 +55,27 @@ void mod_gp(const unsigned short (*rows)[32][6], const int *n, int nd, const u8 
         }
     }
     GP_IN.spec = sp;
+#ifdef KO_BT
+    {   /* this season's moves as the game's copy has them at the season end: the record's (the places'
+           promotions and relegations, knockouts_ours.c's PROM / REL), in division terms -- up / down one
+           level (a level of groups: its first division), out of the lowest: past it */
+        static const int PROM[16] = { 0, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
+        static const int REL[16] = { 3, 3, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2 };
+        const int nl = BT_LV[0];
+        for (int d = 0; d < nd; d++)
+            for (int k = 0; k < n[d]; k++) {
+                int g = rows[d][k][1], mv = k < PROM[d] && d > 0 ? -1 : k >= n[d] - REL[d] ? 1 : 0, to = d;
+                int l = d < nl ? BT_LV[1 + d] : BT_LV[nl] + 1;
+                if (mv) {
+                    int want = l + mv, j = 0;
+                    while (j < nl && BT_LV[1 + j] != want) j++;   /* (the target level's first division) */
+                    to = j;
+                }
+                SEC_SLT[g] = 0;
+                SEC_COPY[g] = (s8)(to - d);
+            }
+    }
+#endif
     gp_season();
     for (int i = 0; i < GP_OUT.nmv; i++) fprintf(out, " g%u:%d", GP_OUT.mv[i].glob, GP_OUT.mv[i].delta);
     for (int i = 0; i < GP_OUT.nres; i++)
@@ -54,14 +90,34 @@ void mod_gp(const unsigned short (*rows)[32][6], const int *n, int nd, const u8 
 }
 /* The career club's play-off at its league's end (gp_need, a career), for every club of every
    division: its index and the divisions simulated early. */
+/* (with B teams: the tables the game has at that moment -- the club's division only, as the library
+   is given them: a first team elsewhere is not found) */
+static u8 keep_n[GD];
+static void only_divs(const int *dv, int nd)
+{
+#ifdef KO_BT
+    for (int d = 0; d < GP_IN.nd; d++) {
+        int in = 0;
+        for (int j = 0; j < nd; j++) in |= dv[j] == d;
+        GP_IN.n[d] = in ? keep_n[d] : 0;
+    }
+#else
+    (void)dv; (void)nd;
+#endif
+}
+static void all_divs(void) { for (int d = 0; d < GP_IN.nd; d++) GP_IN.n[d] = keep_n[d]; }
 void mod_need(FILE *out)
 {
     GP_IN.gtype = 4;
+    for (int d = 0; d < GP_IN.nd; d++) keep_n[d] = GP_IN.n[d];
     for (int d = 0; d < GP_IN.nd; d++)
-        for (int k = 0; k < GP_IN.n[d]; k++) {
+        for (int k = 0; k < keep_n[d]; k++) {
             GP_IN.mdiv = (u8)d;
             GP_IN.mgr = GP_IN.t[d][k].team;
-            if (!gp_need()) continue;
+            only_divs(&d, 1);
+            const int need = gp_need();
+            all_divs();
+            if (!need) continue;
             fprintf(out, " N%d.%d:%d", d, k, GP_IN.pi[0]);
             if (!t2_shape(po_at(GP_IN.pi[0]), 0))
                 for (int j = 0; j < SD && GP_IN.sim[j] != NOC; j++) fprintf(out, "/%d", GP_IN.sim[j]);
@@ -94,11 +150,19 @@ void mod_ko(FILE *out)
             grp |= nd > 3;
         }
         if (grp || r0[4] || n > 64) continue;   /* (group rounds, a paired round 1: not here) */
+        int dv[64], ndv = 0;
+        for (int i = 0; i < n; i++) {
+            int j = 0;
+            while (j < ndv && dv[j] != s[7 + 4 * i]) j++;
+            if (j == ndv) dv[ndv++] = s[7 + 4 * i];
+        }
+        for (int d = 0; d < GP_IN.nd; d++) keep_n[d] = GP_IN.n[d];
+        only_divs(dv, ndv);
         for (int i = 0; i < n; i++) {
             int c = ent_club(s + 6 + 4 * i, s[0]);
             if (c < 0) ok = 0; else team[i] = row(c)->team;
         }
-        if (!ok) continue;
+        if (!ok) { all_divs(); continue; }
         for (int i = 0; i < r0[0]; i++)
             for (int x = 0; x < 2; x++) if (r0[6 + 2 * i + x] < n) in0[r0[6 + 2 * i + x]] = 1;
         for (int i = 0; i < n && wait < 0; i++) {
@@ -106,10 +170,11 @@ void mod_ko(FILE *out)
             wait = i;
             for (int j = 0; j < n; j++) if (j != i && team[j] == team[i]) wait = -1;
         }
-        if (wait < 0) continue;
+        if (wait < 0) { all_divs(); continue; }
         GP_IN.mgr = team[wait];
         struct gp_ko *k = &GP_ST.ko[0];
         ko_build(k, pi, 4, 0xFE);
+        all_divs();
         fprintf(out, " K%d:", pi);
         for (int t = 0; t < r0[0]; t++) fprintf(out, "%04X,", k->tw[t] != NOC ? k->team[k->tw[t]] : 0);
         if (s[5] & 2)

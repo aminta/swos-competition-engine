@@ -85,6 +85,9 @@ typedef struct {
     const uint8_t (*second)[2];     /* its first team's or FFh); the highest level one may reach */
     uint8_t        second_top;      /* (FFh any); flags: 1 play-offs allowed, 2 it may leave the */
     uint8_t        second_flags;    /* league from the lowest division (the pool) */
+    const uint16_t *second_team;    /* each B team's team word, or 0: a row is found by it as well as by
+                                       its global number (the Mod 4.0.5's SEC_TAB: rows of a division
+                                       simulated early may carry no global number) */
 } sr_league;
 
 /* A league's levels when some are groups of parallel divisions (Serie C's, Serie D's): where each
@@ -124,6 +127,13 @@ typedef struct {
      * where they start). The career club's own play-offs (own_pi, -1 none) are left to it. */
     uint8_t        preview;
     int8_t         own_pi[2];
+    /* The B teams in the knockouts (gplay.c place_club / sec_inelig): their global numbers' base
+     * (as sr_final_moves takes it) and the league's levels, 0 a level per division. A B team is
+     * passed over as a play-off entrant by place (not in a play-out) unless its league's B teams
+     * may play play-offs and it may go up: not above second_top, nor into or above its first
+     * team's level after this season's record (the places' promotions and relegations). */
+    uint16_t       base;
+    const sr_levels *levels;
 } sr_season;
 
 /* A result the knockouts decide beside the moves: a title's champion and runner-up, a continental
