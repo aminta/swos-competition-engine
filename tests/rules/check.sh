@@ -64,3 +64,19 @@ else
     echo "FAIL: the knockouts of$bad differ from the Mod's ($np equal; VERBOSE=1 for the first seasons)"
     exit 1
 fi
+
+# The season's moves and the B-team rules (sr_final_moves, sr_b_teams = gplay.c sec_post): built
+# cases, then random ones against the Mod's sec_post -- Italy (levels of groups) and the other
+# countries with B teams (Spain, Germany, the Netherlands, Portugal).
+$C -DGPLAY_C="\"$MOD/tools/gplay.c\"" -o "$OUT/bmod" $T/bteams_mod.c
+$C -Irules -o "$OUT/bours" $T/bteams_ours.c rules/sr_post.c
+"$OUT/bours" || exit 1
+"$OUT/bmod" "$N" > "$OUT/b_mod.txt"
+"$OUT/bours" random "$N" > "$OUT/b_ours.txt" 2> "$OUT/b.log"
+if cmp -s "$OUT/b_mod.txt" "$OUT/b_ours.txt"; then
+    echo "PASS: B teams, $N cases in each of Italy, Spain, Germany, the Netherlands, Portugal ($(cut -d' ' -f1 "$OUT/b.log") changed by the rules), every move the Mod's"
+else
+    echo "FAIL: B teams: the first case that differs (Mod, then the library):"
+    diff "$OUT/b_mod.txt" "$OUT/b_ours.txt" | head -4
+    exit 1
+fi

@@ -77,7 +77,15 @@ typedef struct {
     const uint8_t *spec;            /* the pack's knockouts: gplay.py compile_spec's bytes, 0-ended */
     const sr_promedio_seed *promedio_seed;  /* the promedio's history at a new career (gplay.c */
     uint8_t        promedio_seeds;          /* GP_PROM_TAB, global numbers) */
+    uint8_t        seconds;         /* B teams (gplay.c SEC_TAB): each one's (global number - base, */
+    const uint8_t (*second)[2];     /* its first team's or FFh); the highest level one may reach */
+    uint8_t        second_top;      /* (FFh any); flags: 1 play-offs allowed, 2 it may leave the */
+    uint8_t        second_flags;    /* league from the lowest division (the pool) */
 } sr_league;
+
+/* A league's levels when some are groups of parallel divisions (Serie C's, Serie D's): where each
+ * level starts. levels 0: a level per division. */
+typedef struct { uint8_t levels; const uint8_t *first; } sr_levels;
 
 /* What the game around the rules knows (all optional, 0 for none): a tie, a title or a stage
  * title the career club played itself; a line for the game's log. */
@@ -145,6 +153,7 @@ typedef struct sr_state {
         sr_promedio_club nx[SR_PROMEDIO_CLUBS];
         int32_t  ce_club[64], ce_n; /* the last contest's entrants (sr_contest_entrants) */
     } gp;
+    int8_t    want[SR_DIVS][SR_CLUBS];      /* each club's move, a level: -1 up, 1 down (sr_final_moves) */
 } sr_state;
 
 void     sr_reset(sr_state *st);
@@ -203,5 +212,19 @@ int32_t sr_contest_tie(sr_state *st, int32_t a, int32_t b, int32_t legs, int32_t
  * taking q (the groups' winners and best runners-up), kb their round bytes. 0: not one. */
 typedef struct { uint8_t g, m, meet, nk, q, kt[4], kb[4]; } sr_group_shape;
 int32_t sr_group_shape_of(const uint8_t *spec, sr_group_shape *shape);
+
+/* ---- The season's moves (sr_post.c) ---- */
+
+/* Each club's move, one level, into st->want[d][k] (k its place in st->t): the record's by place
+ * (the top promoted[d] up, the bottom relegated[d] down), the play-offs' moves (st->mv) on top,
+ * then the B-team rules. base: the league's first global number (a B team's is base + its
+ * ordinal). */
+void sr_final_moves(sr_state *st, const sr_league *lg, const sr_levels *lv, uint16_t base);
+
+/* The B-team rules alone (gplay.c sec_post), over the moves already in st->want: a B team may not
+ * go up above second_top, nor into or above its first team's level after this season's moves --
+ * held, the next club of its division goes up instead; it goes down when its first team comes
+ * into its level, the best placed relegated of its division staying. */
+void sr_b_teams(sr_state *st, const sr_league *lg, const sr_levels *lv, uint16_t base);
 
 #endif
