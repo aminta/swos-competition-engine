@@ -117,6 +117,13 @@ typedef struct {
     sr_promedio   *promedio;        /* its promedio history, 0 none */
     sr_winners    *winners;         /* the SEASON WINNERS page, 0 not kept */
     const sr_host *host;            /* 0: none */
+    /* The season-end preview (the Mod 4.0.5 rc19, gplay.c GP_PRE): this season's titles decided
+     * at the career club's league end, before the season-end menu -- the same results the season
+     * end will reach (each play-off draws from its own entrants), but no promedio, no move of the
+     * stage tables and no new SEASON WINNERS page: its entries are appended (the caller marks
+     * where they start). The career club's own play-offs (own_pi, -1 none) are left to it. */
+    uint8_t        preview;
+    int8_t         own_pi[2];
 } sr_season;
 
 /* A result the knockouts decide beside the moves: a title's champion and runner-up, a continental
