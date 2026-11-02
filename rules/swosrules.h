@@ -345,4 +345,40 @@ int32_t sr_cupd_make(const sr_cupd_end *e, uint32_t season, uint8_t rounds, uint
 /* (-1: rounds outside 2..8 -- a first round of more than 64 ties --, or first + groups past the
  * league's divisions: nothing made) */
 
+/* ---- Parallel groups at the season end (sr_groups.c: gplay.c pg_one / pg_season, the Mod 4.0.5,
+ * with 4.0.6's pg_a2 guard) ---- */
+
+#define SR_PG_LEVELS   8            /* a league's levels (gplay.c PL) */
+#define SR_PG_GROUPS   9            /* a level's groups side by side (PG: Serie D 2026-27's nine) */
+#define SR_PG_PARALLEL 4            /* levels of groups whose areas a club carries */
+
+/* One level of the league's chain, top-down: a single division (groups 1) or groups side by side,
+ * divisions first .. first + groups - 1, each size[g] clubs. */
+typedef struct { uint8_t first, groups; uint8_t size[SR_PG_GROUPS]; } sr_pg_level;
+
+/* A club that can play at a level of groups: its division in its team file (`base`: a division
+ * offset is from it) and its area byte at each level of groups, top-down (the Mod's area_byte):
+ * low nibble its 1st choice of group (A = 0), high nibble its 2nd + 1 -- 0 or Fh no 2nd, Eh any
+ * group (a second team), + 8 never another group ('C,B!'); FFh no area. A swapped pool slot gives
+ * its new identity's areas (the Mod's ripool ri_ida). */
+typedef struct { uint8_t base; uint8_t area[SR_PG_PARALLEL]; } sr_pg_club;
+
+typedef struct {
+    uint8_t            levels;
+    const sr_pg_level *level;
+    uint16_t           clubs;       /* at most SR_CLUB_SLOTS, in the table's order (it decides) */
+    const sr_pg_club  *club;
+} sr_pg_league;
+
+/* The game has moved every club one division up or down the league's chain (its divisions'
+ * promoted / relegated counts). Each move becomes one LEVEL: into a single division as it is;
+ * into a level of groups, the club's 1st choice, then its 2nd -- each with room, else room made by
+ * moving a club that may go elsewhere --, else the group nearest to its 1st choice with room
+ * (schema/v1.md, "Parallel leagues by area"). Clubs that stay are counted in their group first.
+ * old_off[i] / new_off[i]: club i's division offset (division - base) before the season end and
+ * after the game's move -- new_off rewritten. entering (0: none): nonzero for a slot taking a club
+ * from below the chain this season end (the off-file pool's swap, the Mod's ri_og), which enters
+ * the lowest level. 0; -1 a league past the limits above (nothing changed). */
+int32_t sr_pg_season(const sr_pg_league *pg, const int8_t *old_off, int8_t *new_off, const uint8_t *entering);
+
 #endif

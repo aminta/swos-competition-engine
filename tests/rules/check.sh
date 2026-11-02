@@ -148,6 +148,25 @@ else
     exit 1
 fi
 
+# The parallel groups (sr_pg_season = gplay.c pg_season, 4.0.5's two choices of group): each league
+# with groups (tests/rules/specs/<code>.pg: the Mod's pgroups.table_bytes) over random season ends --
+# the clubs coming back from below on odd seasons, every fourth season all of one area --, every
+# club placed in the Mod's group.
+$MC -I$T -DGPLAY_C="\"$MOD/tools/gplay.c\"" -o "$OUT/gmod" $T/groups_mod.c
+$C -Irules -I$T -o "$OUT/gours" $T/groups_ours.c rules/sr_groups.c
+GN=$((N / 10)); bad=""
+for code in $(cat $T/specs/groups.txt); do
+    "$OUT/gmod" $T/specs/$code.pg $T/specs/$code.pr "$GN" > "$OUT/g_mod.txt"
+    "$OUT/gours" $T/specs/$code.pg $T/specs/$code.pr "$GN" > "$OUT/g_ours.txt"
+    cmp -s "$OUT/g_mod.txt" "$OUT/g_ours.txt" || bad="$bad $code"
+done
+if [ -z "$bad" ]; then
+    echo "PASS: the parallel groups ($(tr '\n' ' ' < $T/specs/groups.txt| sed 's/ $//')), $GN season ends each: every club placed as the Mod's pg_season places it"
+else
+    echo "FAIL: the parallel groups of$bad differ from the Mod's pg_season"
+    exit 1
+fi
+
 # The Coppa Italia Serie D's later seasons (sr_cupd_make = gplay.c cd_rank, cd_season, cd_make):
 # random season ends of Italy 2026-27 (moves, Serie D's tables, the pool's arrivals), each later
 # season's preliminary round and first round of 64.
