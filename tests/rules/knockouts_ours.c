@@ -98,6 +98,7 @@ int main(int argc, char **argv)
     lg.second_team = SECOND_TEAM;
 #endif
     load_spec(argv[1]);
+    lg.spec_len = spec_size;
     if (argc > 3) { set_shape(argv[3]); lg.divisions = (uint8_t)ND; lg.italy = 0; }
     sr_reset(&st);
     for (unsigned it = 0; it < N; it++) {
@@ -134,6 +135,7 @@ int main(int argc, char **argv)
         }
         se.bank = &bank;
 #ifdef KO_BT
+        se.b_in_ko = 1;
         se.base = 424;
         se.levels = KO_BT == 2 ? &IT_LV : 0;
 #endif
@@ -142,7 +144,7 @@ int main(int argc, char **argv)
         if (getenv("KO_PRE")) {                 /* (the preview first, as knockouts_mod.c) */
             sr_season pre = se;
             pre.preview = 1;
-            pre.own_pi[0] = (int8_t)(it % 2 ? -1 : 0); pre.own_pi[1] = -1;
+            pre.own_pi[0] = (uint8_t)(it % 2 ? 0 : 1); pre.own_pi[1] = 0;   /* (play-off 0 + 1, or none) */
             wn.n = 0;
             st.nmv = st.dp_moves = 0;
             sr_knockouts(&st, &lg, &pre);
