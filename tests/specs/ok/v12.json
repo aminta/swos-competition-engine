@@ -1,5 +1,5 @@
 {
- "schema": "swc/1",
+ "schema": "swc/1.2",
  "id": "test.v12",
  "host_world": 9,
  "_note": "swc/1.2 (synthetic, no real data): a level of two parallel groups ('to' lists + assign geographic, clubs' area), a linked play-off of the groups' winners (source = both), a play-off with a list of places, best runners-up (best_of).",

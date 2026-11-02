@@ -1,5 +1,5 @@
 {
- "schema": "swc/1",
+ "schema": "swc/1.2",
  "id": "test.v12",
  "host_world": 9,
  "_note": "swc/1.2 bad case (from tests/specs/ok/v12.json): parallel_balance",

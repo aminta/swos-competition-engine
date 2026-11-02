@@ -61,7 +61,8 @@ typedef struct {
     uint32_t arena_max;
     /* spec */
     JNode *root;
-    int minor;                  /* the spec's "schema": "swc/1" any minor (SWC_MINOR), "swc/1.1" / "swc/1.2" that one */
+    int minor;                  /* the spec's "schema": "swc/1" = the M1 schema (1.0 + 1.1), "swc/1.1", "swc/1.2" */
+    const char *schema;         /* its text, for the messages */
     JNode *countries;
     JNode **clubs, **comps;
     int nclubs, ncomps;
@@ -114,10 +115,11 @@ static JNode *opt(C *c, JNode *obj, const char *key, JType t, const char *path)
     return v;
 }
 
-/* A construct added in swc/1.<m>: refused when the spec names an older minor ("schema": "swc/1.1"). */
+/* A construct added in swc/1.<m>: refused unless the spec names that minor or a later one ("swc/1" and "swc/1.1" are
+   the M1 schema: a v1.2 construct needs "schema": "swc/1.2"). */
 static void need_minor(C *c, JNode *at, const char *path, int m, const char *what)
 {
-    if (c->minor < m) ERR(at, path, "%s is swc/1.%d: this spec says \"swc/1.%d\"", what, m, c->minor);
+    if (c->minor < m) ERR(at, path, "%s is swc/1.%d: this spec says \"%s\"", what, m, c->schema);
 }
 
 static int int_in(C *c, JNode *v, const char *key, const char *path, long lo, long hi, long *out)
@@ -1102,11 +1104,13 @@ int swcc_compile(const char *spec, size_t len, const char *name, const char *pro
         if (c->root->type != J_OBJ) ERR(c->root, "", "the spec is a JSON object");
         else {
             c->minor = SWC_MINOR;
+            c->schema = "swc/1.2";
             if ((v = need(c, c->root, "schema", J_STR, ""))) {
-                if (!strcmp(v->str, "swc/1.1")) c->minor = 1;
+                c->schema = v->str;
+                if (!strcmp(v->str, "swc/1") || !strcmp(v->str, "swc/1.1")) c->minor = 1;
                 else if (!strcmp(v->str, "swc/1.2")) c->minor = 2;
-                else if (strcmp(v->str, "swc/1"))
-                    ERR(v, "", "schema \"%s\": this compiler reads \"swc/1\" (any 1.x), \"swc/1.1\" and \"swc/1.2\"", v->str);
+                else
+                    ERR(v, "", "schema \"%s\": this compiler reads \"swc/1\" (= 1.1, the M1 schema), \"swc/1.1\" and \"swc/1.2\"", v->str);
             }
             if ((v = need(c, c->root, "id", J_STR, "")) && !id_ok(v->str, NULL)) ERR(v, "", "world id \"%s\": lower-case words joined by '.', '-' or '_'", v->str);
             int_in(c, opt(c, c->root, "host_world", J_NUM, ""), "host_world", "", 0, 65535, &world);
