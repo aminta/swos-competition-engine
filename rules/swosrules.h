@@ -91,6 +91,11 @@ typedef struct {
     uint32_t        spec_len;       /* spec's bytes, required with a spec: the rules check it first
                                        (sr_spec_check) and refuse a league whose spec is not sound, or
                                        has no length (SR_CHECK_COUNT, "spec_len") */
+    uint8_t         team_file_high; /* how this game lays out a team word (sr_row.team, second_team):
+                                       0 the Mod's, file | ordinal << 8 (an x86 word over the two
+                                       bytes); 1 file << 8 | ordinal (OpenSWOS). A spec names a club
+                                       as its (file, ordinal) bytes -- entrant type 8 -- the same in
+                                       both games; the rules make the word from them this way */
 } sr_league;
 
 /* A league's levels when some are groups of parallel divisions (Serie C's, Serie D's): where each

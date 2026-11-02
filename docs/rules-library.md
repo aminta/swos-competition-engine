@@ -100,7 +100,15 @@ ELF linker) and requires every symbol one needs to be another's.
 A zeroed `sr_league` / `sr_season` is the safe default in every field added since version 1's
 first modules: no B-team team words, no preview (`own_pi` is a play-off's index + 1, 0 none), no B
 team passed over in the knockouts (`b_in_ko` 0 -- its own switch: `base` 0 is a real value, a league
-that comes first, and the team-word match does not depend on it), a level per division.
+that comes first, and the team-word match does not depend on it), a level per division, team words
+laid out as the Mod's (`team_file_high` 0).
+
+**Team words are each game's own; a spec's bytes are not.** A team word is the game's in-memory
+name for a club (`sr_row.team`, `second_team`): the Mod's is `file | ordinal << 8` (the x86 word over
+its team id's two bytes), OpenSWOS's `file << 8 | ordinal`. A spec names a club (entrant type 8,
+New Zealand's reserves) by its `(file, ordinal)` bytes, as the Mod's compile_spec writes them, so one
+compiled spec -- a `.SWC` section, a pack's tables -- is the same in both games; `team_file_high`
+says how to make that game's word from them.
 
 ## 4. Modules, one pull request each
 
