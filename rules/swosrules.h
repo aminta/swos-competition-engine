@@ -88,8 +88,9 @@ typedef struct {
     const uint16_t *second_team;    /* each B team's team word, or 0: a row is found by it as well as by
                                        its global number (the Mod 4.0.5's SEC_TAB: rows of a division
                                        simulated early may carry no global number) */
-    uint32_t        spec_len;       /* spec's bytes: given, the rules check it first (sr_spec_check) and
-                                       refuse it if it is not sound; 0 -- a spec the game compiled in itself */
+    uint32_t        spec_len;       /* spec's bytes, required with a spec: the rules check it first
+                                       (sr_spec_check) and refuse a league whose spec is not sound, or
+                                       has no length (SR_CHECK_COUNT, "spec_len") */
 } sr_league;
 
 /* A league's levels when some are groups of parallel divisions (Serie C's, Serie D's): where each
@@ -126,14 +127,16 @@ typedef struct {
      * at the career club's league end, before the season-end menu -- the same results the season
      * end will reach (each play-off draws from its own entrants), but no promedio, no move of the
      * stage tables and no new SEASON WINNERS page: its entries are appended (the caller marks
-     * where they start). The career club's own play-offs (own_pi, -1 none) are left to it. */
+     * where they start). The career club's own play-offs are left to it: own_pi, each the play-off's
+     * index + 1 (0 none -- a zeroed sr_season previews every play-off). */
     uint8_t        preview;
-    int8_t         own_pi[2];
+    uint8_t        own_pi[2];
     /* The B teams in the knockouts (gplay.c place_club / sec_inelig): their global numbers' base
      * (as sr_final_moves takes it) and the league's levels, 0 a level per division. A B team is
      * passed over as a play-off entrant by place (not in a play-out) unless its league's B teams
      * may play play-offs and it may go up: not above second_top, nor into or above its first
-     * team's level after this season's record (the places' promotions and relegations). */
+     * team's level after this season's record (the places' promotions and relegations). base 0
+     * (a zeroed sr_season): no B team is passed over in the knockouts, as before 4.0.5's port. */
     uint16_t       base;
     const sr_levels *levels;
 } sr_season;
@@ -184,7 +187,8 @@ uint32_t sr_state_size(void);
 
 /* The season end's first step: Serie B and Serie C's play-offs and play-outs (dplay.c dp_season)
  * over st->t, by the league's Italian rules. The moves start again in st->mv (rule
- * SR_RULE_ITALY); their count, 0 when the league is not Italian. */
+ * SR_RULE_ITALY); their count, 0 when the league is not Italian, -1 when it is refused
+ * (sr_league_check: nothing played). */
 int32_t sr_italy(sr_state *st, const sr_league *lg, const sr_season *se);
 
 /* Serie B's play-out is held unless the 16th leads the 17th by more than 4 points; its play-off
@@ -290,7 +294,7 @@ typedef struct {
 /* A pack's knockouts, len bytes, for a league of `divisions` (0: any up to SR_DIVS): SR_CHECK_OK, or
  * the first fault (err, optional). */
 int32_t sr_spec_check(const uint8_t *spec, uint32_t len, int32_t divisions, sr_check_error *err);
-/* A league's rules (its spec too when spec_len is given) and a season's saved state (the stage
+/* A league's rules (its spec too, which needs its spec_len) and a season's saved state (the stage
  * tables, the promedio, the SEASON WINNERS page, the levels). */
 int32_t sr_league_check(const sr_league *lg, sr_check_error *err);
 int32_t sr_season_check(const sr_season *se, sr_check_error *err);

@@ -108,9 +108,10 @@ static unsigned short cup_winner(unsigned it, struct trow t[16][32], const int n
 }
 
 static unsigned char spec[4096];
+static unsigned spec_size;              /* (its bytes: sr_league.spec_len) */
 static void load_spec(const char *path)
 {
     FILE *f = fopen(path, "rb");
-    if (!f || fread(spec, 1, sizeof spec, f) == 0) { fprintf(stderr, "no spec %s\n", path); exit(2); }
+    if (!f || (spec_size = (unsigned)fread(spec, 1, sizeof spec, f)) == 0) { fprintf(stderr, "no spec %s\n", path); exit(2); }
     fclose(f);
 }

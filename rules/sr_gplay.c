@@ -504,7 +504,7 @@ static int b_index(const sr_state *st, const sr_league *lg, int c)    /* which B
  * may not go up -- above second_top, or into or above its first team's level after the record */
 static int b_inelig(const sr_state *st, const sr_league *lg, int c)
 {
-    const int i = lg->seconds ? b_index(st, lg, c) : -1;
+    const int i = lg->seconds && st->gp.se && st->gp.se->base ? b_index(st, lg, c) : -1;
     const sr_levels *lv = st->gp.se ? st->gp.se->levels : 0;
     if (i < 0)
         return 0;
@@ -602,7 +602,7 @@ static void gp_season(sr_state *st, const sr_league *lg)
         u16 dteam[2], dglob[2];
         int dec = kind == K_STAGE && stage_dec(st, wdiv, dteam, dglob);    /* (decided mid-season) */
         if (dec) ok = 0;
-        if (st->gp.se->preview && (pidx == st->gp.se->own_pi[0] || pidx == st->gp.se->own_pi[1]))
+        if (st->gp.se->preview && (pidx + 1 == st->gp.se->own_pi[0] || pidx + 1 == st->gp.se->own_pi[1]))
             ok = 0;                             /* (the preview: the career club's own) */
         if (s[5] & PO_SUPER) { ok = 0; dec = 0; }   /* (Mexico's Campeon de Campeones: the next season's supercup) */
         st->gp.pidx = pidx;

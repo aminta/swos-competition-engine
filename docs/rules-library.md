@@ -82,11 +82,12 @@ and the play code stays the Mod's line for line:
   member: an entrant, a placing, a tie's winner or loser not there yet), a byte with no meaning
   (kind, entrant type, legs, host, level) -- refused with `SR_CHECK_TRUNCATED` / `COUNT` / `INDEX` /
   `VALUE`, the play-off, the byte and the field's name;
-- `sr_league.spec_len`: given, every entry point (`sr_italy`, `sr_knockouts`, `sr_club_playoff`,
-  `sr_contest_entrants`) checks the league first (`sr_league_check`, the spec included) and the
-  season's saved state (`sr_season_check`: the stage tables' and the kept table's clubs, the
-  promedio's, the SEASON WINNERS entries, the levels) and refuses what is not sound -- nothing is
-  played (`sr_knockouts` returns -1); 0, a spec the game compiled in itself, as before;
+- `sr_league.spec_len`: required with a spec -- every entry point (`sr_italy`, `sr_knockouts`,
+  `sr_club_playoff`, `sr_contest_entrants`) checks the league first (`sr_league_check`: the spec
+  and its length, the Italian rules' divisions, the B teams) and the season's saved state
+  (`sr_season_check`: the stage tables' and the kept table's clubs, the promedio's, the SEASON
+  WINNERS entries, the levels) and refuses what is not sound -- nothing is played (`sr_italy` and
+  `sr_knockouts` return -1); a spec with no length is refused (`SR_CHECK_COUNT`, "spec_len");
 - `sr_cupd_make`: rounds outside 2..8 (a first round of more than 64 ties) refused (-1).
 
 `make test` runs `tests/rules/spec_check.c` under AddressSanitizer and UBSan: every real spec
@@ -95,6 +96,10 @@ what the check lets through is played (the season end, the contests, each club's
 random tables, within every buffer (31,312 of them over the 4.0.5 and 4.0.2 specs, once, at ten
 times `make test`'s count). The i486 check builds one object per module (no `-r` link: macOS has no
 ELF linker) and requires every symbol one needs to be another's.
+
+A zeroed `sr_league` / `sr_season` is the safe default in every field added since version 1's
+first modules: no B-team team words, no preview (`own_pi` is a play-off's index + 1, 0 none), no B
+team passed over in the knockouts (`base` 0), a level per division.
 
 ## 4. Modules, one pull request each
 

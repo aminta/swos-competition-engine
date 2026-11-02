@@ -127,7 +127,7 @@ int main(int argc, char **argv)
         static sr_stage_bank bank;
         static sr_promedio pr;
         static const uint8_t end0[1] = { 0 };
-        sr_league lg = { 1, PROM, REL, 0, 0, 0, 0, end0, 0, 0, 0, 0, 0, 0, 0, 0 };
+        sr_league lg = { 1, PROM, REL, 0, 0, 0, 0, end0, 0, 0, 0, 0, 0, 0, 0, 1 };
         sr_season se;
         memset(&se, 0, sizeof se);
         se.bank = &bank;
@@ -139,6 +139,18 @@ int main(int argc, char **argv)
         se.promedio = &pr;
         pr.n = SR_PROMEDIO_CLUBS + 1;
         if (sr_season_check(&se, &e) != SR_CHECK_COUNT) { printf("FAIL: a promedio of 49 not refused\n"); bad++; }
+        faults += 2;
+        /* a spec with no length: refused, nothing played; an Italian league out of its divisions:
+           sr_italy refuses it (-1) */
+        bank.n_kept = 0; se.promedio = 0;
+        lg.spec_len = 0;
+        if (sr_league_check(&lg, &e) != SR_CHECK_COUNT || sr_knockouts(&st, &lg, &se) != -1) {
+            printf("FAIL: a spec with no length not refused\n"); bad++;
+        }
+        {
+            sr_league it = { 3, PROM, REL, 1, 1, 2, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+            if (sr_italy(&st, &it, &se) != -1) { printf("FAIL: sr_italy did not refuse Serie C's groups past the league\n"); bad++; }
+        }
         faults += 2;
     }
     printf("%s: %d specs accepted, %d cuts and %d faults refused, %d random faults accepted and played%s\n",
