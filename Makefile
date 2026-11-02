@@ -43,7 +43,12 @@ $(OUT)/spec_check: tests/rules/spec_check.c tests/rules/tables.h $(RULES) rules/
 	$(CC) -std=c99 -O1 -g -Wall -Wextra -Wno-missing-field-initializers $(SANITIZE) -Irules -Itests/rules -o $@ \
 	    tests/rules/spec_check.c rules/sr_check.c rules/sr_gplay.c rules/sr_dplay.c
 
-test: $(OUT)/test_format $(OUT)/swcc $(OUT)/swc_i486.o $(RULES_I486) $(OUT)/spec_check
+# a club named by (file, ordinal) found from team words in either game's layout (team_file_high)
+$(OUT)/team_order: tests/rules/team_order.c tests/rules/tables.h $(RULES) rules/swosrules.h | $(OUT)
+	$(CC) -std=c99 -O1 -g -Wall -Wextra -Wno-missing-field-initializers $(SANITIZE) -Irules -Itests/rules -o $@ \
+	    tests/rules/team_order.c rules/sr_check.c rules/sr_gplay.c rules/sr_dplay.c
+
+test: $(OUT)/test_format $(OUT)/swcc $(OUT)/swc_i486.o $(RULES_I486) $(OUT)/spec_check $(OUT)/team_order
 	$(OUT)/swcc compile packs/sample/world.json -o $(OUT)/sample.swc >/dev/null
 	$(OUT)/test_format $(OUT)/sample.swc
 	sh tests/run_specs.sh $(OUT)/swcc
@@ -55,6 +60,7 @@ test: $(OUT)/test_format $(OUT)/swcc $(OUT)/swc_i486.o $(RULES_I486) $(OUT)/spec
 	@if [ -n "$$(comm -23 $(OUT)/rules_u.txt $(OUT)/rules_d.txt)" ]; then echo "the rules' i486 objects need symbols from outside:"; comm -23 $(OUT)/rules_u.txt $(OUT)/rules_d.txt; exit 1; fi
 	@echo "rules i486 objects: nothing from outside (no libc, no memcpy / memset)"
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/spec_check tests/rules/specs/*.spec
+	ASAN_OPTIONS=detect_leaks=0 $(OUT)/team_order
 	@if grep -n '(const Swc[A-Za-z]* \*)\|(const uint16_t \*)\|(const uint32_t \*)' format/*.c; then echo "the reader reads the spec buffer through a cast (big-endian rule: BE accessors only)"; exit 1; fi
 	@echo "reader: no casts over the spec buffer (BE accessors only)"
 
