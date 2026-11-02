@@ -99,7 +99,8 @@ ELF linker) and requires every symbol one needs to be another's.
 
 A zeroed `sr_league` / `sr_season` is the safe default in every field added since version 1's
 first modules: no B-team team words, no preview (`own_pi` is a play-off's index + 1, 0 none), no B
-team passed over in the knockouts (`base` 0), a level per division.
+team passed over in the knockouts (`b_in_ko` 0 -- its own switch: `base` 0 is a real value, a league
+that comes first, and the team-word match does not depend on it), a level per division.
 
 ## 4. Modules, one pull request each
 

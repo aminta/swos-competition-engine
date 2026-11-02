@@ -135,8 +135,11 @@ typedef struct {
      * (as sr_final_moves takes it) and the league's levels, 0 a level per division. A B team is
      * passed over as a play-off entrant by place (not in a play-out) unless its league's B teams
      * may play play-offs and it may go up: not above second_top, nor into or above its first
-     * team's level after this season's record (the places' promotions and relegations). base 0
-     * (a zeroed sr_season): no B team is passed over in the knockouts, as before 4.0.5's port. */
+     * team's level after this season's record (the places' promotions and relegations). b_in_ko
+     * switches it on: 0 (a zeroed sr_season) no B team is passed over in the knockouts, as before
+     * 4.0.5's port; 1 B teams found by global number (base + ordinal: base 0 is a league that comes
+     * first) or by team word (sr_league.second_team). */
+    uint8_t        b_in_ko;
     uint16_t       base;
     const sr_levels *levels;
 } sr_season;

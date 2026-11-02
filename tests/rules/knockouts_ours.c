@@ -135,6 +135,7 @@ int main(int argc, char **argv)
         }
         se.bank = &bank;
 #ifdef KO_BT
+        se.b_in_ko = 1;
         se.base = 424;
         se.levels = KO_BT == 2 ? &IT_LV : 0;
 #endif

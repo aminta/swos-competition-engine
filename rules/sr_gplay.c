@@ -504,7 +504,7 @@ static int b_index(const sr_state *st, const sr_league *lg, int c)    /* which B
  * may not go up -- above second_top, or into or above its first team's level after the record */
 static int b_inelig(const sr_state *st, const sr_league *lg, int c)
 {
-    const int i = lg->seconds && st->gp.se && st->gp.se->base ? b_index(st, lg, c) : -1;
+    const int i = lg->seconds && st->gp.se && st->gp.se->b_in_ko ? b_index(st, lg, c) : -1;
     const sr_levels *lv = st->gp.se ? st->gp.se->levels : 0;
     if (i < 0)
         return 0;
