@@ -67,7 +67,7 @@ typedef struct {
     void *stinfo;               /* StageInfo[], all stages in order */
     int nstinfo;
     /* output */
-    Buf strs, names, club, comp, stag, entr, tieb, deci, roun, outc, reg, meta, fixt, grps, srce;
+    Buf strs, names, club, comp, stag, entr, tieb, deci, roun, outc, reg, meta, fixt, grps, srce, tols;
     uint32_t arena;
 } C;
 
@@ -502,6 +502,54 @@ static int stage_index(StageInfo *si, int n, const char *id)
     return -1;
 }
 
+/* One item of a stage's 'entrants': "stage#N-M", the places N..M of every table of an earlier stage (*per = 1: the
+   count is per table), or (v1.2) {"best_of": "stage#P", "count": K}, the K best clubs placed P across the groups of a
+   groups stage, ranked by that stage's tie-breakers (*per = 0). Returns the clubs, -1 after an error; *src = the
+   source stage (all_st index), *pa..*pb = the places taken (for the overlap check). */
+static int entr_item(C *c, JNode *it, const char *sp, StageInfo *all_st, int first_stage, int nall, int *src, int *per,
+                     int *pa, int *pb)
+{
+    JNode *ref = it, *cnt = NULL;
+    char *hash;
+    int a, b, ix, n = -1;
+    long k = 0;
+    if (it->type == J_OBJ) {
+        ref = need(c, it, "best_of", J_STR, sp);
+        cnt = need(c, it, "count", J_NUM, sp);
+        unknown_keys(c, it, sp);
+        if (!ref || !cnt) return -1;
+    } else if (it->type != J_STR) {
+        ERR(it, sp, "entrants: an item is 'stage#N-M' or {\"best_of\": \"stage#N\", \"count\": K}");
+        return -1;
+    }
+    hash = strchr(ref->str, '#');
+    if (!hash || !positions(hash + 1, &a, &b)) {
+        ERR(ref, sp, "entrants \"%s\": write 'stage#N', 'stage#N-M' or 'stage#LN-LM' (from the bottom)", ref->str);
+        return -1;
+    }
+    *hash = 0;
+    ix = stage_index(all_st + first_stage, nall - first_stage, ref->str);
+    if (ix < 0) ERR(ref, sp, "entrants: no earlier stage \"%s\" in this competition", ref->str);
+    *hash = '#';
+    if (ix >= 0) {
+        StageInfo *s = &all_st[first_stage + ix];
+        int lo = s->gmin ? s->gmin : s->teams, hi = s->gmax ? s->gmax : s->teams;
+        int n1 = pos_res(b, lo) - pos_res(a, lo) + 1, n2 = pos_res(b, hi) - pos_res(a, hi) + 1;
+        *src = first_stage + ix;
+        *pa = pos_res(a, lo);
+        *pb = pos_res(b, lo);
+        if (lo && (pos_res(a, lo) < 1 || pos_res(b, lo) > lo || n1 < 1))
+            ERR(ref, sp, "entrants: positions outside stage \"%s\" (%d clubs per table)", s->id, lo);
+        else if (n1 != n2)
+            ERR(ref, sp, "entrants: the range has %d clubs in a group of %d and %d in a group of %d: count both ends from the same side", n1, lo, n2, hi);
+        else if (!cnt) { *per = 1; n = n1; }
+        else if (a != b) ERR(ref, sp, "best_of \"%s\": one place ('stage#2': the best runners-up)", ref->str);
+        else if (s->groups < 2) ERR(ref, sp, "best_of \"%s\": stage \"%s\" has one table (best_of ranks one place across groups)", ref->str, s->id);
+        else if (int_in(c, cnt, "count", sp, 1, s->groups, &k)) { *per = 0; n = (int)k; }
+    }
+    return n;
+}
+
 static void do_comp(C *c, int ci, StageInfo *all_st, int *nall)
 {
     JNode *cp = c->comps[ci], *id, *names, *kind, *country, *parts, *points, *stages, *outcomes, *modes, *level, *v;
@@ -609,32 +657,40 @@ static void do_comp(C *c, int ci, StageInfo *all_st, int *nall)
             t = enum_member(c, type, "type", sp, STYPES, NE(STYPES));
             if (t > 0) s.type = (uint8_t)t;
             all_st[*nall].groups = 1;
-            if ((entrants = opt(c, st, "entrants", J_STR, sp))) {           /* "table#3-6" inside this competition */
-                char *hash = strchr(entrants->str, '#');
-                int a, b, ix;
-                if (!hash || !positions(hash + 1, &a, &b)) ERR(entrants, sp, "entrants \"%s\": write 'stage#N', 'stage#N-M' or 'stage#LN-LM' (from the bottom)", entrants->str);
-                else {
-                    *hash = 0;
-                    ix = stage_index(all_st + first_stage, *nall - first_stage, entrants->str);
-                    if (ix < 0) ERR(entrants, sp, "entrants: no earlier stage \"%s\" in this competition", entrants->str);
-                    else {
-                        StageInfo *src = &all_st[first_stage + ix];
-                        int lo = src->gmin ? src->gmin : src->teams, hi = src->gmax ? src->gmax : src->teams;
-                        int n1 = pos_res(b, lo) - pos_res(a, lo) + 1, n2 = pos_res(b, hi) - pos_res(a, hi) + 1;
-                        JNode *pg = opt(c, st, "per_group", J_BOOL, sp);
-                        if (lo && (pos_res(a, lo) < 1 || pos_res(b, lo) > lo || n1 < 1))
-                            ERR(entrants, sp, "entrants: positions outside stage \"%s\" (%d clubs per table)", entrants->str, lo);
-                        else if (n1 != n2)
-                            ERR(entrants, sp, "entrants: the range has %d clubs in a group of %d and %d in a group of %d: count both ends from the same side", n1, lo, n2, hi);
-                        if (src->groups > 1 && (pg ? pg->b : t == SWC_ST_PLAYOFF)) {   /* one play-off per group */
-                            all_st[*nall].per_group = 1;
-                            all_st[*nall].groups = src->groups;
-                            s.groups = (uint16_t)src->groups;
-                            s.flags |= 1;
-                            s.teams = (uint16_t)n1;
-                        } else s.teams = (uint16_t)(n1 * src->groups);
+            entrants = json_get(st, "entrants");                         /* "table#3-6" inside this competition */
+            if (entrants && entrants->type != J_STR && entrants->type != J_ARR) {
+                ERR(entrants, sp, "'entrants' must be a string ('stage#N-M') or a list of places");
+                entrants = NULL;
+            }
+            if (entrants && entrants->type == J_ARR && !entrants->n) ERR(entrants, sp, "entrants: an empty list");
+            if (entrants) {                     /* v1.2: a list of places ["table#3", "table#6"] and best_of items */
+                JNode *pg = opt(c, st, "per_group", J_BOOL, sp), *it;
+                int total = 0, pgn = 0, gsrc = -1, same = 1, best = 0, ok = 1, nr = 0, i2;
+                struct { int src, a, b; } rg[64];
+                for (it = entrants->type == J_STR ? entrants : entrants->child; it; it = entrants->type == J_STR ? NULL : it->next) {
+                    int src = -1, per = 0, a = 0, b = 0, n = entr_item(c, it, sp, all_st, first_stage, *nall, &src, &per, &a, &b);
+                    if (n < 0) { ok = 0; continue; }
+                    if (per) { total += n * all_st[src].groups; pgn += n; } else { total += n; best = 1; }
+                    if (gsrc < 0) gsrc = src; else if (src != gsrc) same = 0;
+                    for (i2 = 0; i2 < nr; i2++)
+                        if (rg[i2].src == src && a <= rg[i2].b && rg[i2].a <= b)
+                            ERR(it, sp, "entrants: place %d of stage \"%s\" is taken twice", a > rg[i2].a ? a : rg[i2].a, all_st[src].id);
+                    if (nr < 64) { rg[nr].src = src; rg[nr].a = a; rg[nr].b = b; nr++; }
+                }
+                if (!ok) s.teams = 0;              /* (unknown: no round counts) */
+                else if (gsrc >= 0) {
+                    StageInfo *src = &all_st[gsrc];
+                    if (src->groups > 1 && same && !best && (pg ? pg->b : t == SWC_ST_PLAYOFF)) {   /* one play-off per group */
+                        all_st[*nall].per_group = 1;
+                        all_st[*nall].groups = src->groups;
+                        s.groups = (uint16_t)src->groups;
+                        s.flags |= 1;
+                        s.teams = (uint16_t)pgn;
+                    } else {
+                        if (pg && pg->b && src->groups > 1)
+                            ERR(pg, sp, "per_group: the entrants must all come from one groups stage, with no best_of");
+                        s.teams = (uint16_t)total;
                     }
-                    *hash = '#';
                 }
             }
             legs = opt(c, st, "legs", J_NUM, sp);
@@ -768,7 +824,7 @@ static void do_comp(C *c, int ci, StageInfo *all_st, int *nall)
         int oi = 0;
         for (o = outcomes->child; o; o = o->next, oi++) {
             SwcOutcome r;
-            JNode *st, *pos, *tag, *zone, *to, *season;
+            JNode *st, *pos, *tag, *zone, *to, *assign, *season;
             int a = 0, b = 0, sx, tg, z;
             char op[320];
             memset(&r, 0, sizeof r);
@@ -779,7 +835,9 @@ static void do_comp(C *c, int ci, StageInfo *all_st, int *nall)
             pos = need(c, o, "positions", J_STR, op);
             tag = need(c, o, "tag", J_STR, op);
             zone = opt(c, o, "zone", J_STR, op);
-            to = opt(c, o, "to", J_STR, op);
+            to = json_get(o, "to");
+            if (to && to->type != J_STR && to->type != J_ARR) { ERR(to, op, "'to' must be a competition id or a list of them"); to = NULL; }
+            assign = opt(c, o, "assign", J_STR, op);
             season = opt(c, o, "season", J_STR, op);
             sx = st ? stage_index(all_st + first_stage, *nall - first_stage, st->str) : -1;
             if (st && sx < 0) ERR(st, op, "stage \"%s\" is not a stage of this competition", st->str);
@@ -794,12 +852,38 @@ static void do_comp(C *c, int ci, StageInfo *all_st, int *nall)
             }
             tg = enum_member(c, tag, "tag", op, TAGS, NE(TAGS));
             z = zone ? enum_member(c, zone, "zone", op, ZONES, NE(ZONES)) : 0;
-            if (to && !strcmp(to->str, "out")) r.target = 0xFFFE;         /* leaves the world */
-            else if (to) {
+            if (to && to->type == J_STR && !strcmp(to->str, "out")) r.target = 0xFFFE;     /* leaves the world */
+            else if (to && to->type == J_STR) {
                 int t2 = find_comp(c, to->str);
                 if (t2 < 0) ERR(to, op, "'to': no competition \"%s\" in this world", to->str);
                 else if (t2 == ci && !season) ERR(to, op, "'to' its own competition needs \"season\": \"next\"");
                 r.target = (uint16_t)(t2 < 0 ? 0xFFFF : t2);
+            } else if (to) {                    /* v1.2: parallel leagues of one level, each club to its area's */
+                JNode *q, *q2;
+                int qi = 0, lv = -1;
+                if (to->n < 2) ERR(to, op, "a 'to' list names 2 or more leagues (one league: a string)");
+                if (!assign) ERR(o, op, "a 'to' list needs \"assign\": \"geographic\" (each club goes to the league of its area)");
+                for (q = to->child; q; q = q->next, qi++) {
+                    int t2 = q->type == J_STR ? find_comp(c, q->str) : -1, l;
+                    JNode *kd, *lvn;
+                    if (t2 < 0) { ERR(q, op, "'to'[%d]: no competition \"%s\" in this world", qi, q->type == J_STR ? q->str : "?"); continue; }
+                    for (q2 = to->child; q2 != q; q2 = q2->next)
+                        if (q2->type == J_STR && !strcmp(q2->str, q->str)) { ERR(q, op, "'to'[%d]: \"%s\" listed twice", qi, q->str); break; }
+                    kd = json_get(c->comps[t2], "kind");
+                    lvn = json_get(c->comps[t2], "level");
+                    l = lvn && lvn->type == J_NUM ? (int)lvn->num : 0;
+                    if (!kd || kd->type != J_STR || strcmp(kd->str, "league")) ERR(q, op, "'to' list: \"%s\" is not a league", q->str);
+                    else if (t2 == ci) ERR(q, op, "'to' list: \"%s\" is this competition", q->str);
+                    else if (lv < 0) lv = l;
+                    else if (l != lv) ERR(q, op, "'to' list: \"%s\" is level %d, the first league level %d (parallel leagues share one level)", q->str, l, lv);
+                    if (r.target == 0xFFFF) r.target = (uint16_t)t2;
+                    { uint16_t tl[2] = { (uint16_t)(c->outc.n / sizeof(SwcOutcome)), (uint16_t)t2 }; bput(&c->tols, tl, 4); }
+                }
+                r.flags |= SWC_OF_GEOGRAPHIC;
+            }
+            if (assign) {
+                if (strcmp(assign->str, "geographic")) ERR(assign, op, "assign must be \"geographic\" (each club goes to the league of its area, clubs' 'area')");
+                else if (!to || to->type != J_ARR) ERR(assign, op, "'assign' goes with a 'to' list");
             }
             if ((tg == SWC_TAG_PROMOTED || tg == SWC_TAG_RELEGATED) && !to) ERR(o, op, "a %s outcome needs 'to'", TAGS[tg]);
             if (season) {
@@ -829,6 +913,15 @@ static void do_comp(C *c, int ci, StageInfo *all_st, int *nall)
     bput(&c->comp, &rec, sizeof rec);
 }
 
+/* union-find over competitions; the root is the lowest index (errors point at a level's first league) */
+static int uf_find(int *p, int i) { while (p[i] != i) i = p[i] = p[p[i]]; return i; }
+static void uf_join(int *p, int a, int b)
+{
+    a = uf_find(p, a);
+    b = uf_find(p, b);
+    if (a < b) p[b] = a; else p[a] = b;
+}
+
 /* ---- link checks across competitions ----------------------------------------------------------------------------- */
 static void check_links(C *c)
 {
@@ -839,29 +932,62 @@ static void check_links(C *c)
     const SwcComp *cm = (const SwcComp *)c->comp.p;
     const SwcStage *sg = (const SwcStage *)c->stag.p;
     const StageInfo *si = (const StageInfo *)c->stinfo;
-    const uint16_t *src = (const uint16_t *)c->srce.p;
-    int no = (int)(c->outc.n / sizeof *o), nsrc = (int)(c->srce.n / 4), i, j, k;
+    /* v1.2: parallel leagues (the targets of one 'to' list; the league sources of one linked competition, when they
+       share a level) are one level: the sizes are counted for the level, the clubs spread by area. */
+    const uint16_t *src = (const uint16_t *)c->srce.p, *tl = (const uint16_t *)c->tols.p;
+    int no = (int)(c->outc.n / sizeof *o), nsrc = (int)(c->srce.n / 4), ntl = (int)(c->tols.n / 4), i, j, k;
     int *out = calloc((size_t)c->ncomps + 1, sizeof *out), *in = calloc((size_t)c->ncomps + 1, sizeof *in);
+    int *par = calloc((size_t)c->ncomps + 1, sizeof *par), *one = calloc((size_t)c->ncomps + 1, sizeof *one);
+    SwcSpec sv = { .strs = (const char *)c->strs.p, .nstrs = (uint32_t)c->strs.n };
+    for (i = 0; i < c->ncomps; i++) { par[i] = i; one[i] = -1; }
+    for (k = 0; k < ntl; k++) uf_join(par, o[tl[2 * k]].target, tl[2 * k + 1]);
+    for (k = 0; k < nsrc; k++) {                    /* one[comp] = its first league source, when they share a level */
+        int a = src[2 * k], b = src[2 * k + 1];
+        if (cm[b].kind != SWC_K_LEAGUE || one[a] == -2) continue;
+        if (one[a] < 0) one[a] = b;
+        else if (cm[one[a]].level == cm[b].level) uf_join(par, one[a], b);
+        else one[a] = -2;
+    }
     for (j = 0; j < no; j++) {
         const StageInfo *x = &si[o[j].stage];
         int ko = x->type == SWC_ST_KNOCKOUT || x->type == SWC_ST_PLAYOFF, n, from = sg[o[j].stage].comp, any = 0;
         if (o[j].tag != SWC_TAG_PROMOTED && o[j].tag != SWC_TAG_RELEGATED) continue;
         if (ko) n = ((o[j].from <= 1 && o[j].to >= 1) + (o[j].from <= 2 && o[j].to >= 2)) * x->last_ties * (x->per_group ? x->groups : 1);
         else n = (pos_res(o[j].to, x->gmin) - pos_res(o[j].from, x->gmin) + 1) * x->groups;
-        for (k = 0; k < nsrc; k++)
+        if (one[from] >= 0) { out[one[from]] += n; any = 1; }
+        else for (k = 0; k < nsrc; k++)
             if (src[2 * k] == from && cm[src[2 * k + 1]].kind == SWC_K_LEAGUE) { out[src[2 * k + 1]] += n; any = 1; }
         if (!any) out[from] += n;
         if (o[j].target < c->ncomps) in[o[j].target] += n;
     }
+    for (i = 0; i < c->ncomps; i++) {               /* sums per level: at its first league */
+        int r = uf_find(par, i);
+        if (r != i) { in[r] += in[i]; out[r] += out[i]; }
+    }
     for (i = 0; i < c->ncomps; i++) {
-        if (cm[i].kind != SWC_K_LEAGUE || (!in[i] && !out[i])) continue;
-        if (cm[i].flags & 1 ? in[i] > out[i] : in[i] != out[i])
-            ERR(c->comps[i], swc_str(&(SwcSpec){ .strs = (const char *)c->strs.p, .nstrs = (uint32_t)c->strs.n }, cm[i].id),
-                "the league loses %d clubs and gains %d: its size would change%s", out[i], in[i],
-                cm[i].flags & 1 ? " (more clubs come in than leave, even with its refill)" : "");
+        int n = 1, refill = 1, l;
+        char lst[300];
+        size_t at = 0;
+        if (uf_find(par, i) != i || cm[i].kind != SWC_K_LEAGUE || (!in[i] && !out[i])) continue;
+        lst[0] = 0;
+        for (l = 0; l < c->ncomps; l++)
+            if (uf_find(par, l) == i) {
+                refill &= cm[l].flags & 1;
+                if (l != i) n++;
+                if (at < sizeof lst - 40) at += (size_t)snprintf(lst + at, sizeof lst - at, "%s%s", at ? ", " : "", swc_str(&sv, cm[l].id));
+            }
+        if (refill ? in[i] <= out[i] : in[i] == out[i]) continue;
+        if (n == 1)
+            ERR(c->comps[i], swc_str(&sv, cm[i].id), "the league loses %d clubs and gains %d: its size would change%s", out[i], in[i],
+                refill ? " (more clubs come in than leave, even with its refill)" : "");
+        else
+            ERR(c->comps[i], swc_str(&sv, cm[i].id), "the %d parallel leagues of level %d (%s) lose %d clubs and gain %d: their sizes would change%s",
+                n, cm[i].level, lst, out[i], in[i], refill ? " (more clubs come in than leave, even with their refill)" : "");
     }
     free(out);
     free(in);
+    free(par);
+    free(one);
 }
 
 /* ---- writer ------------------------------------------------------------------------------------------------------ */
@@ -892,10 +1018,9 @@ static uint8_t *write_bin(C *c, int world, size_t *len)
         { SWC_S_STRS, &c->strs }, { SWC_S_NAME, &c->names }, { SWC_S_CLUB, &c->club }, { SWC_S_COMP, &c->comp },
         { SWC_S_STAG, &c->stag }, { SWC_S_ENTR, &c->entr }, { SWC_S_TIEB, &c->tieb }, { SWC_S_DECI, &c->deci },
         { SWC_S_ROUN, &c->roun }, { SWC_S_OUTC, &c->outc }, { SWC_S_REG, &c->reg }, { SWC_S_META, &c->meta },
-        { SWC_S_FIXT, &c->fixt }, { SWC_S_GRPS, &c->grps }, { SWC_S_SRCE, &c->srce } };
+        { SWC_S_FIXT, &c->fixt }, { SWC_S_GRPS, &c->grps }, { SWC_S_SRCE, &c->srce }, { SWC_S_TOLS, &c->tols } };
     int ns = (int)(sizeof sec / sizeof sec[0]), i;
     while (ns > 13 && !sec[ns - 1].b->n) ns--;           /* sections added after the first release: only when used */
-    if (ns > 13 && !sec[13].b->n && sec[14].b->n) ns = 15;
     Buf out = { 0 };
     uint8_t *h;
     size_t body;
@@ -1039,7 +1164,7 @@ int swcc_compile(const char *spec, size_t len, const char *name, const char *pro
     json_free(proot);
     free(c->clubs); free(c->comps); free(st);
     free(c->strs.p); free(c->names.p); free(c->club.p); free(c->comp.p); free(c->stag.p); free(c->entr.p);
-    free(c->tieb.p); free(c->deci.p); free(c->roun.p); free(c->outc.p); free(c->reg.p); free(c->meta.p); free(c->fixt.p); free(c->grps.p); free(c->srce.p);
+    free(c->tieb.p); free(c->deci.p); free(c->roun.p); free(c->outc.p); free(c->reg.p); free(c->meta.p); free(c->fixt.p); free(c->grps.p); free(c->srce.p); free(c->tols.p);
     return c->errors;
 }
 
