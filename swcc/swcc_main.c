@@ -76,7 +76,7 @@ int main(int argc, char **argv)
     int i, errors;
     if (!strcmp(cmd, "dump") && argc == 3) return dump(argv[2]);
     if (strcmp(cmd, "validate") && strcmp(cmd, "compile")) {
-        fprintf(stderr, "usage: swcc validate|compile SPEC.json [--profile P.json] [-o OUT.SWC] | swcc dump OUT.SWC\n");
+        fprintf(stderr, "usage (schema swc/1.2): swcc validate|compile SPEC.json [--profile P.json] [-o OUT.SWC] | swcc dump OUT.SWC\n");
         return 2;
     }
     for (i = 2; i < argc; i++) {

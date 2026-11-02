@@ -61,6 +61,7 @@ typedef struct {
     uint32_t arena_max;
     /* spec */
     JNode *root;
+    int minor;                  /* the spec's "schema": "swc/1" any minor (SWC_MINOR), "swc/1.1" / "swc/1.2" that one */
     JNode *countries;
     JNode **clubs, **comps;
     int nclubs, ncomps;
@@ -84,6 +85,7 @@ static void diag(C *c, JNode *at, int error, const char *path, const char *fmt, 
     bput(&c->diag, line, (size_t)(k < (int)sizeof line ? k : (int)sizeof line - 1));
     if (error) c->errors++; else c->warnings++;
 }
+#define SWC_MINOR 2         /* the schema's minor version: swc/1.2 */
 #define ERR(at, path, ...)  diag(c, at, 1, path, __VA_ARGS__)
 #define WARN(at, path, ...) diag(c, at, 0, path, __VA_ARGS__)
 
@@ -110,6 +112,12 @@ static JNode *opt(C *c, JNode *obj, const char *key, JType t, const char *path)
     JNode *v = json_get(obj, key);
     if (v && v->type != t) { ERR(v, path, "'%s' must be a %s, not a %s", key, json_type_name(t), json_type_name(v->type)); return NULL; }
     return v;
+}
+
+/* A construct added in swc/1.<m>: refused when the spec names an older minor ("schema": "swc/1.1"). */
+static void need_minor(C *c, JNode *at, const char *path, int m, const char *what)
+{
+    if (c->minor < m) ERR(at, path, "%s is swc/1.%d: this spec says \"swc/1.%d\"", what, m, c->minor);
 }
 
 static int int_in(C *c, JNode *v, const char *key, const char *path, long lo, long hi, long *out)
@@ -663,6 +671,7 @@ static void do_comp(C *c, int ci, StageInfo *all_st, int *nall)
                 entrants = NULL;
             }
             if (entrants && entrants->type == J_ARR && !entrants->n) ERR(entrants, sp, "entrants: an empty list");
+            if (entrants && entrants->type == J_ARR) need_minor(c, entrants, sp, 2, "'entrants' as a list");
             if (entrants) {                     /* v1.2: a list of places ["table#3", "table#6"] and best_of items */
                 JNode *pg = opt(c, st, "per_group", J_BOOL, sp), *it;
                 int total = 0, pgn = 0, gsrc = -1, same = 1, best = 0, ok = 1, nr = 0, i2;
@@ -861,6 +870,7 @@ static void do_comp(C *c, int ci, StageInfo *all_st, int *nall)
             } else if (to) {                    /* v1.2: parallel leagues of one level, each club to its area's */
                 JNode *q, *q2;
                 int qi = 0, lv = -1;
+                need_minor(c, to, op, 2, "a 'to' list");
                 if (to->n < 2) ERR(to, op, "a 'to' list names 2 or more leagues (one league: a string)");
                 if (!assign) ERR(o, op, "a 'to' list needs \"assign\": \"geographic\" (each club goes to the league of its area)");
                 for (q = to->child; q; q = q->next, qi++) {
@@ -1091,8 +1101,13 @@ int swcc_compile(const char *spec, size_t len, const char *name, const char *pro
     if (c->root && c->errors == 0) {
         if (c->root->type != J_OBJ) ERR(c->root, "", "the spec is a JSON object");
         else {
-            if ((v = need(c, c->root, "schema", J_STR, "")) && strcmp(v->str, "swc/1"))
-                ERR(v, "", "schema \"%s\": this compiler reads \"swc/1\"", v->str);
+            c->minor = SWC_MINOR;
+            if ((v = need(c, c->root, "schema", J_STR, ""))) {
+                if (!strcmp(v->str, "swc/1.1")) c->minor = 1;
+                else if (!strcmp(v->str, "swc/1.2")) c->minor = 2;
+                else if (strcmp(v->str, "swc/1"))
+                    ERR(v, "", "schema \"%s\": this compiler reads \"swc/1\" (any 1.x), \"swc/1.1\" and \"swc/1.2\"", v->str);
+            }
             if ((v = need(c, c->root, "id", J_STR, "")) && !id_ok(v->str, NULL)) ERR(v, "", "world id \"%s\": lower-case words joined by '.', '-' or '_'", v->str);
             int_in(c, opt(c, c->root, "host_world", J_NUM, ""), "host_world", "", 0, 65535, &world);
             {
