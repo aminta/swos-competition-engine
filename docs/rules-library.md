@@ -68,6 +68,7 @@ career club played itself comes back through `sr_host`'s callbacks (all optional
 | `sr_cupd_keep_place`, `sr_cupd_note_arrival`, `sr_cupd_make` | `gplay.c` `cd_rank`, `cd_season`, `cd_make` | the Coppa Italia Serie D's later seasons: the entry order from the season end, the preliminary round and the first round of 64 |
 | `sr_b_teams` | `gplay.c` `sec_post` | the B-team rules alone (in levels, a level of groups counting as one; the Mod's division deltas are the same moves) |
 | `sr_spec_check`, `sr_league_check`, `sr_season_check` | -- | untrusted input, checked once: a spec written by hand, a damaged save (§3a) |
+| `sr_pg_season` | `gplay.c` `pg_season` (4.0.5; 4.0.6's `pg_a2` guard) | a league with parallel groups at the season end: each move one level, into a level of groups by the club's 1st / 2nd choice of group, a full group making room (schema/v1.md, "Parallel leagues by area") |
 | `sr_knockouts` | `gplay.c` `gp_season` | every pack's knockouts, whole: each kind and entrant, group rounds, the drawn pot, the promedio; titles, continental places and stage titles in `st.gp.res` / `st.gp.sres`; the SEASON WINNERS page |
 
 ### 3a. Untrusted input (`rules/sr_check.c`)
@@ -120,6 +121,7 @@ says how to make that game's word from them.
 | 4 | B teams, the season's moves | `gplay.c` `sec_post` | 5 built cases, then 20,000 random ones in each of Italy (levels of groups), Spain, Germany, the Netherlands, Portugal: every move the Mod's |
 | 5 | The cups' clubs from the second season | `gplay.c` `cf_build` (`CF_SEED` 1) | Italy 2026-27's two cups over 20,000 random seasons (moves, last season's places, career clubs): both lists the Mod's |
 | 6 | The Coppa Italia Serie D's later seasons | `gplay.c` `cd_rank`, `cd_season`, `cd_make` | 20,000 random season ends of Italy 2026-27: every later season's first two rounds the Mod's |
+| 11 | The parallel groups | `gplay.c` `pg_season`, `pg_make_room` | each league with groups (Italy, Argentina, Australia, El Salvador: `specs/<code>.pg`, the Mod's `pgroups.table_bytes`), 2,000 random season ends each -- clubs entering from below on odd seasons, every fourth season all of one area --: every club in the Mod's group. `make test`: 4.0.6's `pg_a2` guard (built cases, under the sanitizers) |
 
 ### 4a. The Mod 4.0.5 (pull request 7)
 
@@ -157,9 +159,6 @@ a crash once in a few runs; pattern-filled it is negative, the library's "no clu
 - the rest of the Coppa D's pure part -- the table walk (`cd_side`, `cd_raw`), the hosts, the
   simulated ties (`cd_str`, `cd_sim`), a round's draw: to be checked against the Mod 4.0.5, which
   has the drawn-round fix (d3c1221);
-- the parallel groups (OpenSWOS `src/league_groups.c`, the only C version): once compared with the
-  Mod 4.0.5's `pgroups` on random seasons (4.0.5: each region a first and a second choice, from the
-  real groups of the last ten seasons);
 - `sec_post`'s next-season flags (4.0.5 `SEC_BQ`: may each B team go up next season, the zone
   colours): the game's, not yet the library's;
 - the pool's queue (OpenSWOS `src/team_pool.c`): once compared with the Mod's RI section.
