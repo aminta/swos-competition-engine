@@ -1,0 +1,142 @@
+{
+ "schema": "swc/1.2",
+ "id": "test.v12-entrants-list",
+ "host_world": 9,
+ "_note": "swc/1.2 entrants as a list of places (synthetic): a play-off of the 2nd v the 4th of one table.",
+ "languages": [
+  "it",
+  "en",
+  "fr",
+  "de"
+ ],
+ "countries": {
+  "TST": {
+   "names": {
+    "it": "TESTLANDIA",
+    "en": "TESTLAND",
+    "fr": "TESTLANDE",
+    "de": "TESTLAND"
+   }
+  }
+ },
+ "clubs": [
+  {
+   "id": "club:tst.epsilon",
+   "name": "EPSILON",
+   "country": "TST",
+   "host": {
+    "file": 90,
+    "ordinal": 4
+   },
+   "area": "A"
+  },
+  {
+   "id": "club:tst.zeta",
+   "name": "ZETA",
+   "country": "TST",
+   "host": {
+    "file": 90,
+    "ordinal": 5
+   },
+   "area": "A"
+  },
+  {
+   "id": "club:tst.eta",
+   "name": "ETA",
+   "country": "TST",
+   "host": {
+    "file": 90,
+    "ordinal": 6
+   },
+   "area": "A"
+  },
+  {
+   "id": "club:tst.theta",
+   "name": "THETA",
+   "country": "TST",
+   "host": {
+    "file": 90,
+    "ordinal": 7
+   },
+   "area": "A"
+  }
+ ],
+ "competitions": [
+  {
+   "id": "tst.two-a",
+   "kind": "league",
+   "country": "TST",
+   "level": 1,
+   "names": {
+    "it": [
+     "SECONDA A",
+     "SECONDA A"
+    ],
+    "en": [
+     "SECOND A",
+     "SECOND A"
+    ],
+    "fr": [
+     "DEUXIEME A",
+     "DEUXIEME A"
+    ],
+    "de": [
+     "ZWEITE A",
+     "ZWEITE A"
+    ]
+   },
+   "participants": {
+    "count": 4,
+    "clubs": [
+     "club:tst.epsilon",
+     "club:tst.zeta",
+     "club:tst.eta",
+     "club:tst.theta"
+    ]
+   },
+   "stages": [
+    {
+     "id": "table",
+     "type": "round_robin",
+     "legs": 2,
+     "tiebreakers": [
+      "faithful_1996"
+     ]
+    },
+    {
+     "id": "po",
+     "type": "playoff",
+     "entrants": [
+      "table#2",
+      "table#4"
+     ],
+     "rounds": [
+      {
+       "ties": 1,
+       "legs": 2,
+       "home": "better_placed_second_leg",
+       "pairing": "seeded",
+       "decider": [
+        "aggregate",
+        "better_placed"
+       ]
+      }
+     ]
+    }
+   ],
+   "outcomes": [
+    {
+     "stage": "table",
+     "positions": "1",
+     "tag": "qualified"
+    }
+   ],
+   "modes": [
+    "career",
+    "season",
+    "preset",
+    "friendly"
+   ]
+  }
+ ]
+}

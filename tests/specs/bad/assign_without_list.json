@@ -1,0 +1,616 @@
+{
+ "schema": "swc/1.2",
+ "id": "test.v12",
+ "host_world": 9,
+ "_note": "swc/1.2 bad case (from tests/specs/ok/v12.json): assign_without_list",
+ "languages": [
+  "it",
+  "en",
+  "fr",
+  "de"
+ ],
+ "countries": {
+  "TST": {
+   "names": {
+    "it": "TESTLANDIA",
+    "en": "TESTLAND",
+    "fr": "TESTLANDE",
+    "de": "TESTLAND"
+   }
+  }
+ },
+ "clubs": [
+  {
+   "id": "club:tst.alpha",
+   "name": "ALPHA",
+   "country": "TST",
+   "host": {
+    "file": 90,
+    "ordinal": 0
+   }
+  },
+  {
+   "id": "club:tst.beta",
+   "name": "BETA",
+   "country": "TST",
+   "host": {
+    "file": 90,
+    "ordinal": 1
+   }
+  },
+  {
+   "id": "club:tst.gamma",
+   "name": "GAMMA",
+   "country": "TST",
+   "host": {
+    "file": 90,
+    "ordinal": 2
+   }
+  },
+  {
+   "id": "club:tst.delta",
+   "name": "DELTA",
+   "country": "TST",
+   "host": {
+    "file": 90,
+    "ordinal": 3
+   }
+  },
+  {
+   "id": "club:tst.epsilon",
+   "name": "EPSILON",
+   "country": "TST",
+   "host": {
+    "file": 90,
+    "ordinal": 4
+   },
+   "area": "A"
+  },
+  {
+   "id": "club:tst.zeta",
+   "name": "ZETA",
+   "country": "TST",
+   "host": {
+    "file": 90,
+    "ordinal": 5
+   },
+   "area": "A"
+  },
+  {
+   "id": "club:tst.eta",
+   "name": "ETA",
+   "country": "TST",
+   "host": {
+    "file": 90,
+    "ordinal": 6
+   },
+   "area": "A"
+  },
+  {
+   "id": "club:tst.theta",
+   "name": "THETA",
+   "country": "TST",
+   "host": {
+    "file": 90,
+    "ordinal": 7
+   },
+   "area": "A"
+  },
+  {
+   "id": "club:tst.iota",
+   "name": "IOTA",
+   "country": "TST",
+   "host": {
+    "file": 90,
+    "ordinal": 8
+   },
+   "area": "B"
+  },
+  {
+   "id": "club:tst.kappa",
+   "name": "KAPPA",
+   "country": "TST",
+   "host": {
+    "file": 90,
+    "ordinal": 9
+   },
+   "area": "B"
+  },
+  {
+   "id": "club:tst.lambda",
+   "name": "LAMBDA",
+   "country": "TST",
+   "host": {
+    "file": 90,
+    "ordinal": 10
+   },
+   "area": "B"
+  },
+  {
+   "id": "club:tst.mu",
+   "name": "MU",
+   "country": "TST",
+   "host": {
+    "file": 90,
+    "ordinal": 11
+   },
+   "area": "B"
+  },
+  {
+   "id": "club:tst.rho",
+   "name": "RHO",
+   "country": "TST",
+   "host": {
+    "file": 91,
+    "ordinal": 0
+   }
+  },
+  {
+   "id": "club:tst.sigma",
+   "name": "SIGMA",
+   "country": "TST",
+   "host": {
+    "file": 91,
+    "ordinal": 1
+   }
+  },
+  {
+   "id": "club:tst.tau",
+   "name": "TAU",
+   "country": "TST",
+   "host": {
+    "file": 91,
+    "ordinal": 2
+   }
+  },
+  {
+   "id": "club:tst.upsilon",
+   "name": "UPSILON",
+   "country": "TST",
+   "host": {
+    "file": 91,
+    "ordinal": 3
+   }
+  },
+  {
+   "id": "club:tst.phi",
+   "name": "PHI",
+   "country": "TST",
+   "host": {
+    "file": 91,
+    "ordinal": 4
+   }
+  },
+  {
+   "id": "club:tst.chi",
+   "name": "CHI",
+   "country": "TST",
+   "host": {
+    "file": 91,
+    "ordinal": 5
+   }
+  },
+  {
+   "id": "club:tst.psi",
+   "name": "PSI",
+   "country": "TST",
+   "host": {
+    "file": 91,
+    "ordinal": 6
+   }
+  },
+  {
+   "id": "club:tst.omega",
+   "name": "OMEGA",
+   "country": "TST",
+   "host": {
+    "file": 91,
+    "ordinal": 7
+   }
+  },
+  {
+   "id": "club:tst.auriga",
+   "name": "AURIGA",
+   "country": "TST",
+   "host": {
+    "file": 91,
+    "ordinal": 8
+   }
+  },
+  {
+   "id": "club:tst.bootes",
+   "name": "BOOTES",
+   "country": "TST",
+   "host": {
+    "file": 91,
+    "ordinal": 9
+   }
+  },
+  {
+   "id": "club:tst.carina",
+   "name": "CARINA",
+   "country": "TST",
+   "host": {
+    "file": 91,
+    "ordinal": 10
+   }
+  },
+  {
+   "id": "club:tst.draco",
+   "name": "DRACO",
+   "country": "TST",
+   "host": {
+    "file": 91,
+    "ordinal": 11
+   }
+  }
+ ],
+ "competitions": [
+  {
+   "id": "tst.one",
+   "kind": "league",
+   "country": "TST",
+   "level": 1,
+   "names": {
+    "it": [
+     "PRIMA",
+     "PRIMA"
+    ],
+    "en": [
+     "FIRST",
+     "FIRST"
+    ],
+    "fr": [
+     "PREMIERE",
+     "PREMIERE"
+    ],
+    "de": [
+     "ERSTE",
+     "ERSTE"
+    ]
+   },
+   "participants": {
+    "count": 4,
+    "clubs": [
+     "club:tst.alpha",
+     "club:tst.beta",
+     "club:tst.gamma",
+     "club:tst.delta"
+    ]
+   },
+   "stages": [
+    {
+     "id": "table",
+     "type": "round_robin",
+     "legs": 2,
+     "tiebreakers": [
+      "faithful_1996"
+     ]
+    }
+   ],
+   "outcomes": [
+    {
+     "stage": "table",
+     "positions": "1",
+     "tag": "champion"
+    },
+    {
+     "stage": "table",
+     "positions": "L1",
+     "tag": "relegated",
+     "to": [
+      "tst.two-a",
+      "tst.two-b"
+     ],
+     "assign": "geographic",
+     "season": "next"
+    }
+   ],
+   "modes": [
+    "career",
+    "season",
+    "preset",
+    "friendly"
+   ]
+  },
+  {
+   "id": "tst.two-a",
+   "kind": "league",
+   "country": "TST",
+   "level": 2,
+   "names": {
+    "it": [
+     "SECONDA A",
+     "SECONDA A"
+    ],
+    "en": [
+     "SECOND A",
+     "SECOND A"
+    ],
+    "fr": [
+     "DEUXIEME A",
+     "DEUXIEME A"
+    ],
+    "de": [
+     "ZWEITE A",
+     "ZWEITE A"
+    ]
+   },
+   "participants": {
+    "count": 4,
+    "clubs": [
+     "club:tst.epsilon",
+     "club:tst.zeta",
+     "club:tst.eta",
+     "club:tst.theta"
+    ]
+   },
+   "stages": [
+    {
+     "id": "table",
+     "type": "round_robin",
+     "legs": 2,
+     "tiebreakers": [
+      "faithful_1996"
+     ]
+    },
+    {
+     "id": "po",
+     "type": "playoff",
+     "entrants": [
+      "table#2",
+      "table#4"
+     ],
+     "rounds": [
+      {
+       "ties": 1,
+       "legs": 2,
+       "home": "better_placed_second_leg",
+       "pairing": "seeded",
+       "decider": [
+        "aggregate",
+        "better_placed"
+       ]
+      }
+     ]
+    }
+   ],
+   "outcomes": [
+    {
+     "stage": "table",
+     "positions": "1",
+     "tag": "qualified"
+    }
+   ],
+   "modes": [
+    "career",
+    "season",
+    "preset",
+    "friendly"
+   ]
+  },
+  {
+   "id": "tst.two-b",
+   "kind": "league",
+   "country": "TST",
+   "level": 2,
+   "names": {
+    "it": [
+     "SECONDA B",
+     "SECONDA B"
+    ],
+    "en": [
+     "SECOND B",
+     "SECOND B"
+    ],
+    "fr": [
+     "DEUXIEME B",
+     "DEUXIEME B"
+    ],
+    "de": [
+     "ZWEITE B",
+     "ZWEITE B"
+    ]
+   },
+   "participants": {
+    "count": 4,
+    "clubs": [
+     "club:tst.iota",
+     "club:tst.kappa",
+     "club:tst.lambda",
+     "club:tst.mu"
+    ]
+   },
+   "stages": [
+    {
+     "id": "table",
+     "type": "round_robin",
+     "legs": 2,
+     "tiebreakers": [
+      "faithful_1996"
+     ]
+    }
+   ],
+   "outcomes": [
+    {
+     "stage": "table",
+     "positions": "1",
+     "tag": "qualified"
+    }
+   ],
+   "modes": [
+    "career",
+    "season",
+    "preset",
+    "friendly"
+   ]
+  },
+  {
+   "id": "tst.final",
+   "kind": "playoff",
+   "country": "TST",
+   "names": {
+    "it": [
+     "FINALE PROMOZIONE",
+     "FINALE"
+    ],
+    "en": [
+     "PROMOTION FINAL",
+     "FINALE"
+    ],
+    "fr": [
+     "FINALE MONTEE",
+     "FINALE"
+    ],
+    "de": [
+     "AUFSTIEGSFINALE",
+     "FINALE"
+    ]
+   },
+   "participants": {
+    "count": 2,
+    "from": "link",
+    "source": [
+     "tst.two-a",
+     "tst.two-b"
+    ]
+   },
+   "stages": [
+    {
+     "id": "ko",
+     "type": "knockout",
+     "rounds": [
+      {
+       "ties": 1,
+       "legs": 1,
+       "home": "neutral",
+       "pairing": "draw",
+       "decider": [
+        "extra_time",
+        "penalties"
+       ]
+      }
+     ]
+    }
+   ],
+   "outcomes": [
+    {
+     "stage": "ko",
+     "positions": "1",
+     "tag": "promoted",
+     "to": "tst.one",
+     "season": "next",
+     "assign": "geographic"
+    }
+   ],
+   "modes": [
+    "career",
+    "season",
+    "preset",
+    "friendly"
+   ]
+  },
+  {
+   "id": "tst.cup",
+   "kind": "tournament",
+   "country": "TST",
+   "names": {
+    "it": [
+     "TORNEO",
+     "TORNEO"
+    ],
+    "en": [
+     "TOURNAMENT",
+     "TOURNAMENT"
+    ],
+    "fr": [
+     "TOURNOI",
+     "TOURNOI"
+    ],
+    "de": [
+     "TURNIER",
+     "TURNIER"
+    ]
+   },
+   "participants": {
+    "count": 12,
+    "clubs": [
+     "club:tst.rho",
+     "club:tst.sigma",
+     "club:tst.tau",
+     "club:tst.upsilon",
+     "club:tst.phi",
+     "club:tst.chi",
+     "club:tst.psi",
+     "club:tst.omega",
+     "club:tst.auriga",
+     "club:tst.bootes",
+     "club:tst.carina",
+     "club:tst.draco"
+    ]
+   },
+   "stages": [
+    {
+     "id": "groups",
+     "type": "groups",
+     "groups": 3,
+     "legs": 1,
+     "tiebreakers": [
+      "points",
+      "goal_difference",
+      "goals_for",
+      "draw_lots"
+     ]
+    },
+    {
+     "id": "ko",
+     "type": "knockout",
+     "entrants": [
+      "groups#1",
+      {
+       "best_of": "groups#2",
+       "count": 1
+      }
+     ],
+     "rounds": [
+      {
+       "ties": 2,
+       "legs": 2,
+       "home": "better_placed_second_leg",
+       "pairing": "seeded",
+       "decider": [
+        "aggregate",
+        "extra_time",
+        "penalties"
+       ]
+      },
+      {
+       "ties": 1,
+       "legs": 1,
+       "home": "neutral",
+       "pairing": "draw",
+       "decider": [
+        "extra_time",
+        "penalties"
+       ]
+      }
+     ]
+    }
+   ],
+   "outcomes": [
+    {
+     "stage": "ko",
+     "positions": "1",
+     "tag": "champion"
+    }
+   ],
+   "modes": [
+    "career",
+    "season",
+    "preset",
+    "friendly"
+   ]
+  }
+ ],
+ "_expect": "'assign' goes with a 'to' list"
+}

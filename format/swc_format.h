@@ -110,6 +110,7 @@ typedef struct { uint32_t tag, off, len; } SwcSection;       /* directory entry,
 #define SWC_S_FIXT  SWC_TAG('F','I','X','T')   /* SwcFixed records: fixed draws (pairing "fixed") */
 #define SWC_S_GRPS  SWC_TAG('G','R','P','S')   /* SwcGroup records: group sizes of a stage with unequal groups */
 #define SWC_S_SRCE  SWC_TAG('S','R','C','E')   /* SwcSource records: a linked competition's source competitions */
+#define SWC_S_TOLS  SWC_TAG('T','O','L','S')   /* SwcTarget records: every target of an outcome with a 'to' list (v1.2) */
 
 #define SWC_LANGS   4                          /* it, en, fr, de: the order of SwcName.str */
 
@@ -160,8 +161,10 @@ typedef struct {
     uint8_t  from, to;      /* positions (1-based, inclusive) */
     uint8_t  tag, zone;
     uint16_t target;        /* COMP index, 0xFFFF = none */
-    uint8_t  season, pad;   /* 0 = this season, 1 = next */
+    uint8_t  season;        /* 0 = this season, 1 = next */
+    uint8_t  flags;         /* bit 0: 'to' is a list (TOLS; target = its first), the clubs spread by area (v1.2) */
 } SwcOutcome;
+#define SWC_OF_GEOGRAPHIC 1
 
 typedef enum { SWC_M_CAREER = 1, SWC_M_SEASON = 2, SWC_M_PRESET = 4, SWC_M_FRIENDLY = 8 } SwcMode;
 typedef struct { uint16_t comp; uint16_t modes; } SwcReg;
@@ -169,6 +172,7 @@ typedef struct { uint32_t id, version; } SwcMeta;                 /* STRS offset
 typedef struct { uint16_t round, home, away; } SwcFixed;           /* ROUN index; ENTR-style club indices */
 typedef struct { uint16_t stage, size; } SwcGroup;                 /* one per group, in order */
 typedef struct { uint16_t comp, source; } SwcSource;
+typedef struct { uint16_t outcome, target; } SwcTarget;           /* OUTC index, COMP index */
 
 /* Tie-breaker criteria (TIEB) and deciders (DECI): dense codes shared with swcc. 0 ends a list. */
 typedef enum { SWC_TB_END = 0, SWC_TB_POINTS, SWC_TB_GOAL_DIFFERENCE, SWC_TB_GOALS_FOR, SWC_TB_GOALS_AGAINST,
@@ -199,6 +203,7 @@ typedef struct {
     const SwcFixed *fixt;   uint32_t nfixt;
     const SwcGroup *grps;   uint32_t ngrps;
     const SwcSource *srce;  uint32_t nsrce;
+    const SwcTarget *tols;  uint32_t ntols;
 } SwcSpec;
 
 /* Checks the header, the directory, the hash and every section's bounds and record size, and decodes the records

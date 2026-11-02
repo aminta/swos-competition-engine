@@ -1,0 +1,235 @@
+{
+ "schema": "swc/1.2",
+ "id": "test.v12-best-of",
+ "host_world": 9,
+ "_note": "swc/1.2 best_of (synthetic): 3 groups of 4; the group winners and the best runner-up go to the semi-finals.",
+ "languages": [
+  "it",
+  "en",
+  "fr",
+  "de"
+ ],
+ "countries": {
+  "TST": {
+   "names": {
+    "it": "TESTLANDIA",
+    "en": "TESTLAND",
+    "fr": "TESTLANDE",
+    "de": "TESTLAND"
+   }
+  }
+ },
+ "clubs": [
+  {
+   "id": "club:tst.rho",
+   "name": "RHO",
+   "country": "TST",
+   "host": {
+    "file": 91,
+    "ordinal": 0
+   }
+  },
+  {
+   "id": "club:tst.sigma",
+   "name": "SIGMA",
+   "country": "TST",
+   "host": {
+    "file": 91,
+    "ordinal": 1
+   }
+  },
+  {
+   "id": "club:tst.tau",
+   "name": "TAU",
+   "country": "TST",
+   "host": {
+    "file": 91,
+    "ordinal": 2
+   }
+  },
+  {
+   "id": "club:tst.upsilon",
+   "name": "UPSILON",
+   "country": "TST",
+   "host": {
+    "file": 91,
+    "ordinal": 3
+   }
+  },
+  {
+   "id": "club:tst.phi",
+   "name": "PHI",
+   "country": "TST",
+   "host": {
+    "file": 91,
+    "ordinal": 4
+   }
+  },
+  {
+   "id": "club:tst.chi",
+   "name": "CHI",
+   "country": "TST",
+   "host": {
+    "file": 91,
+    "ordinal": 5
+   }
+  },
+  {
+   "id": "club:tst.psi",
+   "name": "PSI",
+   "country": "TST",
+   "host": {
+    "file": 91,
+    "ordinal": 6
+   }
+  },
+  {
+   "id": "club:tst.omega",
+   "name": "OMEGA",
+   "country": "TST",
+   "host": {
+    "file": 91,
+    "ordinal": 7
+   }
+  },
+  {
+   "id": "club:tst.auriga",
+   "name": "AURIGA",
+   "country": "TST",
+   "host": {
+    "file": 91,
+    "ordinal": 8
+   }
+  },
+  {
+   "id": "club:tst.bootes",
+   "name": "BOOTES",
+   "country": "TST",
+   "host": {
+    "file": 91,
+    "ordinal": 9
+   }
+  },
+  {
+   "id": "club:tst.carina",
+   "name": "CARINA",
+   "country": "TST",
+   "host": {
+    "file": 91,
+    "ordinal": 10
+   }
+  },
+  {
+   "id": "club:tst.draco",
+   "name": "DRACO",
+   "country": "TST",
+   "host": {
+    "file": 91,
+    "ordinal": 11
+   }
+  }
+ ],
+ "competitions": [
+  {
+   "id": "tst.cup",
+   "kind": "tournament",
+   "country": "TST",
+   "names": {
+    "it": [
+     "TORNEO",
+     "TORNEO"
+    ],
+    "en": [
+     "TOURNAMENT",
+     "TOURNAMENT"
+    ],
+    "fr": [
+     "TOURNOI",
+     "TOURNOI"
+    ],
+    "de": [
+     "TURNIER",
+     "TURNIER"
+    ]
+   },
+   "participants": {
+    "count": 12,
+    "clubs": [
+     "club:tst.rho",
+     "club:tst.sigma",
+     "club:tst.tau",
+     "club:tst.upsilon",
+     "club:tst.phi",
+     "club:tst.chi",
+     "club:tst.psi",
+     "club:tst.omega",
+     "club:tst.auriga",
+     "club:tst.bootes",
+     "club:tst.carina",
+     "club:tst.draco"
+    ]
+   },
+   "stages": [
+    {
+     "id": "groups",
+     "type": "groups",
+     "groups": 3,
+     "legs": 1,
+     "tiebreakers": [
+      "points",
+      "goal_difference",
+      "goals_for",
+      "draw_lots"
+     ]
+    },
+    {
+     "id": "ko",
+     "type": "knockout",
+     "entrants": [
+      "groups#1",
+      {
+       "best_of": "groups#2",
+       "count": 1
+      }
+     ],
+     "rounds": [
+      {
+       "ties": 2,
+       "legs": 2,
+       "home": "better_placed_second_leg",
+       "pairing": "seeded",
+       "decider": [
+        "aggregate",
+        "extra_time",
+        "penalties"
+       ]
+      },
+      {
+       "ties": 1,
+       "legs": 1,
+       "home": "neutral",
+       "pairing": "draw",
+       "decider": [
+        "extra_time",
+        "penalties"
+       ]
+      }
+     ]
+    }
+   ],
+   "outcomes": [
+    {
+     "stage": "ko",
+     "positions": "1",
+     "tag": "champion"
+    }
+   ],
+   "modes": [
+    "career",
+    "season",
+    "preset",
+    "friendly"
+   ]
+  }
+ ]
+}

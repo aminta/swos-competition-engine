@@ -96,6 +96,7 @@ const char *swc_layout(uint32_t tag)
     case SWC_S_FIXT: return "222";
     case SWC_S_GRPS: return "22";
     case SWC_S_SRCE: return "22";
+    case SWC_S_TOLS: return "22";
     default:         return 0;
     }
 }
@@ -194,6 +195,7 @@ SwcStatus swc_spec_open(SwcSpec *s, const void *bin, uint32_t len, SwcArena *a)
     SEC(SWC_S_FIXT, SwcFixed, fixt, nfixt, 0)
     SEC(SWC_S_GRPS, SwcGroup, grps, ngrps, 0)
     SEC(SWC_S_SRCE, SwcSource, srce, nsrce, 0)
+    SEC(SWC_S_TOLS, SwcTarget, tols, ntols, 0)
 #undef SEC
     if (!s->nstrs || s->strs[s->nstrs - 1]) return SWC_E_TRUNC;       /* the string table ends with a NUL */
     for (i = 0; i < s->ncomps; i++) {                                  /* cross-references in range */
@@ -216,6 +218,8 @@ SwcStatus swc_spec_open(SwcSpec *s, const void *bin, uint32_t len, SwcArena *a)
     for (i = 0; i < s->noutc; i++)
         if (s->outc[i].stage >= s->nstages || (s->outc[i].target < 0xFFFE && s->outc[i].target >= s->ncomps))
             return SWC_E_TRUNC;
+    for (i = 0; i < s->ntols; i++)
+        if (s->tols[i].outcome >= s->noutc || s->tols[i].target >= s->ncomps) return SWC_E_TRUNC;
     return SWC_OK;
 }
 
