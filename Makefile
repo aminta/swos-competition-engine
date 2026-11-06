@@ -75,7 +75,12 @@ $(OUT)/swcc.wasm: $(SWCC) $(FORMAT) wasm/swcc_wasm.c wasm/libc.c $(wildcard wasm
 
 wasm: $(OUT)/swcc.wasm
 
+# swcc.wasm = native swcc on every spec of the repo (verdict, diagnostics, compiled bytes); WASM_SPECS adds more
+wasm-test: $(OUT)/swcc $(OUT)/swcc.wasm
+	node tests/wasm_parity.mjs $(OUT)/swcc $(OUT)/swcc.wasm tests/specs/ok tests/specs/bad examples packs $(WASM_SPECS) \
+	    --profile profiles/openswos.json tests/specs/ok-openswos examples packs $(WASM_SPECS)
+
 clean:
 	rm -rf $(OUT)
 
-.PHONY: all test clean rules-check wasm
+.PHONY: all test clean rules-check wasm wasm-test
