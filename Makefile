@@ -75,6 +75,11 @@ $(OUT)/swcc.wasm: $(SWCC) $(FORMAT) wasm/swcc_wasm.c wasm/libc.c $(wildcard wasm
 
 wasm: $(OUT)/swcc.wasm
 
+# the checker page (web/editor.html): one self-contained file, swcc.wasm and the profiles inlined
+page: $(OUT)/swcc-checker.html
+$(OUT)/swcc-checker.html: $(OUT)/swcc.wasm web/editor.html wasm/mkpage.mjs profiles/swos9697.json profiles/openswos.json
+	node wasm/mkpage.mjs $(OUT)/swcc.wasm $@
+
 # swcc.wasm = native swcc on every spec of the repo (verdict, diagnostics, compiled bytes); WASM_SPECS adds more
 wasm-test: $(OUT)/swcc $(OUT)/swcc.wasm
 	node tests/wasm_parity.mjs $(OUT)/swcc $(OUT)/swcc.wasm tests/specs/ok tests/specs/bad examples packs $(WASM_SPECS) \
@@ -83,4 +88,4 @@ wasm-test: $(OUT)/swcc $(OUT)/swcc.wasm
 clean:
 	rm -rf $(OUT)
 
-.PHONY: all test clean rules-check wasm wasm-test
+.PHONY: all test clean rules-check wasm wasm-test page

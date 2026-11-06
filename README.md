@@ -22,6 +22,7 @@ and the **contract tests** both sides must pass (`docs/contract-tests.md`).
 | `rules/` | the rules library: the Mod's season-end and cup rules both games play, one C copy, freestanding (`docs/rules-library.md`) |
 | `format/` | the shared reference, C99 freestanding: `.SWC` big-endian accessors, record layouts, reference reader; PCG32, substreams, FNV-1a |
 | `swcc/` | the spec compiler / validator (hosted C11): JSON + host profile -> diagnostics + binary spec `.SWC` |
+| `wasm/`, `web/` | swcc for the browser: wasm32 with its own minimal libc (no emscripten), and the checker page (validate only, UI in IT/EN/FR/DE) |
 | `schema/v1.md` | spec schema swc/1 (current minor 1.2): the frozen primitives list, what S0 validates, what each minor adds |
 | `profiles/` | host limits: `swos9697.json` (the 1996 DOS exe), `openswos.json` (OpenSWOS SDL + Amiga, draft) |
 | `examples/` | specs of real competitions, club names only (Serie A + Serie B 2026-27) |
@@ -35,6 +36,8 @@ build/swcc validate SPEC.json [--profile profiles/swos9697.json]
 build/swcc compile  SPEC.json -o OUT.SWC
 build/swcc dump     OUT.SWC
 make rules-check MOD=../swos-9697-mod    # the rules library against the Mod's own C
+make page        # build/swcc.wasm + build/swcc-checker.html, one self-contained page (needs clang wasm32 + wasm-ld)
+make wasm-test   # swcc.wasm = native swcc on every spec (WASM_SPECS=DIR for more)
 ```
 
 ## Who uses it
