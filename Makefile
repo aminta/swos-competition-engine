@@ -62,7 +62,20 @@ test: $(OUT)/test_format $(OUT)/swcc $(OUT)/swc_i486.o $(RULES_I486) $(OUT)/spec
 rules-check:
 	CC=$(CC) sh tests/rules/check.sh $(SEASONS)
 
+# swcc for the web (wasm/): wasm32, freestanding, its own minimal libc (wasm/libc.c), no emscripten. Needs clang with
+# the wasm32 target and wasm-ld (LLVM's lld): WASM_CC=/opt/homebrew/opt/llvm/bin/clang on macOS with brew llvm + lld.
+WASM_CC ?= /opt/homebrew/opt/llvm/bin/clang
+WASM     = --target=wasm32 -ffreestanding -nostdlib -O2 -std=c11 -Wall -Wextra -Wno-missing-field-initializers \
+           -Werror -isystem wasm/libc
+$(OUT)/swcc.wasm: $(SWCC) $(FORMAT) wasm/swcc_wasm.c wasm/libc.c $(wildcard wasm/libc/*.h) swcc/swcc.h swcc/json.h \
+                  format/swc_format.h | $(OUT)
+	$(WASM_CC) $(WASM) -fno-builtin -c -o $(OUT)/wasm_libc.o wasm/libc.c
+	$(WASM_CC) $(WASM) -Wl,--no-entry -Wl,--export-memory -Wl,--strip-all -o $@ $(SWCC) $(FORMAT) wasm/swcc_wasm.c \
+	    $(OUT)/wasm_libc.o
+
+wasm: $(OUT)/swcc.wasm
+
 clean:
 	rm -rf $(OUT)
 
-.PHONY: all test clean rules-check
+.PHONY: all test clean rules-check wasm
