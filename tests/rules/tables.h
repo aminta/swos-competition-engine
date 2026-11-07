@@ -16,8 +16,36 @@ static void set_shape(const char *s)
 static unsigned tab_seed;
 static unsigned tab_rand(unsigned n) { tab_seed = tab_seed * 1664525u + 1013904223u; return (tab_seed >> 8) % n; }
 struct trow { unsigned short team, glob, won, gf, ga, pts; };
+/* KO_TABLES=<file>: one real season instead (the S1 shadow, a game's final tables): "nd cupw mgr", then
+ * each division's "n" and its n rows "team glob won gf ga pts" -- every season the same, no stage tables */
+static int ko_file;
+static unsigned short ko_cupw, ko_mgr;
+static int ko_load(struct trow t[16][32], int n[16])
+{
+    const char *p = getenv("KO_TABLES");
+    unsigned v[6];
+    FILE *f;
+    if (!p || !(f = fopen(p, "r")))
+        return 0;
+    if (fscanf(f, "%d %u %u", &ND, &v[0], &v[1]) != 3 || ND < 1 || ND > 16) { fprintf(stderr, "bad %s\n", p); exit(2); }
+    ko_cupw = (unsigned short)v[0]; ko_mgr = (unsigned short)v[1];
+    for (int d = 0; d < ND; d++) {
+        if (fscanf(f, "%d", &n[d]) != 1 || n[d] < 0 || n[d] > 32) { fprintf(stderr, "bad %s\n", p); exit(2); }
+        SIZES[d] = n[d];
+        for (int k = 0; k < n[d]; k++) {
+            if (fscanf(f, "%u %u %u %u %u %u", &v[0], &v[1], &v[2], &v[3], &v[4], &v[5]) != 6) { fprintf(stderr, "bad %s\n", p); exit(2); }
+            struct trow *r = &t[d][k];
+            r->team = (unsigned short)v[0]; r->glob = (unsigned short)v[1]; r->won = (unsigned short)v[2];
+            r->gf = (unsigned short)v[3]; r->ga = (unsigned short)v[4]; r->pts = (unsigned short)v[5];
+        }
+    }
+    fclose(f);
+    return ko_file = 1;
+}
 static void make_tables(unsigned it, struct trow t[16][32], int n[16])
 {
+    if (ko_load(t, n))
+        return;
     tab_seed = it * 2654435761u + 1;
     for (int d = 0; d < ND; d++) {
         int pts[32];
@@ -75,6 +103,10 @@ static void make_stages(unsigned it, struct trow t[16][32], const int n[16], str
     unsigned h = it * 2246822519u + 7u;
     s->fresh = 0;
     s->nkeep = 0;
+    if (ko_file) {                              /* (a real season: no stage tables) */
+        for (int k = 0; k < 4; k++) s->n[k] = 0;
+        return;
+    }
     for (int k = 0; k < 5; k++) {
         int m = n[0], ord[32];
         struct trow *o = k < 4 ? s->r[k] : s->keep;
@@ -101,6 +133,8 @@ static unsigned short cup_winner(unsigned it, struct trow t[16][32], const int n
 {
     unsigned h = it * 2654435761u + 97u;
     h ^= h >> 15;
+    if (ko_file)
+        return ko_cupw;
     if (h % 4 == 0 || GP_ONLY)
         return 0;
     int d = 2 + (int)((h >> 4) % 3);

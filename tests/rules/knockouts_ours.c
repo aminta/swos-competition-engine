@@ -130,7 +130,7 @@ int main(int argc, char **argv)
         const uint16_t saved = sel;
         {                                       /* (the career club: a club of each division in turn) */
             const int d = (int)(it % ND);
-            sel = n[d] ? t[d][(it / ND) % n[d]].team : 0;
+            sel = ko_file ? ko_mgr : n[d] ? t[d][(it / ND) % n[d]].team : 0;
             se.mgr = sel;
         }
         se.bank = &bank;

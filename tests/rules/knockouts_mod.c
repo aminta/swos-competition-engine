@@ -48,7 +48,7 @@ int main(int argc, char **argv)
         if (!GP_ONLY) mod_dp((const unsigned short (*)[32][6])rows, n, cup_winner(it, t, n), stdout);
         {                                       /* (the career club: a club of each division in turn) */
             const int d = (int)(it % ND);
-            mod_mgr(n[d] ? t[d][(it / ND) % n[d]].team : 0);
+            mod_mgr(ko_file ? ko_mgr : n[d] ? t[d][(it / ND) % n[d]].team : 0);
         }
         mod_gp((const unsigned short (*)[32][6])rows, n, ND, spec, stdout);
         mod_mgr(0);                             /* (the contests' checks below: as before) */
