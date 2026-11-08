@@ -58,6 +58,8 @@ into this binary; an engine decodes it once when it opens a world (reference rea
 | `GRPS` | stage, size (one record per group; only with unequal groups) | `22` |
 | `SRCE` | competition, source competition | `22` |
 | `TOLS` | outcome, target competition: every target of an outcome whose `to` is a list (v1.2; the outcome's own target is the first; clubs spread over them by area) | `22` |
+| `PRNT` | club, parent club: a second team and its first team (v1.3) | `22` |
+| `SECT` | country (STRS offset of the code), level: the highest level a country's second teams play (v1.3) | `22` |
 
 Unknown tags are skipped (a newer compiler may add sections a reader can ignore); a format that changes a layout
 bumps `format`. `tests/golden/sample.swc` is the reference file (the sample pack, byte for byte).

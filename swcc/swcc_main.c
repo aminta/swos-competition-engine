@@ -48,6 +48,10 @@ static int dump(const char *path)
     if (s.nmeta) printf("  pack %s version %s\n", swc_str(&s, s.meta[0].id), swc_str(&s, s.meta[0].version));
     printf("  %u clubs, %u competitions, %u stages, %u rounds, %u outcomes, %u modes entries, %u names, %u fixed pairs\n",
            s.nclubs, s.ncomps, s.nstages, s.nrounds, s.noutc, s.nreg, s.nnames, s.nfixt);
+    for (i = 0; i < s.nsect; i++)                       /* v1.3 sections: printed only when present */
+        printf("  second teams of %s: level %u or lower\n", swc_str(&s, s.sect[i].country), s.sect[i].highest);
+    for (i = 0; i < s.nprnt; i++)
+        printf("  second team %s of %s\n", swc_str(&s, s.clubs[s.prnt[i].club].id), swc_str(&s, s.clubs[s.prnt[i].parent].id));
     for (i = 0; i < s.ncomps; i++) {
         const SwcComp *c = &s.comps[i];
         uint32_t j;
@@ -76,7 +80,7 @@ int main(int argc, char **argv)
     int i, errors;
     if (!strcmp(cmd, "dump") && argc == 3) return dump(argv[2]);
     if (strcmp(cmd, "validate") && strcmp(cmd, "compile")) {
-        fprintf(stderr, "usage (schema swc/1.2): swcc validate|compile SPEC.json [--profile P.json] [-o OUT.SWC] | swcc dump OUT.SWC\n");
+        fprintf(stderr, "usage (schema swc/1.3): swcc validate|compile SPEC.json [--profile P.json] [-o OUT.SWC] | swcc dump OUT.SWC\n");
         return 2;
     }
     for (i = 2; i < argc; i++) {

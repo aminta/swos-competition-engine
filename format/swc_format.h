@@ -111,6 +111,8 @@ typedef struct { uint32_t tag, off, len; } SwcSection;       /* directory entry,
 #define SWC_S_GRPS  SWC_TAG('G','R','P','S')   /* SwcGroup records: group sizes of a stage with unequal groups */
 #define SWC_S_SRCE  SWC_TAG('S','R','C','E')   /* SwcSource records: a linked competition's source competitions */
 #define SWC_S_TOLS  SWC_TAG('T','O','L','S')   /* SwcTarget records: every target of an outcome with a 'to' list (v1.2) */
+#define SWC_S_PRNT  SWC_TAG('P','R','N','T')   /* SwcParent records: a second team's parent club (v1.3) */
+#define SWC_S_SECT  SWC_TAG('S','E','C','T')   /* SwcSecondTeams records: a country's highest level for second teams (v1.3) */
 
 #define SWC_LANGS   4                          /* it, en, fr, de: the order of SwcName.str */
 
@@ -173,13 +175,15 @@ typedef struct { uint16_t round, home, away; } SwcFixed;           /* ROUN index
 typedef struct { uint16_t stage, size; } SwcGroup;                 /* one per group, in order */
 typedef struct { uint16_t comp, source; } SwcSource;
 typedef struct { uint16_t outcome, target; } SwcTarget;           /* OUTC index, COMP index */
+typedef struct { uint16_t club, parent; } SwcParent;               /* CLUB indices: a second team, its first team (v1.3) */
+typedef struct { uint16_t country, highest; } SwcSecondTeams;      /* STRS country code, the highest level a second team plays (v1.3) */
 
 /* Tie-breaker criteria (TIEB) and deciders (DECI): dense codes shared with swcc. 0 ends a list. */
 typedef enum { SWC_TB_END = 0, SWC_TB_POINTS, SWC_TB_GOAL_DIFFERENCE, SWC_TB_GOALS_FOR, SWC_TB_GOALS_AGAINST,
                SWC_TB_WINS, SWC_TB_AWAY_WINS, SWC_TB_AWAY_GOALS_FOR, SWC_TB_H2H_POINTS, SWC_TB_H2H_GOAL_DIFFERENCE,
                SWC_TB_H2H_GOALS_FOR, SWC_TB_H2H_AWAY_GOALS, SWC_TB_FAIR_PLAY, SWC_TB_COEFFICIENT,
                SWC_TB_PREVIOUS_STAGE_RANK, SWC_TB_PLAY_OFF_MATCH, SWC_TB_DRAW_LOTS, SWC_TB_NAME,
-               SWC_TB_FAITHFUL_1996, SWC_TB_COUNT } SwcTieBreak;
+               SWC_TB_FAITHFUL_1996, SWC_TB_H2H_REAPPLIED, SWC_TB_COUNT } SwcTieBreak;
 typedef enum { SWC_D_END = 0, SWC_D_AGGREGATE, SWC_D_AWAY_GOALS, SWC_D_EXTRA_TIME, SWC_D_PENALTIES,
                SWC_D_BETTER_PLACED, SWC_D_REPLAY, SWC_D_DRAW_LOTS, SWC_D_GOLDEN_GOAL, SWC_D_COUNT } SwcDecider;
 
@@ -204,6 +208,8 @@ typedef struct {
     const SwcGroup *grps;   uint32_t ngrps;
     const SwcSource *srce;  uint32_t nsrce;
     const SwcTarget *tols;  uint32_t ntols;
+    const SwcParent *prnt;  uint32_t nprnt;
+    const SwcSecondTeams *sect; uint32_t nsect;
 } SwcSpec;
 
 /* Checks the header, the directory, the hash and every section's bounds and record size, and decodes the records

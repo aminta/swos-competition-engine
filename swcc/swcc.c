@@ -61,7 +61,7 @@ typedef struct {
     uint32_t arena_max;
     /* spec */
     JNode *root;
-    int minor;                  /* the spec's "schema": "swc/1" = the M1 schema (1.0 + 1.1), "swc/1.1", "swc/1.2" */
+    int minor;                  /* the spec's "schema": "swc/1" = the M1 schema (1.0 + 1.1), "swc/1.1", "swc/1.2", "swc/1.3" */
     const char *schema;         /* its text, for the messages */
     JNode *countries;
     JNode **clubs, **comps;
@@ -69,7 +69,7 @@ typedef struct {
     void *stinfo;               /* StageInfo[], all stages in order */
     int nstinfo;
     /* output */
-    Buf strs, names, club, comp, stag, entr, tieb, deci, roun, outc, reg, meta, fixt, grps, srce, tols;
+    Buf strs, names, club, comp, stag, entr, tieb, deci, roun, outc, reg, meta, fixt, grps, srce, tols, prnt, sect;
     uint32_t arena;
 } C;
 
@@ -86,7 +86,7 @@ static void diag(C *c, JNode *at, int error, const char *path, const char *fmt, 
     bput(&c->diag, line, (size_t)(k < (int)sizeof line ? k : (int)sizeof line - 1));
     if (error) c->errors++; else c->warnings++;
 }
-#define SWC_MINOR 2         /* the schema's minor version: swc/1.2 */
+#define SWC_MINOR 3         /* the schema's minor version: swc/1.3 */
 #define ERR(at, path, ...)  diag(c, at, 1, path, __VA_ARGS__)
 #define WARN(at, path, ...) diag(c, at, 0, path, __VA_ARGS__)
 
@@ -382,7 +382,7 @@ static void do_clubs(C *c, JNode *arr)
     char path[128];
     uint16_t *per_file = calloc(65536, sizeof *per_file);
     for (i = 0; i < c->nclubs; i++) {
-        JNode *cl = c->clubs[i], *id, *name, *country, *host, *area;
+        JNode *cl = c->clubs[i], *id, *name, *country, *host, *area, *parent;
         SwcClub rec;
         long file = 0, ord = 0;
         memset(&rec, 0xFF, sizeof rec);
@@ -393,6 +393,7 @@ static void do_clubs(C *c, JNode *arr)
         country = need(c, cl, "country", J_STR, path);
         host = need(c, cl, "host", J_OBJ, path);
         area = opt(c, cl, "area", J_STR, path);
+        if ((parent = opt(c, cl, "parent", J_STR, path))) need_minor(c, parent, path, 3, "'parent'");
         if (id) {
             if (!id_ok(id->str, "club:")) ERR(id, path, "club id \"%s\" must be 'club:' + lower-case words joined by '.', '-' or '_'", id->str);
             for (j = 0; j < i; j++) {
@@ -431,6 +432,20 @@ static void do_clubs(C *c, JNode *arr)
         bput(&c->club, &rec, sizeof rec);
     }
     free(per_file);
+    for (i = 0; i < c->nclubs; i++) {                  /* v1.3: a second team's parent, a first team of its country */
+        JNode *cl = c->clubs[i], *p = json_get(cl, "parent"), *cc = json_get(cl, "country"), *pc;
+        if (!p || p->type != J_STR) continue;
+        pathf(path, sizeof path, "clubs[%d]", i);
+        j = find_club(c, p->str);
+        if (j < 0) { ERR(p, path, "parent \"%s\" is not in 'clubs'", p->str); continue; }
+        if (j == i) { ERR(p, path, "a club is not its own parent"); continue; }
+        pc = json_get(c->clubs[j], "country");
+        if (cc && pc && cc->type == J_STR && pc->type == J_STR && strcmp(cc->str, pc->str))
+            ERR(p, path, "parent \"%s\" is of %s, this club of %s (a second team plays in its parent's country)", p->str, pc->str, cc->str);
+        if (json_get(c->clubs[j], "parent"))
+            ERR(p, path, "parent \"%s\" is a second team itself (a parent is a first team)", p->str);
+        { uint16_t pr[2] = { (uint16_t)i, (uint16_t)j }; bput(&c->prnt, pr, 4); }
+    }
     (void)arr;
 }
 
@@ -464,7 +479,8 @@ static const char *const STYPES[] = { NULL, "round_robin", "groups", "league_pha
 static const char *const TIEBS[] = { NULL, "points", "goal_difference", "goals_for", "goals_against", "wins", "away_wins",
                                      "away_goals_for", "head_to_head_points", "head_to_head_goal_difference",
                                      "head_to_head_goals_for", "head_to_head_away_goals", "fair_play", "coefficient",
-                                     "previous_stage_rank", "play_off_match", "draw_lots", "name", "faithful_1996" };
+                                     "previous_stage_rank", "play_off_match", "draw_lots", "name", "faithful_1996",
+                                     "head_to_head_reapplied" };
 static const char *const DECIS[] = { NULL, "aggregate", "away_goals", "extra_time", "penalties", "better_placed", "replay",
                                      "draw_lots", "golden_goal" };
 static const char *const TAGS[] = { NULL, "champion", "promoted", "relegated", "playoff", "playout", "continental", "qualified" };
@@ -495,6 +511,7 @@ static uint16_t code_list(C *c, Buf *b, JNode *arr, const char *key, const char 
     int k = 0;
     for (m = arr ? arr->child : NULL; m; m = m->next) {
         int e = enum_member(c, m, key, path, names, n);
+        if (names == TIEBS && e == SWC_TB_H2H_REAPPLIED) need_minor(c, m, path, 3, "the tie-breaker \"head_to_head_reapplied\"");
         if (e > 0) { uint8_t u = (uint8_t)e; bput(b, &u, 1); k++; }
     }
     bput(b, &zero, 1);
@@ -935,6 +952,33 @@ static void uf_join(int *p, int a, int b)
 }
 
 /* ---- link checks across competitions ----------------------------------------------------------------------------- */
+/* v1.3: a second team (a club with a 'parent') never in its parent's league, never above its country's
+   second_teams.highest level */
+static void check_second_teams(C *c)
+{
+    int i;
+    for (i = 0; i < c->ncomps; i++) {
+        JNode *cp = c->comps[i], *kind = json_get(cp, "kind"), *lv = json_get(cp, "level"),
+              *list = json_get(json_get(cp, "participants"), "clubs"), *m, *o;
+        char path[128];
+        if (!kind || kind->type != J_STR || strcmp(kind->str, "league") || !list || list->type != J_ARR) continue;
+        pathf(path, sizeof path, "competitions[%d].participants", i);
+        for (m = list->child; m; m = m->next) {
+            int ix = m->type == J_STR ? find_club(c, m->str) : -1;
+            JNode *p, *cc, *hi;
+            if (ix < 0 || !(p = json_get(c->clubs[ix], "parent")) || p->type != J_STR) continue;
+            for (o = list->child; o; o = o->next)
+                if (o->type == J_STR && !strcmp(o->str, p->str))
+                    ERR(m, path, "\"%s\" plays in the league of its parent \"%s\"", m->str, p->str);
+            cc = json_get(c->clubs[ix], "country");
+            hi = cc && cc->type == J_STR ? json_get(json_get(json_get(c->countries, cc->str), "second_teams"), "highest") : NULL;
+            if (hi && hi->type == J_NUM && lv && lv->type == J_NUM && lv->num < hi->num)
+                ERR(m, path, "second team \"%s\" at level %d: %s's second teams play level %d or lower", m->str,
+                    (int)lv->num, cc->str, (int)hi->num);
+        }
+    }
+}
+
 static void check_links(C *c)
 {
     /* every league keeps its size: the clubs that leave it (promoted, relegated, out of the world) = the clubs that
@@ -1030,7 +1074,8 @@ static uint8_t *write_bin(C *c, int world, size_t *len)
         { SWC_S_STRS, &c->strs }, { SWC_S_NAME, &c->names }, { SWC_S_CLUB, &c->club }, { SWC_S_COMP, &c->comp },
         { SWC_S_STAG, &c->stag }, { SWC_S_ENTR, &c->entr }, { SWC_S_TIEB, &c->tieb }, { SWC_S_DECI, &c->deci },
         { SWC_S_ROUN, &c->roun }, { SWC_S_OUTC, &c->outc }, { SWC_S_REG, &c->reg }, { SWC_S_META, &c->meta },
-        { SWC_S_FIXT, &c->fixt }, { SWC_S_GRPS, &c->grps }, { SWC_S_SRCE, &c->srce }, { SWC_S_TOLS, &c->tols } };
+        { SWC_S_FIXT, &c->fixt }, { SWC_S_GRPS, &c->grps }, { SWC_S_SRCE, &c->srce }, { SWC_S_TOLS, &c->tols },
+        { SWC_S_PRNT, &c->prnt }, { SWC_S_SECT, &c->sect } };
     int ns = (int)(sizeof sec / sizeof sec[0]), i;
     while (ns > 13 && !sec[ns - 1].b->n) ns--;           /* sections added after the first release: only when used */
     Buf out = { 0 };
@@ -1104,13 +1149,14 @@ int swcc_compile(const char *spec, size_t len, const char *name, const char *pro
         if (c->root->type != J_OBJ) ERR(c->root, "", "the spec is a JSON object");
         else {
             c->minor = SWC_MINOR;
-            c->schema = "swc/1.2";
+            c->schema = "swc/1.3";
             if ((v = need(c, c->root, "schema", J_STR, ""))) {
                 c->schema = v->str;
                 if (!strcmp(v->str, "swc/1") || !strcmp(v->str, "swc/1.1")) c->minor = 1;
                 else if (!strcmp(v->str, "swc/1.2")) c->minor = 2;
+                else if (!strcmp(v->str, "swc/1.3")) c->minor = 3;
                 else
-                    ERR(v, "", "schema \"%s\": this compiler reads \"swc/1\" (= 1.1, the M1 schema), \"swc/1.1\" and \"swc/1.2\"", v->str);
+                    ERR(v, "", "schema \"%s\": this compiler reads \"swc/1\" (= 1.1, the M1 schema), \"swc/1.1\", \"swc/1.2\" and \"swc/1.3\"", v->str);
             }
             if ((v = need(c, c->root, "id", J_STR, "")) && !id_ok(v->str, NULL)) ERR(v, "", "world id \"%s\": lower-case words joined by '.', '-' or '_'", v->str);
             int_in(c, opt(c, c->root, "host_world", J_NUM, ""), "host_world", "", 0, 65535, &world);
@@ -1143,6 +1189,15 @@ int swcc_compile(const char *spec, size_t len, const char *name, const char *pro
                     }
                     unknown_keys(c, cn, cpth);
                 }
+                if ((cn = opt(c, m, "second_teams", J_OBJ, cpth))) {      /* v1.3 */
+                    long hi = 0;
+                    need_minor(c, cn, cpth, 3, "'second_teams'");
+                    if (int_in(c, need(c, cn, "highest", J_NUM, cpth), "highest", cpth, 1, 32, &hi)) {
+                        uint16_t st2[2] = { (uint16_t)str_add(c, m->key), (uint16_t)hi };
+                        bput(&c->sect, st2, 4);
+                    }
+                    unknown_keys(c, cn, cpth);
+                }
                 unknown_keys(c, m, cpth);
             }
             if ((v = need(c, c->root, "clubs", J_ARR, ""))) {
@@ -1165,6 +1220,7 @@ int swcc_compile(const char *spec, size_t len, const char *name, const char *pro
                 c->stinfo = st;
                 for (i = 0; i < c->ncomps; i++) do_comp(c, i, st, &nst);
                 if (c->errors == 0) check_links(c);
+                if (c->errors == 0) check_second_teams(c);
             }
             unknown_keys(c, c->root, "");
         }
@@ -1183,7 +1239,7 @@ int swcc_compile(const char *spec, size_t len, const char *name, const char *pro
     json_free(proot);
     free(c->clubs); free(c->comps); free(st);
     free(c->strs.p); free(c->names.p); free(c->club.p); free(c->comp.p); free(c->stag.p); free(c->entr.p);
-    free(c->tieb.p); free(c->deci.p); free(c->roun.p); free(c->outc.p); free(c->reg.p); free(c->meta.p); free(c->fixt.p); free(c->grps.p); free(c->srce.p); free(c->tols.p);
+    free(c->tieb.p); free(c->deci.p); free(c->roun.p); free(c->outc.p); free(c->reg.p); free(c->meta.p); free(c->fixt.p); free(c->grps.p); free(c->srce.p); free(c->tols.p); free(c->prnt.p); free(c->sect.p);
     return c->errors;
 }
 
