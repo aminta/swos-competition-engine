@@ -4,6 +4,7 @@
  * divisions, its knockouts only; ko: the career club's contests too (ko_build, gp_need). */
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "tables.h"
 void mod_dp(const unsigned short (*rows)[32][6], const int *n, unsigned short cupw, FILE *out);
 void mod_gp(const unsigned short (*rows)[32][6], const int *n, int nd, const unsigned char *sp, FILE *out);
@@ -11,16 +12,22 @@ void mod_mgr(unsigned short team);
 void mod_ko_all(FILE *out);
 void mod_pre(const unsigned short (*rows)[32][6], const int *n, int nd, const unsigned char *sp, int own, FILE *out);
 void mod_stages(const unsigned short (*r)[32][6], const int *n, int nk, const unsigned short (*keep)[6], int fresh);
+#if KO_BT == 3
+unsigned char SEC_TAB[1024];            /* (the game's SEC_TAB, KO_SEC: knockouts_mod_gp.c's gplay.c reads it) */
+#endif
 int main(int argc, char **argv)
 {
     unsigned N = argc > 2 ? (unsigned)atoi(argv[2]) : 20000;
+#if KO_BT == 3
+    sec_load(SEC_TAB, sizeof SEC_TAB);
+#endif
     struct trow t[16][32]; int n[16];
     unsigned short rows[16][32][6];
     load_spec(argv[1]);
-    if (argc > 3) set_shape(argv[3]);
+    if (argc > 3 && strcmp(argv[3], "-")) set_shape(argv[3]);   /* ("-": no shape, the ko argument after it) */
     for (unsigned it = 0; it < N; it++) {
         make_tables(it, t, n);
-#ifdef KO_BT
+#if defined(KO_BT) && KO_BT != 3
         bt_place(it, t, n);
 #endif
         for (int d = 0; d < ND; d++) for (int k = 0; k < n[d]; k++) {

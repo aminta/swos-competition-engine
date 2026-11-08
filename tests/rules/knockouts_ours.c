@@ -3,6 +3,7 @@
  * knockouts_mod.c prints the Mod's. Arguments: SPEC [SEASONS [SHAPE [ko]]]. */
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "tables.h"
 #include "swosrules.h"
 static const uint8_t PROM[16] = { 0, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
@@ -89,7 +90,35 @@ int main(int argc, char **argv)
     struct trow t[16][32]; int n[16];
     int pre_it = 0;                             /* (the season's number printed with its preview) */
     sr_league lg = { 14, PROM, REL, 1, 1, 2, 3, spec, 0, 0 };
-#ifdef KO_BT                                    /* (tables.h's B teams: knockouts_mod_gp.c's SEC_TAB) */
+#if KO_BT == 3                                 /* (the game's SEC_TAB, KO_SEC: its first country's B teams) */
+    static unsigned char sec[1024];
+    static uint8_t SECOND[32][2], IT_FIRST[16];
+    static uint16_t SECOND_TEAM[32];
+    static sr_levels IT_LV;
+    unsigned bt_base = 0xFFFF;
+    sec_load(sec, sizeof sec);
+    {
+        const unsigned char *c = sec + 1, *lv = c + 1, *e = lv + c[0] + 1;
+        int nb = lv[c[0]], nl = 0;
+        for (int i = 0; i < nb; i++) {
+            unsigned b = e[8 * i] | e[8 * i + 1] << 8, f = e[8 * i + 2] | e[8 * i + 3] << 8;
+            if (b < bt_base) bt_base = b;
+            if (f != 0xFFFF && f < bt_base) bt_base = f;
+            if (e[8 * i + 4] != e[4] || e[8 * i + 5] != e[5]) { fprintf(stderr, "KO_SEC: B teams' top / flags differ\n"); exit(2); }
+        }
+        for (int i = 0; i < nb; i++) {
+            unsigned b = e[8 * i] | e[8 * i + 1] << 8, f = e[8 * i + 2] | e[8 * i + 3] << 8;
+            SECOND[i][0] = (uint8_t)(b - bt_base);
+            SECOND[i][1] = f == 0xFFFF ? 0xFF : (uint8_t)(f - bt_base);
+            SECOND_TEAM[i] = (uint16_t)(e[8 * i + 6] | e[8 * i + 7] << 8);
+        }
+        for (int d = 0; d < c[0]; d++)          /* (each level's first division) */
+            if (!d || lv[d] != lv[d - 1]) IT_FIRST[nl++] = (uint8_t)d;
+        IT_LV.levels = (uint8_t)nl; IT_LV.first = IT_FIRST;
+        lg.seconds = (uint8_t)nb; lg.second = (const uint8_t (*)[2])SECOND; lg.second_top = e[4];
+        lg.second_flags = e[5]; lg.second_team = SECOND_TEAM;
+    }
+#elif defined(KO_BT)                           /* (tables.h's B teams: knockouts_mod_gp.c's SEC_TAB) */
     static const uint8_t SECOND[2][2] = { { 20, 0 }, { 21, 1 } };
     static const uint16_t SECOND_TEAM[2] = { 0x1420, 0x1421 };
     static const uint8_t IT_FIRST[4] = { 0, 1, 2, 5 };
@@ -99,12 +128,12 @@ int main(int argc, char **argv)
 #endif
     load_spec(argv[1]);
     lg.spec_len = spec_size;
-    if (argc > 3) { set_shape(argv[3]); lg.divisions = (uint8_t)ND; lg.italy = 0; }
+    if (argc > 3 && strcmp(argv[3], "-")) { set_shape(argv[3]); lg.divisions = (uint8_t)ND; lg.italy = 0; }
     sr_reset(&st);
     for (unsigned it = 0; it < N; it++) {
         sr_season se = { 0 };
         make_tables(it, t, n);
-#ifdef KO_BT
+#if defined(KO_BT) && KO_BT != 3
         bt_place(it, t, n);
 #endif
         se.cup_winner = cup_winner(it, t, n);
@@ -134,7 +163,11 @@ int main(int argc, char **argv)
             se.mgr = sel;
         }
         se.bank = &bank;
-#ifdef KO_BT
+#if KO_BT == 3
+        se.b_in_ko = 1;
+        se.base = (uint16_t)bt_base;
+        se.levels = &IT_LV;
+#elif defined(KO_BT)
         se.b_in_ko = 1;
         se.base = 424;
         se.levels = KO_BT == 2 ? &IT_LV : 0;

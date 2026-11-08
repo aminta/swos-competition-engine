@@ -60,6 +60,14 @@ static void make_tables(unsigned it, struct trow t[16][32], int n[16])
         }
     }
 }
+/* KO_SEC=<file> (-DKO_BT=3, the S1 shadow): the game's SEC_TAB bytes, raw */
+static void sec_load(unsigned char *b, unsigned size)
+{
+    const char *p = getenv("KO_SEC");
+    FILE *f = p ? fopen(p, "rb") : 0;
+    if (!f || fread(b, 1, size, f) < 2) { fprintf(stderr, "KO_SEC: no SEC_TAB file\n"); exit(2); }
+    fclose(f);
+}
 /* B teams (built with -DKO_BT): two B teams -- globals 444, 445, team words 1420h, 1421h, the
  * second division's first two rows -- and their first teams (424, 425: the top division's), each
  * season at random places of the tables, a B team in a division below its first team's; the
