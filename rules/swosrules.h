@@ -440,4 +440,55 @@ int32_t sr_lp_rank_strength(uint16_t own, const uint16_t *above, int32_t na, con
 
 int32_t sr_lp_season(uint32_t seed, int32_t nd, const sr_lp_club *const *c, const int32_t *n, int32_t *up);
 
+/* ---- sr_stage.c: the generic stages a spec's competitions are made of (swc/1.2: round_robin, groups,
+ * knockout / playoff rounds, single_match), as the competition editor writes them. Nothing in either
+ * game plays them yet; the codes are swcc's dense ones (format/swc_format.h SwcTieBreak / SwcDecider,
+ * checked equal by tests/rules/stage.c). A stage's clubs are 0 .. n-1 in the caller's order. */
+#define SR_STAGE_CLUBS 64
+enum { SR_TB_END = 0, SR_TB_POINTS, SR_TB_GOAL_DIFFERENCE, SR_TB_GOALS_FOR, SR_TB_GOALS_AGAINST, SR_TB_WINS,
+       SR_TB_AWAY_WINS, SR_TB_AWAY_GOALS_FOR, SR_TB_H2H_POINTS, SR_TB_H2H_GOAL_DIFFERENCE, SR_TB_H2H_GOALS_FOR,
+       SR_TB_H2H_AWAY_GOALS, SR_TB_FAIR_PLAY, SR_TB_COEFFICIENT, SR_TB_PREVIOUS_STAGE_RANK, SR_TB_PLAY_OFF_MATCH,
+       SR_TB_DRAW_LOTS, SR_TB_NAME, SR_TB_FAITHFUL_1996 };
+enum { SR_D_END = 0, SR_D_AGGREGATE, SR_D_AWAY_GOALS, SR_D_EXTRA_TIME, SR_D_PENALTIES, SR_D_BETTER_PLACED,
+       SR_D_REPLAY, SR_D_DRAW_LOTS, SR_D_GOLDEN_GOAL };
+
+/* A match of a stage: its matchday (0-based), the two clubs; the score once played. */
+typedef struct { uint8_t md, home, away, played, hg, ag; } sr_match;
+
+/* A round robin's calendar (the circle method): every pair meets `legs` times (1..4), one match per club
+ * per matchday, a club resting each matchday when n is odd; leg 2 the mirror of leg 1 (home and away
+ * swapped), legs 3-4 again legs 1-2. Matchdays: legs * (n - 1), legs * n when n is odd. Each club at home
+ * (n - 1) / 2 or n / 2 times a leg. Returns the matches written (legs * n * (n - 1) / 2), -1 for n outside
+ * 2..SR_STAGE_CLUBS, legs outside 1..4, or room short. */
+int32_t sr_rr_calendar(int32_t n, int32_t legs, sr_match *out, int32_t room);
+
+/* A table's row: the club (0 .. n-1) and its record from the played matches. */
+typedef struct { uint8_t club, pad; int16_t pts; uint16_t pl, w, d, l, gf, ga, aw, agf; } sr_srow;
+
+/* The table of n clubs from the played matches (points win / draw / loss), ranked by the tie-breaker list
+ * (SR_TB_*, 0-ended; the head-to-head criteria compare the tied clubs' matches among themselves, then the
+ * next criterion; draw lots from the seed and the club, so the input order never matters; 'name' = the
+ * caller's order). Returns n, or -1: a criterion the stage cannot use alone (fair play, coefficient,
+ * previous stage rank, play-off match, faithful_1996: they need the game's data), a club outside 0..n-1. */
+int32_t sr_rr_table(int32_t n, const sr_match *m, int32_t nm, int32_t win, int32_t draw, int32_t loss,
+                    const uint8_t *tieb, uint32_t seed, sr_srow *out);
+
+/* A knockout's rounds: ties and byes per round, entrants the clubs that reach the first. Returns the clubs
+ * left at the end; -(k + 1) when round k does not take the clubs that reach it (2 * ties + byes), as swcc. */
+typedef struct { uint16_t ties, byes; } sr_round_size;
+int32_t sr_ko_left(int32_t entrants, const sr_round_size *r, int32_t nr);
+
+/* One tie: its legs (side 0's and side 1's goals, the home side, 2 = neutral), extra time and penalties if
+ * played (after the last leg), the sides' places (better_placed: the lower wins). The aggregate score
+ * first; level, the deciders in order. Returns the winning side 0 / 1, SR_TIE_REPLAY when the list says
+ * 'replay', SR_TIE_OPEN when still level (a decider not played yet, or none left). */
+enum { SR_TIE_REPLAY = 2, SR_TIE_OPEN = -1 };
+typedef struct { uint8_t g[2], home; } sr_leg;
+typedef struct { uint8_t et_played, et[2], pens_played, pens[2]; uint8_t place[2]; } sr_tie_extra;
+int32_t sr_ko_tie(const sr_leg *leg, int32_t nlegs, const sr_tie_extra *x, const uint8_t *deci, uint32_t seed);
+
+/* Group sizes for n clubs in g groups when the spec gives none: as even as can be, the larger first
+ * (29 in 3: 10, 10, 9). Returns g, -1 when g < 1 or a group would have fewer than 2 clubs. */
+int32_t sr_group_sizes(int32_t n, int32_t g, uint8_t *size);
+
 #endif

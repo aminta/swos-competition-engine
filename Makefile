@@ -53,12 +53,17 @@ $(OUT)/groups_guard: tests/rules/groups_guard.c $(RULES) rules/swosrules.h | $(O
 	$(CC) -std=c99 -O1 -g -Wall -Wextra -Wno-missing-field-initializers $(SANITIZE) -Irules -o $@ \
 	    tests/rules/groups_guard.c rules/sr_groups.c
 
+# the generic stages the competition editor writes (round robin, table, knockout, ties, groups)
+$(OUT)/stage: tests/rules/stage.c $(RULES) rules/swosrules.h format/swc_format.h | $(OUT)
+	$(CC) -std=c99 -O1 -g -Wall -Wextra -Wno-missing-field-initializers $(SANITIZE) -Irules -o $@ \
+	    tests/rules/stage.c rules/sr_stage.c
+
 # England's non-league: the step-3 light pool and the summer re-allocation (invariants + controls)
 $(OUT)/nonleague: tests/rules/nonleague.c $(RULES) rules/swosrules.h | $(OUT)
 	$(CC) -std=c99 -O1 -g -Wall -Wextra -Wno-missing-field-initializers $(SANITIZE) -Irules -o $@ \
 	    tests/rules/nonleague.c rules/sr_pool.c rules/sr_groups.c
 
-test: $(OUT)/test_format $(OUT)/swcc $(OUT)/swc_i486.o $(RULES_I486) $(OUT)/spec_check $(OUT)/team_order $(OUT)/groups_guard $(OUT)/nonleague
+test: $(OUT)/test_format $(OUT)/swcc $(OUT)/swc_i486.o $(RULES_I486) $(OUT)/spec_check $(OUT)/team_order $(OUT)/groups_guard $(OUT)/nonleague $(OUT)/stage
 	$(OUT)/swcc compile packs/sample/world.json -o $(OUT)/sample.swc >/dev/null
 	$(OUT)/test_format $(OUT)/sample.swc
 	sh tests/run_specs.sh $(OUT)/swcc
@@ -73,6 +78,7 @@ test: $(OUT)/test_format $(OUT)/swcc $(OUT)/swc_i486.o $(RULES_I486) $(OUT)/spec
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/team_order
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/groups_guard
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/nonleague 500
+	ASAN_OPTIONS=detect_leaks=0 $(OUT)/stage 500
 	@if grep -n '(const Swc[A-Za-z]* \*)\|(const uint16_t \*)\|(const uint32_t \*)' format/*.c; then echo "the reader reads the spec buffer through a cast (big-endian rule: BE accessors only)"; exit 1; fi
 	@echo "reader: no casts over the spec buffer (BE accessors only)"
 
