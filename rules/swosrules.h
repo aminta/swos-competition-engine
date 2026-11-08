@@ -354,7 +354,11 @@ int32_t sr_cupd_make(const sr_cupd_end *e, uint32_t season, uint8_t rounds, uint
 
 /* One level of the league's chain, top-down: a single division (groups 1) or groups side by side,
  * divisions first .. first + groups - 1, each size[g] clubs. */
-typedef struct { uint8_t first, groups; uint8_t size[SR_PG_GROUPS]; } sr_pg_level;
+/* chain (not in the Mod: 0 for its leagues): when both choices of a club coming in are full and no club
+ * there can step aside, a club of a full choice may go to its other choice by making room there in turn
+ * (one step deeper), before the nearest-group fallback -- for a level whose groups are not in a line
+ * (England's step 3: N C S I). */
+typedef struct { uint8_t first, groups; uint8_t size[SR_PG_GROUPS]; uint8_t chain; } sr_pg_level;
 
 /* A club that can play at a level of groups: its division in its team file (`base`: a division
  * offset is from it) and its area byte at each level of groups, top-down (the Mod's area_byte):
@@ -402,9 +406,10 @@ int32_t sr_pg_realloc(const sr_pg_league *pg, int32_t l, const uint8_t *rank, co
 #define SR_LP_DIVS  4               /* a pool's divisions */
 #define SR_LP_CLUBS 24              /* a pool division's clubs */
 
-/* strength: hundredths of the world build's level (step 3 2.50 .. 0.00); ident: the club's identity
- * (its pool record), which also seeds its matches */
-typedef struct { uint16_t ident; uint8_t strength; } sr_lp_club;
+/* strength: hundredths of the club's built first-16 mean (step 3 2.50 .. 0.00; a club down from N / S
+ * keeps its own, 3.06 and up: the favourite it is), the scale linear to 3.75; ident: the club's
+ * identity (its pool record), which also seeds its matches */
+typedef struct { uint16_t ident; uint16_t strength; } sr_lp_club;
 
 /* Division d's light table of n clubs (n <= SR_LP_CLUBS), a double round robin: each match's goals by
  * the two strengths (home advantage, draws ~ 1 in 4) from seed, d and the two idents only -- the same

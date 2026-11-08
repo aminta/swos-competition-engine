@@ -54,7 +54,7 @@ static int make_room(const sr_pg_league *pg, int8_t *new_off, const u8 *pend, in
 {
     const sr_pg_level *L = &pg->level[tl];
     if (p >= SR_PG_PARALLEL) return 0;
-    for (int pass = 0; pass < 5; pass++)
+    for (int pass = 0; pass < (L->chain ? 4 : 5); pass++)   /* (a chain level: no move out of a club's choices) */
         for (int j = 0; j < pg->clubs; j++) {
             const sr_pg_club *f = &pg->club[j];
             if (j == self || (pend[j >> 3] & (1 << (j & 7))) || new_off[j] + f->base != L->first + a) continue;
@@ -71,6 +71,50 @@ static int make_room(const sr_pg_league *pg, int8_t *new_off, const u8 *pend, in
             new_off[j] = (int8_t)(L->first + w - f->base);
             return 1;
         }
+    return 0;
+}
+
+/* the club's other choice than w at level p (or none, GROUPS) */
+static int other_choice(int b, int w, int groups)
+{
+    const int h1 = A1(b), h2 = area2(b);
+    if (banned(b) || h2 == 14 || h2 >= groups || h1 >= groups) return groups;
+    return h1 == w ? h2 : h2 == w ? h1 : groups;
+}
+
+/* a club placed in group g that can go to its other choice, which has room: moved, 1 */
+static int step_aside(const sr_pg_league *pg, int8_t *new_off, const u8 *pend, int skip, int tl, int g,
+                      u8 (*occ)[PG], int p)
+{
+    const sr_pg_level *L = &pg->level[tl];
+    for (int k = 0; k < pg->clubs; k++) {
+        const sr_pg_club *f = &pg->club[k];
+        if (k == skip || (pend[k >> 3] & (1 << (k & 7))) || new_off[k] + f->base != L->first + g) continue;
+        const int y = other_choice(f->area[p], g, L->groups);
+        if (y >= L->groups || occ[tl][y] >= L->size[y]) continue;
+        occ[tl][y]++; occ[tl][g]--;
+        new_off[k] = (int8_t)(L->first + y - f->base);
+        return 1;
+    }
+    return 0;
+}
+
+/* level.chain: room in group w (full) one step deeper -- a club of w goes to its other choice x
+ * (full too) once a club of x steps aside to its own other choice; every move within the clubs'
+ * own choices. 1: room made in w. */
+static int chain_room(const sr_pg_league *pg, int8_t *new_off, const u8 *pend, int self, int tl, int w,
+                      u8 (*occ)[PG], int p)
+{
+    const sr_pg_level *L = &pg->level[tl];
+    for (int j = 0; j < pg->clubs; j++) {
+        const sr_pg_club *f = &pg->club[j];
+        if (j == self || (pend[j >> 3] & (1 << (j & 7))) || new_off[j] + f->base != L->first + w) continue;
+        const int x = other_choice(f->area[p], w, L->groups);
+        if (x >= L->groups || !step_aside(pg, new_off, pend, j, tl, x, occ, p)) continue;
+        occ[tl][x]++; occ[tl][w]--;
+        new_off[j] = (int8_t)(L->first + x - f->base);
+        return 1;
+    }
     return 0;
 }
 
@@ -111,6 +155,10 @@ int32_t sr_pg_season(const sr_pg_league *pg, const int8_t *old_off, int8_t *new_
                     const int w = k ? second : area;
                     if (w >= L->groups) continue;
                     if (occ[tl][w] < L->size[w] || make_room(pg, new_off, pend, i, tl, w, occ, p)) to = w;
+                }
+                for (int k = 0; k < 2 && to < 0 && L->chain; k++) {   /* (not in the Mod: one step deeper) */
+                    const int w = k ? second : area;
+                    if (w < L->groups && chain_room(pg, new_off, pend, i, tl, w, occ, p)) to = w;
                 }
                 if (to < 0) to = with_room(a, L, occ[tl]);  /* (a second team, or no choice fits: nearest) */
                 occ[tl][to]++;

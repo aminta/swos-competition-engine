@@ -8,6 +8,7 @@
  *   re-allocation 24 / 24, no strict club across, the flexible ones split by rank (north first),
  *                 the same clubs give the same split in any slots, a second pass changes nothing;
  *                 strict clubs past a group's size cross, the southernmost first
+ *   chain level   a club whose two choices are full placed one step deeper, every club within its choices
  * Argument: SEASONS (default 2000). Prints PASS / FAIL lines; exit 1 on a FAIL. */
 #include <stdio.h>
 #include <stdlib.h>
@@ -44,7 +45,7 @@ static int table_ok(const sr_row *t, int n)
 static void make_div(sr_lp_club *c, int n, unsigned s)
 {
     seed_ = s;
-    for (int i = 0; i < n; i++) { c[i].ident = (uint16_t)(1000 + rnd(30000)); c[i].strength = (uint8_t)(250 - i * 250 / (n - 1)); }
+    for (int i = 0; i < n; i++) { c[i].ident = (uint16_t)(1000 + rnd(30000)); c[i].strength = (uint16_t)(250 - i * 250 / (n - 1)); }
     for (int i = 1; i < n; i++) for (int j = 0; j < i; j++) if (c[i].ident == c[j].ident) c[i].ident++;
 }
 
@@ -129,7 +130,7 @@ static void playoffs(int seasons)
 /* ---- the re-allocation ---- */
 
 enum { NC = 60 };                               /* N 24 + S 24 + 12 elsewhere (NL above, pool below) */
-static sr_pg_level lv[3] = { { 0, 1, { 24 } }, { 1, 2, { 24, 24 } }, { 3, 1, { 12 } } };
+static sr_pg_level lv[3] = { { 0, 1, { 24 }, 0 }, { 1, 2, { 24, 24 }, 0 }, { 3, 1, { 12 }, 0 } };
 static sr_pg_club cl[NC];
 static uint8_t rk[NC];
 static uint16_t id[NC];
@@ -263,9 +264,38 @@ static void reallocation(int seasons)
     if (crossed > 0 && maxin > mincross) worst_ok = 0;
     snprintf(m, sizeof m, "re-allocation: strict northerners past the room cross, the southernmost (%d crossed, north %d)", crossed, n0);
     check(crossed > 0 && n0 == 24 && worst_ok, m);
-    sr_pg_level one[1] = { { 0, 1, { 24 } } };
+    sr_pg_level one[1] = { { 0, 1, { 24 }, 0 } };
     sr_pg_league bad = { 1, one, NC, cl };
     check(sr_pg_realloc(&bad, 0, rk, id, a) == -1, "control: a level that is not two groups is refused");
+}
+
+/* a level of 4 groups not in a line (N C S I, 2 each): a club coming in whose two choices are full,
+ * room only one step deeper. With chain: every club within its own choices; without (the Mod): the
+ * nearest-group fallback puts someone outside them (the control). */
+static int chain_case(int chain, int *outside)
+{
+    /* area bytes: low nibble the 1st choice, high nibble the 2nd + 1; N 0, C 1, S 2, I 3 */
+    static const uint8_t ar[8] = { 0x20, 0x00, 0x31, 0x01, 0x42, 0x02, 0x03, 0x20 };
+    /* n1 (N, C), n2 (N), c1 (C, S), c2 (C), s1 (S, I), s2 (S), i1 (I), x (N, C) coming up from below */
+    sr_pg_level lv4[2] = { { 0, 1, { 8 }, 0 }, { 1, 4, { 2, 2, 2, 2 }, (uint8_t)chain } };
+    sr_pg_club c4[8];
+    int8_t old_off[8] = { 1, 1, 2, 2, 3, 3, 4, 5 }, new_off[8] = { 1, 1, 2, 2, 3, 3, 4, 1 };
+    for (int i = 0; i < 8; i++) {
+        c4[i].base = 0;
+        c4[i].area[0] = ar[i];
+        for (int p = 1; p < SR_PG_PARALLEL; p++) c4[i].area[p] = 0xFF;
+    }
+    sr_pg_league pg = { 2, lv4, 8, c4 };
+    if (sr_pg_season(&pg, old_off, new_off, NULL) != 0) return -1;
+    int n[4] = { 0 }, out = 0;
+    for (int i = 0; i < 8; i++) {
+        const int g = new_off[i] - 1, h1 = ar[i] & 15, h2 = (ar[i] >> 4) - 1;
+        if (g < 0 || g > 3) return -1;
+        n[g]++;
+        if (g != h1 && g != h2) out++;
+    }
+    *outside = out;
+    return n[0] == 2 && n[1] == 2 && n[2] == 2 && n[3] == 2;
 }
 
 int main(int argc, char **argv)
@@ -274,5 +304,12 @@ int main(int argc, char **argv)
     light_tables(n);
     playoffs(n);
     reallocation(n);
+    int out_c = -1, out_m = -1;
+    const int ok_c = chain_case(1, &out_c), ok_m = chain_case(0, &out_m);
+    char m[160];
+    snprintf(m, sizeof m, "chain level (N C S I): both choices full, room one step deeper -- every club within its choices (%d outside)", out_c);
+    check(ok_c == 1 && out_c == 0, m);
+    snprintf(m, sizeof m, "control: the same without chain (the Mod's fallback) puts a club outside its choices (%d)", out_m);
+    check(ok_m == 1 && out_m > 0, m);
     return fails ? 1 : 0;
 }

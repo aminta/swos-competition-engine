@@ -29,10 +29,9 @@ static u32 below(rng *r, u32 n)                 /* 0 .. n-1 */
     return ((r->h >> 16) * n) >> 16;
 }
 
-static u32 str2(int strength, int home)         /* 30 .. 70, squared (gp_str2's scale) */
+static u32 str2(int strength, int home)         /* 30 .. 70 for 0.00 .. 2.50 (gp_str2's scale), on to 90 */
 {
-    int s = 30 + strength * 40 / 250;
-    if (s > 70) s = 70;
+    int s = 30 + (strength > 375 ? 375 : strength) * 40 / 250;
     if (home) s = s * 11 / 10;
     return (u32)(s * s);
 }
