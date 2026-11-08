@@ -162,7 +162,7 @@ a crash once in a few runs; pattern-filled it is negative, the library's "no clu
 - `sec_post`'s next-season flags (4.0.5 `SEC_BQ`: may each B team go up next season, the zone
   colours): the game's, not yet the library's;
 - the pool's queue (OpenSWOS `src/team_pool.c`): once compared with the Mod's RI section.
-| 12 | The generic stages (new: not in the Mod) | -- (`rules/sr_stage.c`) | `tests/rules/stage.c` in `make test`: the competition editor's round robin calendar (n 2..64, legs 1..4: pairs, rests, home balance, mirrored legs), a table ranked by the spec's tie-breakers (head to head included; the ones needing the game's data refused), swcc's knockout arithmetic, a tie by the spec's deciders, group sizes -- invariants with controls; SR_TB_* / SR_D_* checked equal to swcc's codes |
+| 12 | The generic stages (new: not in the Mod) | -- (`rules/sr_stage.c`) | `tests/rules/stage.c` in `make test`: the competition editor's round robin calendar (n 2..64, legs 1..4: pairs, rests, home balance, mirrored legs), a table ranked by the spec's tie-breakers (head to head included, once in list order or UEFA's `head_to_head_reapplied`; the ones needing the game's data refused), swcc's knockout arithmetic, a tie by the spec's deciders, group sizes -- invariants with controls; SR_TB_* / SR_D_* checked equal to swcc's codes |
 
 ## 5. Tests
 

@@ -167,6 +167,7 @@ World 2026-27. Field names follow the proposal's schema.
 |---|---|---|---|
 | `tiebreakers` | ordered list (proposal §4.4), recursive head-to-head | every league with its real criteria | `zones.py` / data |
 | `tiebreak.faithful_1996` | points, GD, GF, name | the original 1996 world | game |
+| `tiebreak.head_to_head_reapplied` | head-to-head points, GD, GF among the tied clubs, again among a smaller still-tied subset | UEFA Nations League, Euro qualifying groups | engine |
 | `table.legend_zones` | outcome `zone` tags per position, per group | CL / EL / CONF / PROM / P.OFF / P.OUT / RETR, legend above the table | `zones.py` (CONVENTIONS 5-7) |
 | `points.adjustment` | `{"club": ..., "points": -N, "reason": ...}` in season-1 data | point deductions where real | data |
 

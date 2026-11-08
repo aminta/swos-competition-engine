@@ -454,7 +454,8 @@ static const char *const STYPES[] = { NULL, "round_robin", "groups", "league_pha
 static const char *const TIEBS[] = { NULL, "points", "goal_difference", "goals_for", "goals_against", "wins", "away_wins",
                                      "away_goals_for", "head_to_head_points", "head_to_head_goal_difference",
                                      "head_to_head_goals_for", "head_to_head_away_goals", "fair_play", "coefficient",
-                                     "previous_stage_rank", "play_off_match", "draw_lots", "name", "faithful_1996" };
+                                     "previous_stage_rank", "play_off_match", "draw_lots", "name", "faithful_1996",
+                                     "head_to_head_reapplied" };
 static const char *const DECIS[] = { NULL, "aggregate", "away_goals", "extra_time", "penalties", "better_placed", "replay",
                                      "draw_lots", "golden_goal" };
 static const char *const TAGS[] = { NULL, "champion", "promoted", "relegated", "playoff", "playout", "continental", "qualified" };

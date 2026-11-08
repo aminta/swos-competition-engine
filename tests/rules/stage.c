@@ -33,7 +33,8 @@ static void codes(void)
 {
     const int tb = SR_TB_POINTS == SWC_TB_POINTS && SR_TB_H2H_POINTS == SWC_TB_H2H_POINTS &&
                    SR_TB_DRAW_LOTS == SWC_TB_DRAW_LOTS && SR_TB_NAME == SWC_TB_NAME &&
-                   SR_TB_FAITHFUL_1996 == SWC_TB_FAITHFUL_1996 && SR_TB_FAITHFUL_1996 + 1 == SWC_TB_COUNT;
+                   SR_TB_FAITHFUL_1996 == SWC_TB_FAITHFUL_1996 && SR_TB_H2H_REAPPLIED == SWC_TB_H2H_REAPPLIED &&
+                   SR_TB_H2H_REAPPLIED + 1 == SWC_TB_COUNT;
     const int de = SR_D_AGGREGATE == SWC_D_AGGREGATE && SR_D_PENALTIES == SWC_D_PENALTIES &&
                    SR_D_REPLAY == SWC_D_REPLAY && SR_D_GOLDEN_GOAL == SWC_D_GOLDEN_GOAL &&
                    SR_D_GOLDEN_GOAL + 1 == SWC_D_COUNT;
@@ -199,6 +200,26 @@ static void table(int seasons)
     sr_rr_table(4, h, 6, 3, 1, 0, gd_first, 1u, t);
     snprintf(msg, sizeof msg, "table: the same three by overall goal difference (all +3), then goals for (6 5 5), then name -- %d %d %d (want 1 0 2)", t[0].club, t[1].club, t[2].club);
     check(t[0].club == 1 && t[1].club == 0 && t[2].club == 2, msg);
+
+    /* UEFA's re-application: four clubs on 4 points (one win, one draw, one loss each), all level on head-to-head
+     * goal difference (0); head-to-head goals for 1 2 2 1 leaves {1, 2} and {0, 3}. Once (the default): name inside
+     * them, 1 2 0 3. Re-applied: 2 beat 1 2-1, 3 beat 0 1-0, so 2 1 3 0 */
+    sr_match u[] = {
+        { 0, 0, 1, 1, 0, 0 }, { 0, 2, 3, 1, 0, 0 }, { 1, 0, 2, 1, 1, 0 },
+        { 1, 1, 3, 1, 1, 0 }, { 2, 0, 3, 1, 0, 1 }, { 2, 1, 2, 1, 1, 2 },
+    };
+    const uint8_t once[] = { SR_TB_POINTS, SR_TB_H2H_POINTS, SR_TB_H2H_GOAL_DIFFERENCE, SR_TB_H2H_GOALS_FOR, SR_TB_NAME, 0 };
+    const uint8_t again[] = { SR_TB_POINTS, SR_TB_H2H_REAPPLIED, SR_TB_NAME, 0 };
+    sr_rr_table(4, u, 6, 3, 1, 0, once, 1u, t);
+    snprintf(msg, sizeof msg, "table: four level, head to head once -- %d %d %d %d (want 1 2 0 3)", t[0].club, t[1].club, t[2].club, t[3].club);
+    check(t[0].club == 1 && t[1].club == 2 && t[2].club == 0 && t[3].club == 3, msg);
+    sr_rr_table(4, u, 6, 3, 1, 0, again, 1u, t);
+    snprintf(msg, sizeof msg, "table: the same four, head_to_head_reapplied -- %d %d %d %d (want 2 1 3 0)", t[0].club, t[1].club, t[2].club, t[3].club);
+    check(t[0].club == 2 && t[1].club == 1 && t[2].club == 3 && t[3].club == 0, msg);
+    /* the three-way case above: re-applying changes nothing there (the first pass splits all three) */
+    const uint8_t again3[] = { SR_TB_POINTS, SR_TB_H2H_REAPPLIED, SR_TB_NAME, 0 };
+    sr_rr_table(4, h, 6, 3, 1, 0, again3, 1u, t);
+    check(t[0].club == 0 && t[1].club == 2 && t[2].club == 1 && t[3].club == 3, "table: head_to_head_reapplied on the three-way tie -- 0 2 1 3 as once");
 
     int refused = 0;
     const uint8_t no[] = { SR_TB_FAIR_PLAY, SR_TB_COEFFICIENT, SR_TB_PREVIOUS_STAGE_RANK, SR_TB_PLAY_OFF_MATCH, SR_TB_FAITHFUL_1996, 99 };

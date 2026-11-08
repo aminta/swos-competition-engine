@@ -65,8 +65,8 @@ i32 sr_rr_calendar(i32 n, i32 legs, sr_match *out, i32 room)
 
 static int usable(u8 c)
 {
-    return c >= SR_TB_POINTS && c <= SR_TB_NAME && c != SR_TB_FAIR_PLAY && c != SR_TB_COEFFICIENT &&
-           c != SR_TB_PREVIOUS_STAGE_RANK && c != SR_TB_PLAY_OFF_MATCH;
+    return c == SR_TB_H2H_REAPPLIED || (c >= SR_TB_POINTS && c <= SR_TB_NAME && c != SR_TB_FAIR_PLAY &&
+                                        c != SR_TB_COEFFICIENT && c != SR_TB_PREVIOUS_STAGE_RANK && c != SR_TB_PLAY_OFF_MATCH);
 }
 
 /* the key of club c under criterion t (higher is better); the head-to-head ones over the clubs in `in` */
@@ -99,6 +99,49 @@ static i32 key(u8 t, const sr_srow *row, i32 c, const sr_match *m, i32 nm, const
     return t == SR_TB_H2H_POINTS ? pts : t == SR_TB_H2H_GOAL_DIFFERENCE ? gd : t == SR_TB_H2H_GOALS_FOR ? gf : ag;
 }
 
+typedef struct { const sr_srow *row; const sr_match *m; i32 nm, n, win, draw, loss; u32 seed; } sr_tctx;
+
+static void block_in(i32 n, const u8 *ord, i32 b, i32 e, u8 *in)
+{
+    for (i32 k = 0; k < n; k++) in[k] = 0;
+    for (i32 k = b; k < e; k++) in[ord[k]] = 1;
+}
+
+/* criterion t inside ord[b..e) (one tied block): a stable sort, best first, then a cut between unequal keys */
+static void split(const sr_tctx *x, u8 t, const u8 *in, u8 *ord, u8 *cut, i32 b, i32 e)
+{
+    i32 kv[N];
+    for (i32 k = b; k < e; k++) kv[ord[k]] = key(t, x->row, ord[k], x->m, x->nm, in, x->win, x->draw, x->loss, x->seed);
+    for (i32 k = b + 1; k < e; k++) {
+        const u8 c = ord[k];
+        i32 j = k;
+        while (j > b && kv[ord[j - 1]] < kv[c]) { ord[j] = ord[j - 1]; j--; }
+        ord[j] = c;
+    }
+    for (i32 k = b + 1; k < e; k++) if (kv[ord[k]] != kv[ord[k - 1]]) cut[k] = 1;
+}
+
+/* head_to_head_reapplied (UEFA): head-to-head points, goal difference, goals for among the tied clubs; a smaller
+ * block still tied after them takes the three again over its own matches only, until nothing splits */
+static void reapply(const sr_tctx *x, u8 *ord, u8 *cut, i32 b, i32 e)
+{
+    u8 in[N];
+    block_in(x->n, ord, b, e, in);
+    for (u8 t = SR_TB_H2H_POINTS; t <= SR_TB_H2H_GOALS_FOR; t++)
+        for (i32 s = b; s < e;) {
+            i32 f = s + 1;
+            while (f < e && !cut[f]) f++;
+            if (f - s > 1) split(x, t, in, ord, cut, s, f);
+            s = f;
+        }
+    for (i32 s = b; s < e;) {
+        i32 f = s + 1;
+        while (f < e && !cut[f]) f++;
+        if (f - s > 1 && f - s < e - b) reapply(x, ord, cut, s, f);
+        s = f;
+    }
+}
+
 i32 sr_rr_table(i32 n, const sr_match *m, i32 nm, i32 win, i32 draw, i32 loss, const u8 *tieb, u32 seed,
                 sr_srow *out)
 {
@@ -124,25 +167,20 @@ i32 sr_rr_table(i32 n, const sr_match *m, i32 nm, i32 win, i32 draw, i32 loss, c
     }
     /* each criterion once, in order, inside the blocks the ones before left tied (a stable sort there) */
     u8 ord[N], cut[N + 1];                                      /* cut[k]: a block starts at k */
-    i32 kv[N];
     for (i32 k = 0; k < n; k++) { ord[k] = (u8)k; cut[k] = k == 0; }
     cut[n] = 1;
+    const sr_tctx x = { row, m, nm, n, win, draw, loss, seed };
     for (const u8 *t = tieb; t && *t; t++) {
         for (i32 b = 0; b < n;) {
             i32 e = b + 1;
             while (!cut[e]) e++;
             if (e - b > 1) {
-                u8 in[N];
-                for (i32 k = 0; k < n; k++) in[k] = 0;
-                for (i32 k = b; k < e; k++) in[ord[k]] = 1;
-                for (i32 k = b; k < e; k++) kv[ord[k]] = key(*t, row, ord[k], m, nm, in, win, draw, loss, seed);
-                for (i32 k = b + 1; k < e; k++) {               /* insertion: stable, best first */
-                    const u8 c = ord[k];
-                    i32 j = k;
-                    while (j > b && kv[ord[j - 1]] < kv[c]) { ord[j] = ord[j - 1]; j--; }
-                    ord[j] = c;
+                if (*t == SR_TB_H2H_REAPPLIED) reapply(&x, ord, cut, b, e);
+                else {
+                    u8 in[N];
+                    block_in(n, ord, b, e, in);
+                    split(&x, *t, in, ord, cut, b, e);
                 }
-                for (i32 k = b + 1; k < e; k++) if (kv[ord[k]] != kv[ord[k - 1]]) cut[k] = 1;
             }
             b = e;
         }
