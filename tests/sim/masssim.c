@@ -21,10 +21,16 @@
 #include <sys/wait.h>
 #include "swosrules.h"
 
+/* the National League's and N / S's tables stand for the game's played matches: a second copy of sr_pool.c at a
+   fixed spread (Makefile: GAME_SPREAD), so a pool SR_LP_SPREAD under calibration changes only the pool */
+int32_t sr_lp_table_game(uint32_t seed, int32_t d, const sr_lp_club *c, int32_t n, sr_row *out);
+int32_t sr_lp_playoff_game(uint32_t seed, int32_t d, const sr_row *table, int32_t n, const sr_lp_club *c);
+
 enum { NL = 24, NS = 24, PD = 22, PDIV = 4, L2B = 16, MAXID = 4096 };
 
 typedef struct {
     long summers, bad, crossed, bounce_n, bounce_up, po_place[8], idem_bad, why_n[8];
+    long up_rank_sum, up_rank_n, up_top4;
     long str_sum[3], str_cnt[3], dec_sum[3][10], dec_cnt[10];
 } stats;
 
@@ -63,7 +69,7 @@ static void table(uint32_t seed, int d, const int *ids, int n, int *ord, sr_row 
 {
     sr_lp_club c[SR_LP_CLUBS];
     for (int i = 0; i < n; i++) c[i].ident = (uint16_t)ids[i], c[i].strength = str_of[ids[i]];
-    sr_lp_table(seed, d, c, n, t);
+    sr_lp_table_game(seed, d, c, n, t);
     for (int k = 0; k < n; k++) ord[k] = ids[t[k].team];
 }
 
@@ -72,8 +78,8 @@ static int playoff_id(uint32_t seed, int d, const int *ids, int n, int *place)
     sr_lp_club c[SR_LP_CLUBS];
     sr_row t[SR_LP_CLUBS];
     for (int i = 0; i < n; i++) c[i].ident = (uint16_t)ids[i], c[i].strength = str_of[ids[i]];
-    sr_lp_table(seed, d, c, n, t);
-    const int p = sr_lp_playoff(seed, d, t, n, c);
+    sr_lp_table_game(seed, d, c, n, t);
+    const int p = sr_lp_playoff_game(seed, d, t, n, c);
     *place = p;
     return ids[t[p].team];
 }
@@ -129,6 +135,12 @@ static void chain_run(uint32_t chain, int seasons, stats *st)
             if (pool[d][tt[0].team] != p_up[2 * d]) bad |= 1u << 3;
             for (int k = 0; k < PD; k++) if (pool[d][tt[k].team] == p_up[2 * d + 1]) st->po_place[k < 7 ? k : 7]++;
         }
+        for (int k = 0; k < 8; k++) {           /* the promoted clubs' strength rank in their division (0 strongest) */
+            const int d = k / 2;
+            int r = 0;
+            for (int i = 0; i < PD; i++) r += str_of[pool[d][i]] > str_of[p_up[k]];
+            st->up_rank_sum += r; st->up_rank_n++; st->up_top4 += r < 4;
+        }
         for (int a = 0; a < 8; a++) for (int b = a + 1; b < 8; b++) if (p_up[a] == p_up[b]) bad |= 1u << 2;
         for (int k = 0; k < 8; k++)             /* bounce-back: down last summer, up now */
             if (down_season[p_up[k]] == s - 1) st->bounce_up++;
@@ -167,7 +179,15 @@ static void chain_run(uint32_t chain, int seasons, stats *st)
             for (int k = 0; k < 4; k++) {
                 const int down = ns_down[g][k], upc = p_up[ri++];
                 const uint16_t slot_str = str_of[down];
+#ifdef SIM_RULE_D
                 str_of[down] = (uint16_t)sr_lp_rank_strength(slot_str, above, NS, pl, np);
+#else
+#ifndef SIM_HIT
+                str_of[down] = (uint16_t)sr_lp_newcomer_strength(slot_str, pl, np);   /* (iii) */
+#else
+                str_of[down] = (uint16_t)sr_lp_newcomer_strength((uint16_t)(slot_str * SIM_HIT / 100), pl, np);   /* (iii) + an experimental relegation hit */
+#endif
+#endif
                 str_of[upc] = slot_str;
                 down_season[down] = s;
                 st->bounce_n++;
@@ -276,6 +296,8 @@ int main(int argc, char **argv)
            100.0 * (double)all.bounce_up / (double)(all.bounce_n ? all.bounce_n : 1));
     long po = 0;
     for (int k = 0; k < 8; k++) po += all.po_place[k];
+    printf("  step-3 promoted: mean strength rank %.2f of %d (random %.1f), %.1f%% from the 4 strongest\n",
+           (double)all.up_rank_sum / (double)all.up_rank_n, PD, (PD - 1) / 2.0, 100.0 * (double)all.up_top4 / (double)all.up_rank_n);
     printf("  step-3 play-off winners by place:");
     for (int k = 1; k < 7; k++) printf(" %d:%.1f%%", k + 1, 100.0 * (double)all.po_place[k] / (double)(po ? po : 1));
     printf("\n  mean strength NL %.1f  N/S %.1f  step 3 %.1f\n",

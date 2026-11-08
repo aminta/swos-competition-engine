@@ -136,3 +136,11 @@ int32_t sr_lp_rank_strength(uint16_t own, const uint16_t *above, int32_t na, con
     }
     return at_pos(pool, np, p * (np - 1));
 }
+
+int32_t sr_lp_newcomer_strength(uint16_t own, const uint16_t *pool, int32_t np)
+{
+    if (!pool || np < 1) return -1;
+    int top = 0;
+    for (int i = 0; i < np; i++) if (pool[i] > top) top = pool[i];
+    return own < top ? own : top;
+}

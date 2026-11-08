@@ -313,6 +313,11 @@ static void rank_strength(void)
     }
     check(ok, "D: a club down from N / S takes the pool's strength at its N / S position (ends, middle, between, monotone)");
     check(sr_lp_rank_strength(400, above, 1, pool, 3) == -1, "control: D refuses a list of fewer than 2");
+    const uint16_t mixed[3] = { 100, 262, 200 };     /* (iii, Davide 09/11): own strength, capped at the pool's strongest */
+    check(sr_lp_newcomer_strength(150, mixed, 3) == 150 && sr_lp_newcomer_strength(262, mixed, 3) == 262
+          && sr_lp_newcomer_strength(306, mixed, 3) == 262 && sr_lp_newcomer_strength(0, mixed, 3) == 0,
+          "iii: a club down from N / S keeps its own strength, capped at the pool's strongest (any order)");
+    check(sr_lp_newcomer_strength(150, mixed, 0) == -1, "control: iii refuses an empty pool");
 }
 
 int main(int argc, char **argv)
