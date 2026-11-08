@@ -1,0 +1,71 @@
+{
+ "schema": "swc/1.3",
+ "id": "tst-pool2",
+ "_note": "A second pool file sharing a club id with pools/tst.json (bad/pool_club_two_pools.json).",
+ "country": "TST",
+ "divisions": [
+  {
+   "id": "three",
+   "names": {
+    "it": "TERZA",
+    "en": "THIRD",
+    "fr": "TROISIEME",
+    "de": "DRITTE"
+   },
+   "size": 4
+  }
+ ],
+ "clubs": [
+  {
+   "id": "club:tst.pool0",
+   "name": "POOL 0",
+   "division": "three",
+   "strength": 0.85,
+   "area": "A",
+   "rank": 12
+  },
+  {
+   "id": "club:tst.pool1",
+   "name": "POOL 1",
+   "division": "three",
+   "strength": 0.7,
+   "area": "A",
+   "host": {
+    "file": 91,
+    "ordinal": 0
+   }
+  },
+  {
+   "id": "club:tst.pool2",
+   "name": "POOL 2",
+   "division": "three",
+   "strength": 1.2,
+   "area": "A"
+  },
+  {
+   "id": "club:tst.pool3",
+   "name": "POOL 3",
+   "division": "three",
+   "strength": 0.5,
+   "area": "A"
+  }
+ ],
+ "up": {
+  "champion": 1,
+  "playoff": {
+   "type": "playoff",
+   "rounds": [
+    {
+     "ties": 1,
+     "legs": 1,
+     "home": "neutral",
+     "pairing": "draw",
+     "decider": [
+      "extra_time",
+      "penalties"
+     ]
+    }
+   ]
+  }
+ }
+}

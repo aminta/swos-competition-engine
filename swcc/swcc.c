@@ -1128,7 +1128,12 @@ static void check_pool_file(C *c, JNode *p, const char *pid, const char ***ids, 
                 if (find_club(c, id->str) >= 0) ERR(id, path, "club id \"%s\" is a club of the world too", id->str);
                 for (j = 0; j < *nids; j++) if (!strcmp((*ids)[j], id->str)) { ERR(id, path, "club id \"%s\" used twice in the pools", id->str); break; }
                 *ids = realloc((void *)*ids, (size_t)(*nids + 1) * sizeof **ids);
-                (*ids)[(*nids)++] = id->str;
+                {                                           /* (a copy, kept past this file's tree: unique across the pools) */
+                    const size_t ln = strlen(id->str) + 1;
+                    char *cp2 = malloc(ln);
+                    memcpy(cp2, id->str, ln);
+                    (*ids)[(*nids)++] = cp2;
+                }
             }
             if ((nm = need(c, m, "name", J_STR, path))) {
                 const char *hn = text_ok(c, nm, path, "club name", nm->str);
@@ -1204,6 +1209,7 @@ static void check_pools(C *c)
         if (!id_ok(id->str, NULL)) ERR(id, path, "pool id \"%s\": lower-case words joined by '.', '-' or '_'", id->str);
         for (j = 0; j < np; j++) if (!strcmp(pid[j], id->str)) ERR(id, path, "pool id \"%s\" used twice", id->str);
         pid[np++] = id->str;
+        if (f && !g_loader) WARN(f, path, "pool file \"%s\" not checked: no loader", f->str);
         if (f && g_loader) {
             size_t n = 0;
             char *text = g_loader(f->str, c->file, &n), err[256];
@@ -1215,11 +1221,11 @@ static void check_pools(C *c)
             if (!root) ERR(NULL, "", "(syntax): %s", err);
             else check_pool_file(c, root, id->str, &ids, &nids);
             c->file = spec_file;
-            if (root) json_free(root);      /* (ids point into it: the checks are done) */
-            nids = 0;                       /* ... so ids are compared within one file, and against the world's */
+            if (root) json_free(root);
             free(text);
         }
     }
+    for (i = 0; i < nids; i++) free((void *)ids[i]);
     free((void *)ids);
     for (i = 0; i < c->ncomps; i++) {
         const char *pp = jstr(c->comps[i], "pool");
