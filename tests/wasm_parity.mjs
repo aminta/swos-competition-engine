@@ -4,7 +4,7 @@
 // A DIR is read recursively (*.json). --profile applies to the arguments after it (default: profiles/swos9697.json).
 import { spawnSync } from 'node:child_process';
 import { readFileSync, readdirSync, statSync, mkdtempSync, rmSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, dirname, isAbsolute } from 'node:path';
 import { tmpdir } from 'node:os';
 
 const [native, wasmPath, ...rest] = process.argv.slice(2);
@@ -13,8 +13,19 @@ if (!native || !wasmPath || !rest.length) {
   process.exit(2);
 }
 
-const { instance } = await WebAssembly.instantiate(readFileSync(wasmPath), {});
+// swc/1.3 pool files: the page's loader, here as the native CLI's load_near (a path relative to the spec)
+function hostLoad(pathP, fromP, lenP) {
+  const path = cstr(pathP), from = cstr(fromP);
+  let text;
+  try { text = readFileSync(isAbsolute(path) || !from.includes('/') ? path : join(dirname(from), path)); }
+  catch { return 0; }
+  const p = put(text, true);
+  new DataView(x.memory.buffer).setUint32(lenP, text.length, true);
+  return p;
+}
+const { instance } = await WebAssembly.instantiate(readFileSync(wasmPath), { env: { swcc_host_load: hostLoad } });
 const x = instance.exports;
+x.swcc_use_loader(1);
 const enc = new TextEncoder(), dec = new TextDecoder();
 
 function put(bytes, nul) {

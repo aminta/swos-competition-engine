@@ -141,7 +141,7 @@ let fileName = 'spec.json', last = null, x = null;
 
 /* ---- swcc ---- */
 const enc = new TextEncoder(), dec = new TextDecoder();
-const ready = WebAssembly.instantiate(Uint8Array.from(atob(WASM_B64), c => c.charCodeAt(0)), {})
+const ready = WebAssembly.instantiate(Uint8Array.from(atob(WASM_B64), c => c.charCodeAt(0)), { env: { swcc_host_load: () => 0 } })
   .then(r => { x = r.instance.exports; });
 
 function put(bytes) {
