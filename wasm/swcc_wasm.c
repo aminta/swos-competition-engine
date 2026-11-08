@@ -32,6 +32,12 @@ EXPORT("swcc_run") int swcc_run(const char *spec, size_t len, const char *name, 
     return swcc_compile(spec, len, name, profile, plen, want_bin ? &bin : NULL, &blen, &diag);
 }
 
+/* swc/1.3 pool files: the host (the page) holds them; swcc asks for one by its name in the world's 'pools'.
+   host_load returns text the host copied in with swcc_alloc, or NULL; *len its length. */
+__attribute__((import_module("env"), import_name("swcc_host_load"))) char *host_load(const char *path, const char *from, size_t *len);
+static char *loader(const char *path, const char *from, size_t *len) { return host_load(path, from, len); }
+EXPORT("swcc_use_loader") void swcc_use_loader(int on) { swcc_set_loader(on ? loader : NULL); }
+
 EXPORT("swcc_diag") const char *swcc_diag(void) { return diag ? diag : ""; }
 EXPORT("swcc_bin") const unsigned char *swcc_bin(void) { return bin; }
 EXPORT("swcc_blen") size_t swcc_blen(void) { return blen; }
