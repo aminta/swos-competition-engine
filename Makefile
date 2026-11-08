@@ -63,6 +63,16 @@ $(OUT)/nonleague: tests/rules/nonleague.c $(RULES) rules/swosrules.h | $(OUT)
 	$(CC) -std=c99 -O1 -g -Wall -Wextra -Wno-missing-field-initializers $(SANITIZE) -Irules -o $@ \
 	    tests/rules/nonleague.c rules/sr_pool.c rules/sr_groups.c
 
+GAME_SPREAD = -DSR_LP_SPREAD=40 -Dsr_lp_table=sr_lp_table_game -Dsr_lp_playoff=sr_lp_playoff_game \
+              -Dsr_lp_season=sr_lp_season_game -Dsr_lp_rank_strength=sr_lp_rank_strength_game \
+              -Dsr_lp_newcomer_strength=sr_lp_newcomer_strength_game
+$(OUT)/masssim: tests/sim/masssim.c $(RULES) rules/swosrules.h | $(OUT)
+	$(CC) $(CFLAGS) $(GAME_SPREAD) -Irules -c -o $(OUT)/sr_pool_game.o rules/sr_pool.c
+	$(CC) $(CFLAGS) $(SIM_FLAGS) -Irules -o $@ tests/sim/masssim.c rules/sr_pool.c rules/sr_groups.c $(OUT)/sr_pool_game.o
+
+sim: $(OUT)/masssim
+	$(OUT)/masssim 1000 100 8
+
 test: $(OUT)/test_format $(OUT)/swcc $(OUT)/swc_i486.o $(RULES_I486) $(OUT)/spec_check $(OUT)/team_order $(OUT)/groups_guard $(OUT)/nonleague $(OUT)/stage
 	$(OUT)/swcc compile packs/sample/world.json -o $(OUT)/sample.swc >/dev/null
 	$(OUT)/test_format $(OUT)/sample.swc
@@ -89,4 +99,4 @@ rules-check:
 clean:
 	rm -rf $(OUT)
 
-.PHONY: all test clean rules-check
+.PHONY: sim all test clean rules-check

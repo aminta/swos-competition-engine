@@ -412,8 +412,9 @@ int32_t sr_pg_realloc(const sr_pg_league *pg, int32_t l, const uint8_t *rank, co
 typedef struct { uint16_t ident; uint16_t strength; } sr_lp_club;
 
 /* The light tables' spread: a match's strength 30 .. 30 + SR_LP_SPREAD over 0.00 .. 2.50 (squared). Calibrated
- * (Davide 08/11, D) so that a club relegated from N / S goes straight back up as often as in reality: 7.3%, 4 of 55
- * over 2011-12 .. 2023-24 (en.wikipedia; the Mod's internal/nonleague2627/bounce). */
+ * against the real bounce-back (a club relegated from N / S straight back up: 7.3%, 4 of 55 over 2011-12 .. 2023-24,
+ * en.wikipedia; the Mod's internal/nonleague2627/bounce). Under rule iii the mass simulation (tests/sim) gives 15.1% at
+ * 40 and never below the 9.0% of pure chance (spread 0): 7.3% is out of reach of the spread; the value is Davide's. */
 #ifndef SR_LP_SPREAD
 #define SR_LP_SPREAD 40
 #endif
@@ -437,6 +438,11 @@ int32_t sr_lp_playoff(uint32_t seed, int32_t d, const sr_row *table, int32_t n, 
  * the level above's strength order (above[0 .. na), strongest first) taken at the same position of the pool's
  * (pool[0 .. np), strongest first), both linear between neighbours. -1 lists of fewer than 2. */
 int32_t sr_lp_rank_strength(uint16_t own, const uint16_t *above, int32_t na, const uint16_t *pool, int32_t np);
+
+/* A club down from the level above (N / S) into the pool (Davide 09/11, iii; replaces D above, which the mass
+ * simulation showed draining the pool: its best leave each summer and D refilled from its bottom): the club keeps its
+ * own strength, capped at the pool's strongest (pool[0 .. np), any order). -1 an empty pool. */
+int32_t sr_lp_newcomer_strength(uint16_t own, const uint16_t *pool, int32_t np);
 
 int32_t sr_lp_season(uint32_t seed, int32_t nd, const sr_lp_club *const *c, const int32_t *n, int32_t *up);
 
