@@ -7,7 +7,10 @@
  * off-file pool's swaps: the Mod's ri_og, the library's entering), each with another club's areas --
  * every fourth season all with ONE club's (a group crowded past its room: the 2nd choices, and the
  * clubs that make room, all used).
- * Each side prints every club's new offset per season. Arguments: TABLE PROMREL SEASONS. */
+ * Each side prints every club's new offset per season. Arguments: TABLE PROMREL SEASONS.
+ * GC_REAL=<dir> (the Mod's 4.2 S1 shadow, tools/hosttest/pg_real.py): one real season end instead -- the game's own
+ * slt.bin / copy.bin at pg_season's entry (the old divisions, the game's moves) and enter.txt (ri_og: the pool's
+ * swapped slots, globals); TABLE one of its table<k>.bin (the areas as the game has them), PROMREL unused, SEASONS 1. */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -20,6 +23,9 @@ static int gc_prom[GC_DIVS], gc_rel[GC_DIVS];
 static signed char gc_slt[4096], gc_copy[4096];
 static int gc_enter[64], gc_nenter;
 static unsigned gc_seed;
+static const char *gc_real;                 /* (GC_REAL: the real season's dir) */
+static signed char gc_rslt[4096], gc_rcopy[4096];
+static int gc_rog[64], gc_nrog;
 
 static unsigned gc_rand(unsigned n)
 {
@@ -44,6 +50,18 @@ static void gc_load(const char *table, const char *promrel)
     for (int i = 0; i < gc_nc; i++, p += 3 + gc_npar) {
         gc_g[i] = p[0] | p[1] << 8; gc_base[i] = p[2]; gc_area_at[i] = (int)(p + 3 - gc_tab);
     }
+    if ((gc_real = getenv("GC_REAL")) != NULL) {
+        char path[1024];
+        snprintf(path, sizeof path, "%s/slt.bin", gc_real);
+        if (!(f = fopen(path, "rb")) || fread(gc_rslt, 1, 4096, f) != 4096) { fprintf(stderr, "no %s\n", path); exit(2); }
+        fclose(f);
+        snprintf(path, sizeof path, "%s/copy.bin", gc_real);
+        if (!(f = fopen(path, "rb")) || fread(gc_rcopy, 1, 4096, f) != 4096) { fprintf(stderr, "no %s\n", path); exit(2); }
+        fclose(f);
+        snprintf(path, sizeof path, "%s/enter.txt", gc_real);
+        if ((f = fopen(path, "r")) != NULL) { while (gc_nrog < 64 && fscanf(f, "%d", &gc_rog[gc_nrog]) == 1) gc_nrog++; fclose(f); }
+        return;
+    }
     f = fopen(promrel, "r");
     for (int d = 0; f && d < gc_nd; d++) if (fscanf(f, "%d", &gc_prom[d]) != 1) break;
     for (int d = 0; f && d < gc_nd; d++) if (fscanf(f, "%d", &gc_rel[d]) != 1) break;
@@ -54,6 +72,16 @@ static void gc_load(const char *table, const char *promrel)
 static void gc_season(unsigned it)
 {
     int order[GC_CLUBS], div[GC_CLUBS], at = 0;
+    if (gc_real) {                              /* (the real season end, as the game has it) */
+        memcpy(gc_slt, gc_rslt, sizeof gc_slt);
+        memcpy(gc_copy, gc_rcopy, sizeof gc_copy);
+        memcpy(gc_run, gc_tab, (size_t)gc_len);
+        gc_nenter = 0;
+        for (int i = 0; i < gc_nc; i++)
+            for (int k = 0; k < gc_nrog; k++) if (gc_g[i] == gc_rog[k] && gc_nenter < 64) gc_enter[gc_nenter++] = i;
+        (void)it; (void)order; (void)div; (void)at;
+        return;
+    }
     gc_seed = it * 2654435761u + 7;
     for (int i = 0; i < gc_nc; i++) order[i] = i;
     for (int i = gc_nc - 1; i > 0; i--) { int j = (int)gc_rand((unsigned)i + 1), x = order[i]; order[i] = order[j]; order[j] = x; }
