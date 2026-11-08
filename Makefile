@@ -58,6 +58,12 @@ $(OUT)/nonleague: tests/rules/nonleague.c $(RULES) rules/swosrules.h | $(OUT)
 	$(CC) -std=c99 -O1 -g -Wall -Wextra -Wno-missing-field-initializers $(SANITIZE) -Irules -o $@ \
 	    tests/rules/nonleague.c rules/sr_pool.c rules/sr_groups.c
 
+$(OUT)/masssim: tests/sim/masssim.c $(RULES) rules/swosrules.h | $(OUT)
+	$(CC) $(CFLAGS) -Irules -o $@ tests/sim/masssim.c rules/sr_pool.c rules/sr_groups.c
+
+sim: $(OUT)/masssim
+	$(OUT)/masssim 1000 100 8
+
 test: $(OUT)/test_format $(OUT)/swcc $(OUT)/swc_i486.o $(RULES_I486) $(OUT)/spec_check $(OUT)/team_order $(OUT)/groups_guard $(OUT)/nonleague
 	$(OUT)/swcc compile packs/sample/world.json -o $(OUT)/sample.swc >/dev/null
 	$(OUT)/test_format $(OUT)/sample.swc
@@ -83,4 +89,4 @@ rules-check:
 clean:
 	rm -rf $(OUT)
 
-.PHONY: all test clean rules-check
+.PHONY: sim all test clean rules-check
