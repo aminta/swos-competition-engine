@@ -356,7 +356,8 @@ static int ent_code(sr_state *st, const sr_league *lg, const u8 *e, int prev_los
     if (ty == 5) return title_club(st, d, p);
     if (ty == 6) return split_seed(st, d, e[3], p);
     if (ty == 7) return title_seed(st, d, e[3], p);
-    if (ty == 8) return team_code(st, (u16)(p | e[3] << 8));    /* (4.0.5: a given club, by its team word) */
+    if (ty == 8)                        /* (4.0.5: a given club, its file and ordinal -> this game's team word) */
+        return team_code(st, lg->team_file_high ? (u16)(p << 8 | e[3]) : (u16)(p | e[3] << 8));
     if (ty != 0) return -1;
     return place_code(st, lg, d, p, kind);
 }

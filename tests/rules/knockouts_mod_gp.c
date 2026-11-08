@@ -5,6 +5,10 @@
 #include GPLAY_C
 #ifndef KO_BT
 const u8 SEC_TAB[1] = { 0 };            /* (no second teams: play-outs take them anyway) */
+#elif KO_BT == 3
+/* -DKO_BT=3 (the S1 shadow on a real season): SEC_TAB is the game's own bytes (KO_SEC=<file>, read by
+   knockouts_mod.c, which defines it); the B-team levels are its first country's (Italy: nd, levels) */
+#define BT_LV (SEC_TAB + 1)
 #else
 /* tables.h's two B teams (globals 444, 445, team words 1420h, 1421h) and their first teams (424,
    425): -DKO_BT=1 a level per division, 2 Italy 2026-27's levels; top KO_BT_TOP, flags KO_BT_FLAGS
