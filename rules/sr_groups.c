@@ -129,3 +129,56 @@ int32_t sr_pg_season(const sr_pg_league *pg, const int8_t *old_off, int8_t *new_
         }
     return 0;
 }
+
+/* the flexible order: rank (north first), then ident (else the index) */
+static int north_of(int i, int j, const uint8_t *rank, const uint16_t *ident)
+{
+    if (rank[i] != rank[j]) return rank[i] < rank[j];
+    return ident ? ident[i] < ident[j] : i < j;
+}
+
+int32_t sr_pg_realloc(const sr_pg_league *pg, int32_t l, const uint8_t *rank, const uint16_t *ident,
+                      int8_t *new_off)
+{
+    static uint16_t on[SR_CLUB_SLOTS];          /* (the level's clubs; a strict club's group in grp) */
+    static u8 grp[SR_CLUB_SLOTS], flex[SR_CLUB_SLOTS];
+    int n = 0, p = 0, crossed = 0, cnt[2] = { 0, 0 };
+    if (!pg || !pg->level || !pg->club || !rank || !new_off || l < 0 || l >= pg->levels || pg->clubs > SR_CLUB_SLOTS)
+        return -1;
+    const sr_pg_level *L = &pg->level[l];
+    if (L->groups != 2) return -1;
+    for (int k = 0; k < l; k++) if (pg->level[k].groups > 1) p++;
+    if (p >= SR_PG_PARALLEL) return -1;
+    for (int i = 0; i < pg->clubs; i++) {
+        const int d = new_off[i] + pg->club[i].base - L->first;
+        if (d < 0 || d >= 2) continue;
+        const int b = pg->club[i].area[p], h1 = A1(b), h2 = area2(b);
+        on[n] = (uint16_t)i;
+        flex[n] = rank[i] != SR_RANK_NONE && !banned(b) && (h2 == 14 || (h2 < 2 && h2 != h1));
+        grp[n] = (u8)(h1 < 2 ? h1 : d);     /* (no area in the level: where it is) */
+        if (!flex[n]) cnt[grp[n]]++;
+        n++;
+    }
+    if (n > L->size[0] + L->size[1]) return -1;
+    for (int i = 1; i < n; i++)                 /* every club by rank: the order a crossing or a fill takes */
+        for (int j = i; j > 0 && north_of(on[j], on[j - 1], rank, ident); j--) {
+            uint16_t x = on[j]; on[j] = on[j - 1]; on[j - 1] = x;
+            u8 y = grp[j]; grp[j] = grp[j - 1]; grp[j - 1] = y;
+            y = flex[j]; flex[j] = flex[j - 1]; flex[j - 1] = y;
+        }
+    for (int j = n - 1; j >= 0 && cnt[0] > L->size[0]; j--)        /* too many strict northerners: */
+        if (!flex[j] && grp[j] == 0) { grp[j] = 1; cnt[0]--; cnt[1]++; crossed++; }   /* the southernmost cross */
+    for (int j = 0; j < n && cnt[1] > L->size[1]; j++)
+        if (!flex[j] && grp[j] == 1) { grp[j] = 0; cnt[1]--; cnt[0]++; crossed++; }
+    int room0 = L->size[0] - cnt[0];            /* the flexible ones, north first, fill the northern group */
+    for (int j = 0; j < n; j++) {
+        if (!flex[j]) continue;
+        grp[j] = room0 > 0 ? 0 : 1;
+        if (room0 > 0) room0--;
+    }
+    for (int j = 0; j < n; j++) {
+        const int i = on[j];
+        new_off[i] = (int8_t)(L->first + grp[j] - pg->club[i].base);
+    }
+    return crossed;
+}

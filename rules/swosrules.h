@@ -381,4 +381,46 @@ typedef struct {
  * the lowest level. 0; -1 a league past the limits above (nothing changed). */
 int32_t sr_pg_season(const sr_pg_league *pg, const int8_t *old_off, int8_t *new_off, const uint8_t *entering);
 
+/* The summer re-allocation of a level of two groups (England's National League North / South, Davide
+ * 07/11 B): after sr_pg_season's moves, every club of level l -- the ones that stay too -- placed
+ * again by its ground. Strict clubs (no 2nd choice in the level, or a ban) go to their 1st choice;
+ * the flexible ones (a 2nd choice, or any group) by rank[i] -- the ground's north-south rank, 0 the
+ * northernmost, SR_RANK_NONE none: placed as a strict club -- north first, ties by ident[i] (the club's
+ * identity, NULL: its index), group 0 filled to its size, the rest into group 1. A group's strict
+ * clubs past its size cross by rank too (the ones nearest the other group). Same clubs, same split,
+ * whatever their slots. new_off rewritten for the level's clubs. The count of strict clubs that
+ * crossed (0 with real data); -1 a level that is not one of two groups, or more clubs than room. */
+#define SR_RANK_NONE 0xFF
+int32_t sr_pg_realloc(const sr_pg_league *pg, int32_t l, const uint8_t *rank, const uint16_t *ident,
+                      int8_t *new_off);
+
+/* ---- A light pool's divisions (sr_pool.c: England's step 3, Davide 07/11 B) ----
+ * Clubs with no league slot: a name, a strength, an area and a prebuilt record. Each season their
+ * divisions are simulated from strength and the season's seed (no matches played), then each sends
+ * up its champion and its play-off winner (2nd-7th, the National League's shape). */
+
+#define SR_LP_DIVS  4               /* a pool's divisions */
+#define SR_LP_CLUBS 24              /* a pool division's clubs */
+
+/* strength: hundredths of the world build's level (step 3 2.50 .. 0.00); ident: the club's identity
+ * (its pool record), which also seeds its matches */
+typedef struct { uint16_t ident; uint8_t strength; } sr_lp_club;
+
+/* Division d's light table of n clubs (n <= SR_LP_CLUBS), a double round robin: each match's goals by
+ * the two strengths (home advantage, draws ~ 1 in 4) from seed, d and the two idents only -- the same
+ * clubs give the same table whatever their order. out[0 .. n), best first (points, goal difference,
+ * goals, then the higher strength, then the lower ident): team = the club's index in c, glob = its
+ * ident. 0; -1 n out of range. */
+int32_t sr_lp_table(uint32_t seed, int32_t d, const sr_lp_club *c, int32_t n, sr_row *out);
+
+/* The play-off of a light table (2nd-7th: quarter-finals 4v7 and 5v6, semi-finals 2 and 3 v the
+ * winners -- 2 v the lower placed --, the final; one match each, the better placed at home, extra time
+ * and penalties near a coin toss): the winner's place in the table (1..6). n < 7: no play-off, -1. */
+int32_t sr_lp_playoff(uint32_t seed, int32_t d, const sr_row *table, int32_t n, const sr_lp_club *c);
+
+/* A pool season: nd divisions' light tables, then each one's champion and play-off winner up.
+ * up[2 * d] / up[2 * d + 1]: their indices in division d's c[d] (champion, then play-off winner).
+ * 0; -1 a division out of range. */
+int32_t sr_lp_season(uint32_t seed, int32_t nd, const sr_lp_club *const *c, const int32_t *n, int32_t *up);
+
 #endif
