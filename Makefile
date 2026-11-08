@@ -96,7 +96,30 @@ test: $(OUT)/test_format $(OUT)/swcc $(OUT)/swc_i486.o $(RULES_I486) $(OUT)/spec
 rules-check:
 	CC=$(CC) sh tests/rules/check.sh $(SEASONS)
 
+# swcc for the web (wasm/): wasm32, freestanding, its own minimal libc (wasm/libc.c), no emscripten. Needs clang with
+# the wasm32 target and wasm-ld (LLVM's lld): WASM_CC=/opt/homebrew/opt/llvm/bin/clang on macOS with brew llvm + lld.
+WASM_CC ?= /opt/homebrew/opt/llvm/bin/clang
+WASM     = --target=wasm32 -ffreestanding -nostdlib -O2 -std=c11 -Wall -Wextra -Wno-missing-field-initializers \
+           -Werror -isystem wasm/libc
+$(OUT)/swcc.wasm: $(SWCC) $(FORMAT) wasm/swcc_wasm.c wasm/libc.c $(wildcard wasm/libc/*.h) swcc/swcc.h swcc/json.h \
+                  format/swc_format.h | $(OUT)
+	$(WASM_CC) $(WASM) -fno-builtin -c -o $(OUT)/wasm_libc.o wasm/libc.c
+	$(WASM_CC) $(WASM) -Wl,--no-entry -Wl,--export-memory -Wl,--strip-all -o $@ $(SWCC) $(FORMAT) wasm/swcc_wasm.c \
+	    $(OUT)/wasm_libc.o
+
+wasm: $(OUT)/swcc.wasm
+
+# the checker page (web/editor.html): one self-contained file, swcc.wasm and the profiles inlined
+page: $(OUT)/swcc-checker.html
+$(OUT)/swcc-checker.html: $(OUT)/swcc.wasm web/editor.html wasm/mkpage.mjs profiles/swos9697.json profiles/openswos.json
+	node wasm/mkpage.mjs $(OUT)/swcc.wasm $@
+
+# swcc.wasm = native swcc on every spec of the repo (verdict, diagnostics, compiled bytes); WASM_SPECS adds more
+wasm-test: $(OUT)/swcc $(OUT)/swcc.wasm
+	node tests/wasm_parity.mjs $(OUT)/swcc $(OUT)/swcc.wasm tests/specs/ok tests/specs/bad examples packs $(WASM_SPECS) \
+	    --profile profiles/openswos.json tests/specs/ok-openswos examples packs $(WASM_SPECS)
+
 clean:
 	rm -rf $(OUT)
 
-.PHONY: sim all test clean rules-check
+.PHONY: sim all test clean rules-check wasm wasm-test page

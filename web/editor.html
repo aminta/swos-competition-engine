@@ -1,0 +1,247 @@
+<!doctype html>
+<!-- The competition spec checker: swcc (wasm, wasm/swcc_wasm.c) in the browser. Validate only: the spec never leaves
+     the page. Built into one self-contained file by wasm/mkpage.mjs (make page): __SWCC_WASM__ and __PROFILES__ are
+     filled there. UI in IT / EN / FR / DE; swcc's own messages are English. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SWC Spec Checker</title>
+<style>
+:root {
+  --bg: #f6f5f1; --panel: #ffffff; --ink: #1d1f22; --muted: #5d6268; --line: #d9d7d0; --accent: #1f6f4a;
+  --ok-bg: #e5f3ea; --ok-ink: #145233; --bad-bg: #fbe9e7; --bad-ink: #8a2416; --warn-ink: #7a5a00; --hl: #fff1b8;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #15171a; --panel: #1d2024; --ink: #e6e4df; --muted: #9aa0a6; --line: #33373c; --accent: #5fc394;
+    --ok-bg: #173325; --ok-ink: #8fe0b5; --bad-bg: #3a1d19; --bad-ink: #ffb1a3; --warn-ink: #e8c46a; --hl: #4a4220;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #15171a; --panel: #1d2024; --ink: #e6e4df; --muted: #9aa0a6; --line: #33373c; --accent: #5fc394;
+  --ok-bg: #173325; --ok-ink: #8fe0b5; --bad-bg: #3a1d19; --bad-ink: #ffb1a3; --warn-ink: #e8c46a; --hl: #4a4220;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+header, main { max-width: 1100px; margin: 0 auto; padding: 0 16px; }
+header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 16px; padding-top: 20px; }
+h1 { font-size: 20px; margin: 0; flex: 1 1 auto; }
+.sub { color: var(--muted); font-size: 13px; margin: 4px 0 16px; max-width: 1100px; padding: 0 16px; margin-inline: auto; }
+.bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
+select, button, label.btn { font: inherit; font-size: 14px; color: var(--ink); background: var(--panel); border: 1px solid var(--line);
+  border-radius: 6px; padding: 6px 10px; cursor: pointer; }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--panel); }
+label.btn input { display: none; }
+.grid { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 14px; }
+@media (max-width: 760px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+.drop { position: relative; }
+textarea { width: 100%; height: 62vh; min-height: 300px; resize: vertical; font: 13px/1.45 var(--mono); color: var(--ink);
+  background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px; tab-size: 2; white-space: pre; }
+.drop.over textarea { outline: 2px dashed var(--accent); outline-offset: -6px; }
+.verdict { border-radius: 8px; padding: 10px 12px; font-weight: 600; margin-bottom: 10px; border: 1px solid var(--line); background: var(--panel); }
+.verdict.ok { background: var(--ok-bg); color: var(--ok-ink); border-color: transparent; }
+.verdict.bad { background: var(--bad-bg); color: var(--bad-ink); border-color: transparent; }
+.verdict small { display: block; font-weight: 400; margin-top: 2px; }
+ol.msgs { list-style: none; margin: 0; padding: 0; max-height: 56vh; overflow: auto; }
+ol.msgs li { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; margin-bottom: 6px;
+  font: 12.5px/1.4 var(--mono); overflow-wrap: anywhere; cursor: pointer; }
+ol.msgs li:hover { border-color: var(--accent); }
+ol.msgs .where { color: var(--muted); }
+ol.msgs .warn .kind { color: var(--warn-ink); }
+ol.msgs .err .kind { color: var(--bad-ink); }
+.foot { color: var(--muted); font-size: 12px; margin: 18px auto 24px; }
+</style>
+</head>
+<body>
+<header>
+  <h1 data-t="title"></h1>
+  <select id="lang" aria-label="Language">
+    <option value="it">Italiano</option><option value="en">English</option><option value="fr">Français</option><option value="de">Deutsch</option>
+  </select>
+</header>
+<p class="sub" data-t="intro"></p>
+<main>
+  <div class="bar">
+    <label class="btn"><span data-t="open"></span><input type="file" id="file" accept=".json,application/json"></label>
+    <label for="profile" data-t="profile"></label>
+    <select id="profile"></select>
+    <button class="primary" id="check" data-t="check"></button>
+    <button id="clear" data-t="clear"></button>
+  </div>
+  <div class="grid">
+    <div class="drop" id="drop">
+      <textarea id="spec" spellcheck="false" autocomplete="off" aria-label="Spec"></textarea>
+    </div>
+    <section aria-live="polite">
+      <div class="verdict" id="verdict"></div>
+      <ol class="msgs" id="msgs"></ol>
+    </section>
+  </div>
+  <p class="foot" data-t="foot"></p>
+</main>
+<script>
+const WASM_B64 = "__SWCC_WASM__";
+const PROFILES = __PROFILES__;
+
+const T = {
+  it: {
+    title: 'Controllo delle competizioni (swc/1.2)',
+    intro: 'Apri, trascina o incolla una specifica JSON (schema swc/1 – swc/1.2): swcc la controlla qui nel browser, come la riga di comando. Il file non lascia la pagina.',
+    open: 'Apri file…', profile: 'Gioco:', check: 'Controlla', clear: 'Svuota',
+    empty: 'Nessuna specifica: apri un file, trascinalo qui o incollalo.',
+    ok: 'Valida', okd: n => `Compila in ${n} byte.`, okw: n => `${n} avviso/i.`,
+    bad: n => n === 1 ? '1 errore' : `${n} errori`, badd: 'La specifica viene rifiutata: correggi i punti elencati.',
+    oom: 'Memoria esaurita durante il controllo.',
+    foot: 'I messaggi di swcc sono in inglese, identici alla riga di comando. Clicca un messaggio per andare alla riga.',
+    profiles: { swos9697: 'SWOS 96/97 (DOS)', openswos: 'OpenSWOS' }
+  },
+  en: {
+    title: 'Competition spec checker (swc/1.2)',
+    intro: 'Open, drop or paste a JSON spec (schema swc/1 – swc/1.2): swcc checks it here in the browser, as the command line does. The file never leaves the page.',
+    open: 'Open file…', profile: 'Game:', check: 'Check', clear: 'Clear',
+    empty: 'No spec yet: open a file, drop it here or paste it.',
+    ok: 'Valid', okd: n => `Compiles to ${n} bytes.`, okw: n => `${n} warning(s).`,
+    bad: n => n === 1 ? '1 error' : `${n} errors`, badd: 'The spec is refused: fix the places listed.',
+    oom: 'Out of memory while checking.',
+    foot: 'swcc’s messages are in English, the same as on the command line. Click a message to go to its line.',
+    profiles: { swos9697: 'SWOS 96/97 (DOS)', openswos: 'OpenSWOS' }
+  },
+  fr: {
+    title: 'Vérificateur de compétitions (swc/1.2)',
+    intro: 'Ouvrez, déposez ou collez une spécification JSON (schéma swc/1 – swc/1.2) : swcc la vérifie ici dans le navigateur, comme la ligne de commande. Le fichier ne quitte pas la page.',
+    open: 'Ouvrir un fichier…', profile: 'Jeu :', check: 'Vérifier', clear: 'Effacer',
+    empty: 'Aucune spécification : ouvrez un fichier, déposez-le ici ou collez-le.',
+    ok: 'Valide', okd: n => `Compile en ${n} octets.`, okw: n => `${n} avertissement(s).`,
+    bad: n => n === 1 ? '1 erreur' : `${n} erreurs`, badd: 'La spécification est refusée : corrigez les points listés.',
+    oom: 'Mémoire épuisée pendant la vérification.',
+    foot: 'Les messages de swcc sont en anglais, identiques à la ligne de commande. Cliquez sur un message pour aller à sa ligne.',
+    profiles: { swos9697: 'SWOS 96/97 (DOS)', openswos: 'OpenSWOS' }
+  },
+  de: {
+    title: 'Wettbewerbs-Prüfer (swc/1.2)',
+    intro: 'Öffnen, ziehen oder fügen Sie eine JSON-Spezifikation ein (Schema swc/1 – swc/1.2): swcc prüft sie hier im Browser, wie die Kommandozeile. Die Datei verlässt die Seite nicht.',
+    open: 'Datei öffnen…', profile: 'Spiel:', check: 'Prüfen', clear: 'Leeren',
+    empty: 'Keine Spezifikation: Datei öffnen, hierher ziehen oder einfügen.',
+    ok: 'Gültig', okd: n => `Ergibt ${n} Bytes.`, okw: n => `${n} Warnung(en).`,
+    bad: n => n === 1 ? '1 Fehler' : `${n} Fehler`, badd: 'Die Spezifikation wird abgelehnt: korrigieren Sie die aufgeführten Stellen.',
+    oom: 'Speicher während der Prüfung erschöpft.',
+    foot: 'Die Meldungen von swcc sind englisch, wie auf der Kommandozeile. Klicken Sie auf eine Meldung, um zu ihrer Zeile zu springen.',
+    profiles: { swos9697: 'SWOS 96/97 (DOS)', openswos: 'OpenSWOS' }
+  }
+};
+
+const $ = id => document.getElementById(id);
+const store = { get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+                set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
+let lang = store.get('swcc.lang') || (navigator.language || 'en').slice(0, 2);
+if (!T[lang]) lang = 'en';
+let fileName = 'spec.json', last = null, x = null;
+
+/* ---- swcc ---- */
+const enc = new TextEncoder(), dec = new TextDecoder();
+const ready = WebAssembly.instantiate(Uint8Array.from(atob(WASM_B64), c => c.charCodeAt(0)), {})
+  .then(r => { x = r.instance.exports; });
+
+function put(bytes) {
+  const p = x.swcc_alloc(bytes.length + 1), m = new Uint8Array(x.memory.buffer);
+  m.set(bytes, p); m[p + bytes.length] = 0;
+  return p;
+}
+
+function swcc(name, text, profile) {
+  const spec = enc.encode(text), prof = enc.encode(profile);
+  x.swcc_begin();
+  const n = put(enc.encode(name)), s = put(spec), p = put(prof);
+  const errors = x.swcc_run(s, spec.length, n, p, prof.length, 1);
+  const m = new Uint8Array(x.memory.buffer);
+  let d = x.swcc_diag(), e = d;
+  while (m[e]) e++;
+  return { errors, diag: dec.decode(m.subarray(d, e)), size: errors ? 0 : x.swcc_blen() };
+}
+
+/* ---- UI ---- */
+function applyLang() {
+  const t = T[lang];
+  document.documentElement.lang = lang;
+  $('lang').value = lang;
+  document.querySelectorAll('[data-t]').forEach(el => { el.textContent = t[el.dataset.t]; });
+  const keep = $('profile').value || store.get('swcc.profile') || 'swos9697';
+  $('profile').innerHTML = '';
+  for (const k of Object.keys(PROFILES)) $('profile').add(new Option(t.profiles[k] || k, k));
+  $('profile').value = PROFILES[keep] ? keep : 'swos9697';
+  render();
+}
+
+function render() {
+  const t = T[lang], v = $('verdict'), list = $('msgs');
+  list.innerHTML = '';
+  if (!last) { v.className = 'verdict'; v.textContent = t.empty; return; }
+  if (last.oom) { v.className = 'verdict bad'; v.textContent = t.oom; return; }
+  const lines = last.diag.split('\n').filter(Boolean);
+  const warns = lines.filter(l => /: warning: /.test(l)).length;
+  v.className = 'verdict ' + (last.errors ? 'bad' : 'ok');
+  v.textContent = last.errors ? t.bad(last.errors) : t.ok;
+  const small = document.createElement('small');
+  small.textContent = last.errors ? t.badd : t.okd(last.size) + (warns ? ' ' + t.okw(warns) : '');
+  v.append(small);
+  for (const l of lines) {
+    const m = /^(.*?):(\d+):(\d+): (error|warning): (.*)$/.exec(l) || /^(.*?): (error|warning): (.*)$/.exec(l);
+    const li = document.createElement('li');
+    if (m && m.length === 6) {
+      li.className = m[4] === 'error' ? 'err' : 'warn';
+      li.innerHTML = `<span class="where"></span> <span class="kind"></span> <span class="text"></span>`;
+      li.querySelector('.where').textContent = `${m[2]}:${m[3]}`;
+      li.querySelector('.kind').textContent = m[4] + ':';
+      li.querySelector('.text').textContent = m[5];
+      li.onclick = () => goto(+m[2], +m[3]);
+    } else li.textContent = l;
+    list.append(li);
+  }
+}
+
+function goto(line, col) {
+  const ta = $('spec'), s = ta.value;
+  let at = 0;
+  for (let i = 1; i < line && at >= 0; i++) at = s.indexOf('\n', at) + 1 || -1;
+  if (at < 0) return;
+  const end = s.indexOf('\n', at);
+  ta.focus();
+  ta.setSelectionRange(at + Math.max(col - 1, 0), end < 0 ? s.length : end);
+  const lh = parseFloat(getComputedStyle(ta).lineHeight) || 19;
+  ta.scrollTop = Math.max(0, (line - 4) * lh);
+}
+
+async function check() {
+  await ready;
+  const text = $('spec').value;
+  if (!text.trim()) { last = null; render(); return; }
+  try { last = swcc(fileName, text, PROFILES[$('profile').value]); }
+  catch (e) { last = { oom: true }; }
+  render();
+}
+
+let timer = 0;
+$('spec').addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(check, 400); });
+$('check').onclick = check;
+$('clear').onclick = () => { $('spec').value = ''; fileName = 'spec.json'; last = null; render(); };
+$('profile').onchange = () => { store.set('swcc.profile', $('profile').value); check(); };
+$('lang').onchange = () => { lang = $('lang').value; store.set('swcc.lang', lang); applyLang(); };
+
+async function load(f) {
+  if (!f) return;
+  fileName = f.name;
+  $('spec').value = await f.text();
+  check();
+}
+$('file').onchange = e => load(e.target.files[0]);
+const drop = $('drop');
+drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
+drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); load(e.dataTransfer.files[0]); });
+
+applyLang();
+</script>
+</body>
+</html>

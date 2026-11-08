@@ -22,6 +22,7 @@ and the **contract tests** both sides must pass (`docs/contract-tests.md`).
 | `rules/` | the rules library: the Mod's season-end and cup rules both games play, one C copy, freestanding (`docs/rules-library.md`) |
 | `format/` | the shared reference, C99 freestanding: `.SWC` big-endian accessors, record layouts, reference reader; PCG32, substreams, FNV-1a |
 | `swcc/` | the spec compiler / validator (hosted C11): JSON + host profile -> diagnostics + binary spec `.SWC` |
+| `wasm/`, `web/` | swcc for the browser: wasm32 with its own minimal libc (no emscripten), and the checker page (validate only, UI in IT/EN/FR/DE) |
 | `schema/v1.md` | spec schema swc/1 (current minor 1.2): the frozen primitives list, what S0 validates, what each minor adds |
 | `profiles/` | host limits: `swos9697.json` (the 1996 DOS exe), `openswos.json` (OpenSWOS SDL + Amiga, draft) |
 | `examples/` | specs of real competitions, club names only (Serie A + Serie B 2026-27) |
@@ -35,7 +36,31 @@ build/swcc validate SPEC.json [--profile profiles/swos9697.json]
 build/swcc compile  SPEC.json -o OUT.SWC
 build/swcc dump     OUT.SWC
 make rules-check MOD=../swos-9697-mod    # the rules library against the Mod's own C
+make page        # build/swcc.wasm + build/swcc-checker.html, one self-contained page (needs clang wasm32 + wasm-ld)
+make wasm-test   # swcc.wasm = native swcc on every spec (WASM_SPECS=DIR for more)
 ```
+
+## The checker page (swcc in the browser)
+
+`make page` builds `build/swcc-checker.html`: one self-contained file (about 100 KB) that checks a competition spec
+in the browser, with the same verdict and the same messages as `swcc validate`. Open a JSON spec, drop it on the page
+or paste it, choose the game (SWOS 96/97 for DOS, or OpenSWOS), and the page shows whether the spec is valid, its
+compiled size and every error or warning; a click on a message selects its line. The spec never leaves the page.
+The page's own texts are in Italian, English, French and German; swcc's messages are in English, as on the
+command line.
+
+How it is built:
+- `wasm/libc.c`: a minimal libc, only the calls swcc makes (no emscripten). Memory is a heap that starts over for
+  every check; a printf format swcc does not use stops the check instead of printing something wrong.
+- `wasm/swcc_wasm.c`: the exports the page calls (`swcc_begin`, `swcc_alloc`, `swcc_run`, `swcc_diag`, `swcc_bin`,
+  `swcc_blen`); `swcc_run` is `swcc_compile`, the same code as the command line.
+- `web/editor.html` + `wasm/mkpage.mjs`: the page, with `swcc.wasm` and both profiles written into it.
+- Tools: clang with the wasm32 target and LLVM's `wasm-ld` (on macOS: `brew install llvm lld`).
+
+`make wasm-test` (`tests/wasm_parity.mjs`) runs native swcc and `swcc.wasm` on every spec of the repo, with both
+profiles, and requires the same verdict, the same messages byte for byte and the same compiled bytes.
+`WASM_SPECS=DIR` adds more specs: the SWOS 96/97 Mod's 131 packs of its 4.0.5 release, converted to swc/1 by its
+`tools/swc_pack.py`, all give identical results.
 
 ## Who uses it
 
