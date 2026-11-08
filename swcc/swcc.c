@@ -486,7 +486,7 @@ static const char *const DECIS[] = { NULL, "aggregate", "away_goals", "extra_tim
 static const char *const TAGS[] = { NULL, "champion", "promoted", "relegated", "playoff", "playout", "continental", "qualified" };
 static const char *const ZONES[] = { NULL, "CL", "EL", "CONF", "PROM", "P.OFF", "P.OUT", "RETR" };
 static const char *const HOMES[] = { "draw", "better_placed", "better_placed_second_leg", "neutral", "fixed" };
-static const char *const PAIRS[] = { "draw", "seeded", "bracket", "fixed" };
+static const char *const PAIRS[] = { "draw", "seeded", "bracket", "fixed", "by_place" };
 static const char *const MODES[] = { "career", "season", "preset", "friendly" };
 
 #define NE(a) ((int)(sizeof(a) / sizeof(a[0])))
@@ -577,12 +577,62 @@ static int entr_item(C *c, JNode *it, const char *sp, StageInfo *all_st, int fir
     return n;
 }
 
+/* v1.3: one item of a round's 'joins' -- "club:<id>", "<stage>#N-M" (an earlier stage of this competition, this
+   season), "<competition>#N-M" (another competition's places), {"from": <competition>, "clubs": n} (by its quota).
+   Returns the clubs it brings, -1 after an error. */
+static int join_item(C *c, JNode *it, const char *rp, int ci, StageInfo *all_st, int first_stage, int nall, const char *self)
+{
+    char *hash;
+    int a, b, sx, kx, n = -1;
+    if (it->type == J_OBJ) {
+        JNode *from = need(c, it, "from", J_STR, rp), *cl = need(c, it, "clubs", J_NUM, rp);
+        long k = 0;
+        unknown_keys(c, it, rp);
+        if (!from || !cl) return -1;
+        kx = find_comp(c, from->str);
+        if (kx < 0) ERR(from, rp, "joins: no competition \"%s\"", from->str);
+        else if (kx == ci) ERR(from, rp, "joins: a competition does not feed itself");
+        else if (int_in(c, cl, "clubs", rp, 1, 1024, &k)) n = (int)k;
+        return n;
+    }
+    if (it->type != J_STR) { ERR(it, rp, "joins: an item is \"club:<id>\", \"<stage or competition>#N-M\" or {\"from\": <competition>, \"clubs\": n}"); return -1; }
+    if (!strncmp(it->str, "club:", 5)) {
+        if (find_club(c, it->str) < 0) { ERR(it, rp, "joins: club \"%s\" is not in 'clubs'", it->str); return -1; }
+        return 1;
+    }
+    hash = strchr(it->str, '#');
+    if (!hash || !positions(hash + 1, &a, &b)) {
+        ERR(it, rp, "joins \"%s\": write 'club:<id>', '<stage>#N-M' or '<competition>#N-M'", it->str);
+        return -1;
+    }
+    *hash = 0;
+    sx = stage_index(all_st + first_stage, nall - first_stage, it->str);
+    kx = find_comp(c, it->str);
+    if (sx >= 0 && kx >= 0) ERR(it, rp, "joins: '%s' is both a stage and a competition: rename one", it->str);
+    else if (self && !strcmp(it->str, self)) ERR(it, rp, "joins: stage \"%s\" cannot feed itself (an earlier stage)", it->str);
+    else if (sx >= 0) {
+        int lo = all_st[first_stage + sx].gmin ? all_st[first_stage + sx].gmin : all_st[first_stage + sx].teams;
+        if (lo && (pos_res(a, lo) < 1 || pos_res(b, lo) > lo || pos_res(b, lo) < pos_res(a, lo)))
+            ERR(it, rp, "joins: positions outside stage \"%s\" (%d clubs per table)", it->str, lo);
+        else n = (pos_res(b, lo) - pos_res(a, lo) + 1) * (all_st[first_stage + sx].per_group ? 1 : all_st[first_stage + sx].groups);
+    } else if (kx >= 0) {
+        JNode *cn = json_get(json_get(c->comps[kx], "participants"), "count");
+        int size = cn && cn->type == J_NUM ? (int)cn->num : 0;
+        if (kx == ci) ERR(it, rp, "joins: a competition does not feed itself");
+        else if (size && (pos_res(a, size) < 1 || pos_res(b, size) > size || pos_res(b, size) < pos_res(a, size)))
+            ERR(it, rp, "joins: positions outside competition \"%s\" (%d clubs)", it->str, size);
+        else n = pos_res(b, size) - pos_res(a, size) + 1;
+    } else ERR(it, rp, "joins: no earlier stage or competition \"%s\"", it->str);
+    *hash = '#';
+    return n;
+}
+
 static void do_comp(C *c, int ci, StageInfo *all_st, int *nall)
 {
     JNode *cp = c->comps[ci], *id, *names, *kind, *country, *parts, *points, *stages, *outcomes, *modes, *level, *v;
     char path[256], p2[300];
     SwcComp rec;
-    int k, teams = 0, first_stage = *nall;
+    int k, teams = 0, first_stage = *nall, qbyes = -1;
     long x;
     memset(&rec, 0, sizeof rec);
     rec.entr = (uint16_t)(c->entr.n / 2);
@@ -613,10 +663,35 @@ static void do_comp(C *c, int ci, StageInfo *all_st, int *nall)
 
     if ((parts = need(c, cp, "participants", J_OBJ, path))) {
         JNode *cnt = need(c, parts, "count", J_NUM, path), *list = opt(c, parts, "clubs", J_ARR, path),
-              *from = opt(c, parts, "from", J_STR, path);
+              *from = opt(c, parts, "from", J_STR, path), *quota = opt(c, parts, "quota", J_ARR, path);
         pathf(p2, sizeof p2, "%s.participants", path);
         if (int_in(c, cnt, "count", p2, 2, c->max_teams, &x)) teams = (int)x;
-        if (!list == !from) ERR(parts, p2, "give either 'clubs' (a fixed list) or 'from': \"link\"");
+        if (quota) {                                    /* v1.3: n clubs from each competition (a cup's entry) */
+            JNode *q;
+            int sum = 0, qi = 0;
+            qbyes = 0;
+            need_minor(c, quota, p2, 3, "'quota'");
+            if (list || from) ERR(quota, p2, "give one of 'clubs', 'from': \"link\" or 'quota'");
+            for (q = quota->child; q; q = q->next, qi++) {
+                char qp[340];
+                JNode *qf;
+                long n = 0, by = 0;
+                pathf(qp, sizeof qp, "%s.quota[%d]", p2, qi);
+                if (q->type != J_OBJ) { ERR(q, qp, "a quota is {\"from\": <competition>, \"clubs\": n, \"byes\": b}"); continue; }
+                if ((qf = need(c, q, "from", J_STR, qp))) {
+                    int k2 = find_comp(c, qf->str);
+                    if (k2 < 0) ERR(qf, qp, "no competition \"%s\"", qf->str);
+                    else if (k2 == ci) ERR(qf, qp, "a competition does not feed itself");
+                }
+                if (int_in(c, need(c, q, "clubs", J_NUM, qp), "clubs", qp, 1, 1024, &n)) sum += (int)n;
+                if (int_in(c, opt(c, q, "byes", J_NUM, qp), "byes", qp, 0, 1024, &by)) {
+                    if (by > n) ERR(json_get(q, "byes"), qp, "%ld byes for %ld clubs", by, n);
+                    qbyes += (int)by;
+                }
+                unknown_keys(c, q, qp);
+            }
+            if (teams && sum != teams) ERR(quota, p2, "the quotas add up to %d clubs, 'count' says %d", sum, teams);
+        } else if (!list == !from) ERR(parts, p2, "give either 'clubs' (a fixed list) or 'from': \"link\"");
         if (from && strcmp(from->str, "link")) ERR(from, p2, "'from' must be \"link\" (entrants come from other competitions' outcomes)");
         {
             JNode *src = opt(c, parts, "source", J_ARR, p2), *q;
@@ -758,10 +833,36 @@ static void do_comp(C *c, int ci, StageInfo *all_st, int *nall)
                     ERR(st, sp, "%d clubs in one table: over %d needs \"long_table\": true (scrolling table)", per, c->table_rows);
                 if (s.teams && s.teams < 2) ERR(st, sp, "a table needs at least 2 clubs");
             } else if (t == SWC_ST_KNOCKOUT || t == SWC_ST_PLAYOFF) {
-                JNode *r;
-                int ri = 0, left = s.teams;
+                JNode *r, *sk;
+                int ri = 0, left = s.teams, joined = 0, jbad = 0, jn[256] = { 0 };
                 s.first_round = (uint16_t)(c->roun.n / sizeof(SwcRound));
                 rounds = need(c, st, "rounds", J_ARR, sp);
+                if ((sk = opt(c, st, "skip_if", J_OBJ, sp))) {             /* v1.3: no play-off when the gap is big */
+                    long g2 = 0;
+                    need_minor(c, sk, sp, 3, "'skip_if'");
+                    if (t != SWC_ST_PLAYOFF) ERR(sk, sp, "'skip_if' goes on a playoff stage");
+                    int_in(c, need(c, sk, "points_gap_ge", J_NUM, sp), "points_gap_ge", sp, 1, 99, &g2);
+                    unknown_keys(c, sk, sp);
+                }
+                for (r = rounds ? rounds->child : NULL; r && ri < 256; r = r->next, ri++) {   /* v1.3: clubs joining a round */
+                    JNode *jl = json_get(r, "joins"), *it;
+                    char rp[360];
+                    pathf(rp, sizeof rp, "%s.rounds[%d]", sp, ri);
+                    if (!jl) continue;
+                    need_minor(c, jl, rp, 3, "'joins'");
+                    if (jl->type != J_ARR || !jl->n) { ERR(jl, rp, "'joins' is a list of items"); continue; }
+                    for (it = jl->child; it; it = it->next) {
+                        int n = join_item(c, it, rp, ci, all_st, first_stage, *nall, sid ? sid->str : NULL);
+                        if (n > 0) jn[ri] += n; else jbad = 1;
+                    }
+                    joined += jn[ri];
+                }
+                if (jbad) left = 0;                     /* (a bad item: the counts are unknown) */
+                if (left && !entrants) {                /* the competition's participants include the clubs that join later */
+                    if (joined >= left) ERR(st, sp, "%d clubs join later rounds, the competition has %d", joined, left);
+                    left -= joined;
+                }
+                ri = 0;
                 for (r = rounds ? rounds->child : NULL; r; r = r->next, ri++) {
                     SwcRound rr;
                     JNode *dec;
@@ -776,6 +877,7 @@ static void do_comp(C *c, int ci, StageInfo *all_st, int *nall)
                     int_in(c, opt(c, r, "byes", J_NUM, rp), "byes", rp, 0, 1024, &byes);
                     h = enum_member(c, need(c, r, "home", J_STR, rp), "home", rp, HOMES, NE(HOMES));
                     pr = enum_member(c, need(c, r, "pairing", J_STR, rp), "pairing", rp, PAIRS, NE(PAIRS));
+                    if (pr == 4) need_minor(c, json_get(r, "pairing"), rp, 3, "the pairing \"by_place\"");
                     dec = json_get(r, "decider");
                     if (!dec) ERR(r, rp, "missing 'decider': every round says how a level tie ends (e.g. [\"aggregate\", \"extra_time\", \"penalties\"])");
                     else if (dec->type != J_ARR) ERR(dec, rp, "'decider' must be an array");
@@ -818,8 +920,15 @@ static void do_comp(C *c, int ci, StageInfo *all_st, int *nall)
                             bput(&c->fixt, &f, sizeof f);
                         }
                     } else if (json_get(r, "fixed")) ERR(json_get(r, "fixed"), rp, "'fixed' pairs need \"pairing\": \"fixed\"");
-                    if (left && ties * 2 + byes != left)
-                        ERR(r, rp, "%ld ties + %ld byes take %ld clubs, %d reach this round", ties, byes, ties * 2 + byes, left);
+                    if (ri < 256 && left) left += jn[ri];
+                    if (ri == 0 && *nall == first_stage && qbyes >= 0 && byes != qbyes)
+                        ERR(r, rp, "the first round has %ld byes, the quotas give %d", byes, qbyes);
+                    if (left && !jbad && ties * 2 + byes != left) {
+                        if (ri < 256 && jn[ri])
+                            ERR(r, rp, "%ld ties + %ld byes take %ld clubs, %d reach this round (%d of them joining)", ties, byes, ties * 2 + byes, left, jn[ri]);
+                        else
+                            ERR(r, rp, "%ld ties + %ld byes take %ld clubs, %d reach this round", ties, byes, ties * 2 + byes, left);
+                    }
                     left = (int)(ties + byes);
                     all_st[*nall].last_ties = (int)ties;
                     rr.ties = (uint16_t)ties;
@@ -831,7 +940,7 @@ static void do_comp(C *c, int ci, StageInfo *all_st, int *nall)
                     s.nrounds++;
                 }
                 if (rounds && !rounds->n) ERR(rounds, sp, "rounds: at least one");
-                if (rounds && left != 1 && s.teams && t == SWC_ST_KNOCKOUT)    /* (a play-off may qualify several) */
+                if (rounds && left != 1 && s.teams && !jbad && t == SWC_ST_KNOCKOUT)    /* (a play-off may qualify several) */
                     ERR(rounds, sp, "the rounds end with %d clubs, not one winner", left);
             }
             json_get(st, "long_table");
