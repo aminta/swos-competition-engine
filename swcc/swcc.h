@@ -11,4 +11,10 @@ int  swcc_compile(const char *spec, size_t len, const char *name, const char *pr
                   unsigned char **bin, size_t *blen, char **diag_out);
 void swcc_free(void *p);
 
+/* v1.3: how swcc reads a file a spec names (a pool file): path as the spec writes it, from = the spec's name; returns
+   the text (malloc'd, swcc frees it) and *len, or NULL when it cannot be read. Without a loader (the default, as in
+   the WASM editor) a pool file's contents are not checked, only the world's 'pools' list. */
+typedef char *(*swcc_loader)(const char *path, const char *from, size_t *len);
+void swcc_set_loader(swcc_loader f);
+
 #endif

@@ -382,7 +382,7 @@ static void do_clubs(C *c, JNode *arr)
     char path[128];
     uint16_t *per_file = calloc(65536, sizeof *per_file);
     for (i = 0; i < c->nclubs; i++) {
-        JNode *cl = c->clubs[i], *id, *name, *country, *host, *area, *parent;
+        JNode *cl = c->clubs[i], *id, *name, *country, *host, *area, *parent, *v;
         SwcClub rec;
         long file = 0, ord = 0;
         memset(&rec, 0xFF, sizeof rec);
@@ -394,6 +394,11 @@ static void do_clubs(C *c, JNode *arr)
         host = need(c, cl, "host", J_OBJ, path);
         area = opt(c, cl, "area", J_STR, path);
         if ((parent = opt(c, cl, "parent", J_STR, path))) need_minor(c, parent, path, 3, "'parent'");
+        if ((v = opt(c, cl, "rank", J_NUM, path))) {   /* v1.3: the club's rank for the summer re-allocation */
+            long rk = 0;
+            need_minor(c, v, path, 3, "'rank'");
+            int_in(c, v, "rank", path, 0, 254, &rk);
+        }
         if (id) {
             if (!id_ok(id->str, "club:")) ERR(id, path, "club id \"%s\" must be 'club:' + lower-case words joined by '.', '-' or '_'", id->str);
             for (j = 0; j < i; j++) {
@@ -657,6 +662,15 @@ static void do_comp(C *c, int ci, StageInfo *all_st, int *nall)
         if (strcmp(v->str, "pool")) ERR(v, path, "refill must be \"pool\" (clubs that leave the world are replaced from an off-world pool)");
         rec.flags |= 1;
     }
+    if ((v = opt(c, cp, "pool", J_STR, path))) {        /* v1.3: which pool refills it (checked with 'pools') */
+        need_minor(c, v, path, 3, "'pool'");
+        if (!json_get(cp, "refill")) ERR(v, path, "'pool' goes with \"refill\": \"pool\"");
+    }
+    if ((v = opt(c, cp, "realloc", J_STR, path))) {     /* v1.3: the summer re-allocation of a whole level */
+        need_minor(c, v, path, 3, "'realloc'");
+        if (strcmp(v->str, "by_rank")) ERR(v, path, "realloc must be \"by_rank\"");
+    }
+    if ((v = opt(c, cp, "chain", J_BOOL, path))) need_minor(c, v, path, 3, "'chain'");
     if (rec.kind == SWC_K_LEAGUE && !level) ERR(cp, path, "a league needs its pyramid 'level'");
     names = need(c, cp, "names", J_OBJ, path);
     rec.name = names_rec(c, names, country ? country->str : NULL, path, rec.id);
@@ -1061,6 +1075,175 @@ static void uf_join(int *p, int a, int b)
 }
 
 /* ---- link checks across competitions ----------------------------------------------------------------------------- */
+/* ---- v1.3: pools (their own files), the summer re-allocation and the chain -------------------------------------- */
+static swcc_loader g_loader;
+void swcc_set_loader(swcc_loader f) { g_loader = f; }
+
+static const char *jstr(JNode *o, const char *k) { JNode *v = json_get(o, k); return v && v->type == J_STR ? v->str : NULL; }
+
+/* one pool file (root p) of the world's pool `pid`; ids: the pool clubs' ids seen so far (all pools) */
+static void check_pool_file(C *c, JNode *p, const char *pid, const char ***ids, int *nids)
+{
+    JNode *v, *divs, *cls, *up, *m;
+    int nd = 0, i, j, cnt[256] = { 0 }, size[256] = { 0 };
+    const char *dname[256];
+    char path[160];
+    if (p->type != J_OBJ) { ERR(p, "", "a pool file is a JSON object"); return; }
+    if ((v = need(c, p, "schema", J_STR, "")) && strcmp(v->str, "swc/1.3")) ERR(v, "", "a pool file says \"schema\": \"swc/1.3\"");
+    if ((v = need(c, p, "id", J_STR, "")) && strcmp(v->str, pid)) ERR(v, "", "pool file id \"%s\", the world names it \"%s\"", v->str, pid);
+    if ((v = need(c, p, "country", J_STR, "")) && (!c->countries || !json_get(c->countries, v->str)))
+        ERR(v, "", "country \"%s\" is not in the world's 'countries'", v->str);
+    if ((divs = need(c, p, "divisions", J_ARR, ""))) {
+        if (!divs->n) ERR(divs, "", "divisions: at least one");
+        for (m = divs->child; m; m = m->next, nd++) {
+            JNode *d, *nm;
+            long sz = 0;
+            pathf(path, sizeof path, "divisions[%d]", nd);
+            if (m->type != J_OBJ || nd >= 256) { ERR(m, path, "a division is an object"); continue; }
+            dname[nd] = "";
+            if ((d = need(c, m, "id", J_STR, path))) {
+                if (!id_ok(d->str, NULL)) ERR(d, path, "division id \"%s\": lower-case words joined by '.', '-' or '_'", d->str);
+                for (j = 0; j < nd; j++) if (!strcmp(dname[j], d->str)) ERR(d, path, "division id \"%s\" used twice", d->str);
+                dname[nd] = d->str;
+            }
+            if ((nm = need(c, m, "names", J_OBJ, path))) {
+                for (j = 0; j < c->nlangs; j++) {
+                    JNode *l = json_get(nm, c->langs[j]);
+                    if (!l || l->type != J_STR) ERR(nm, path, "names: missing language '%s'", c->langs[j]);
+                    else text_ok(c, l, path, "division name", l->str);
+                }
+                unknown_keys(c, nm, path);
+            }
+            if (int_in(c, need(c, m, "size", J_NUM, path), "size", path, 2, c->max_teams, &sz)) size[nd] = (int)sz;
+            unknown_keys(c, m, path);
+        }
+    }
+    if ((cls = need(c, p, "clubs", J_ARR, ""))) {
+        for (i = 0, m = cls->child; m; m = m->next, i++) {
+            JNode *id, *nm, *dv, *sg, *rk, *ar, *ho;
+            pathf(path, sizeof path, "clubs[%d]", i);
+            if (m->type != J_OBJ) { ERR(m, path, "a club is an object"); continue; }
+            if ((id = need(c, m, "id", J_STR, path))) {
+                if (!id_ok(id->str, "club:")) ERR(id, path, "club id \"%s\" must be 'club:' + lower-case words joined by '.', '-' or '_'", id->str);
+                if (find_club(c, id->str) >= 0) ERR(id, path, "club id \"%s\" is a club of the world too", id->str);
+                for (j = 0; j < *nids; j++) if (!strcmp((*ids)[j], id->str)) { ERR(id, path, "club id \"%s\" used twice in the pools", id->str); break; }
+                *ids = realloc((void *)*ids, (size_t)(*nids + 1) * sizeof **ids);
+                (*ids)[(*nids)++] = id->str;
+            }
+            if ((nm = need(c, m, "name", J_STR, path))) {
+                const char *hn = text_ok(c, nm, path, "club name", nm->str);
+                if (hn && (int)strlen(hn) > c->club_name_max)
+                    ERR(nm, path, "club name \"%s\" is %zu characters, the host holds %d", nm->str, strlen(hn), c->club_name_max);
+            }
+            if ((dv = need(c, m, "division", J_STR, path))) {
+                for (j = 0; j < nd && strcmp(dname[j], dv->str); j++) ;
+                if (j == nd) ERR(dv, path, "no division \"%s\" in this pool", dv->str); else cnt[j]++;
+            }
+            if ((sg = need(c, m, "strength", J_NUM, path))) {     /* hundredths, 0.00..2.50 */
+                const double h = sg->num * 100;
+                const long r = (long)(h + 0.5);
+                if (sg->num < 0 || sg->num > 2.5 || h - r > 1e-6 || r - h > 1e-6) ERR(sg, path, "strength %g: 0.00..2.50, in hundredths", sg->num);
+            }
+            if ((rk = opt(c, m, "rank", J_NUM, path))) { long r = 0; int_in(c, rk, "rank", path, 0, 254, &r); }
+            ar = opt(c, m, "area", J_STR, path);
+            (void)ar;
+            if ((ho = opt(c, m, "host", J_OBJ, path))) {
+                long f = 0, o = 0;
+                int_in(c, need(c, ho, "file", J_NUM, path), "file", path, 0, 65535, &f);
+                if (int_in(c, need(c, ho, "ordinal", J_NUM, path), "ordinal", path, 0, 65535, &o) && o >= c->clubs_per_file)
+                    ERR(ho, path, "ordinal %ld: a host file holds %d clubs (0..%d)", o, c->clubs_per_file, c->clubs_per_file - 1);
+                unknown_keys(c, ho, path);
+            }
+            unknown_keys(c, m, path);
+        }
+        for (j = 0; j < nd; j++)
+            if (size[j] && cnt[j] != size[j]) ERR(cls, "clubs", "division \"%s\" has %d clubs, its size is %d", dname[j], cnt[j], size[j]);
+    }
+    if ((up = need(c, p, "up", J_OBJ, ""))) {
+        long ch = 0;
+        JNode *po = opt(c, up, "playoff", J_OBJ, "up");
+        int_in(c, need(c, up, "champion", J_NUM, "up"), "champion", "up", 0, 8, &ch);
+        if (po) {                                       /* a playoff stage's shape: the engine reads it (S3) */
+            const char *ty = jstr(po, "type");
+            JNode *rr = json_get(po, "rounds");
+            if (!ty || strcmp(ty, "playoff")) ERR(po, "up.playoff", "up.playoff is a stage with \"type\": \"playoff\"");
+            if (!rr || rr->type != J_ARR || !rr->n) ERR(po, "up.playoff", "up.playoff needs its 'rounds'");
+        }
+        unknown_keys(c, up, "up");
+    }
+    if ((v = opt(c, p, "feeds", J_ARR, ""))) {
+        for (m = v->child; m; m = m->next) {
+            int k = m->type == J_STR ? find_comp(c, m->str) : -1;
+            const char *pp;
+            if (k < 0) { ERR(m, "feeds", "no competition \"%s\" in the world", m->type == J_STR ? m->str : "?"); continue; }
+            if (!jstr(c->comps[k], "refill")) ERR(m, "feeds", "\"%s\" is fed by a pool: it needs \"refill\": \"pool\"", m->str);
+            if ((pp = jstr(c->comps[k], "pool")) && strcmp(pp, pid)) ERR(m, "feeds", "\"%s\" names pool \"%s\"", m->str, pp);
+        }
+    }
+    unknown_keys(c, p, "");
+}
+
+static void check_pools(C *c)
+{
+    JNode *pl = json_get(c->root, "pools"), *m;
+    const char **ids = NULL, *pid[64];
+    int np = 0, nids = 0, i, j;
+    if (pl) {
+        need_minor(c, pl, "pools", 3, "'pools'");
+        if (pl->type != J_ARR) { ERR(pl, "pools", "'pools' is a list of {\"id\", \"file\"}"); pl = NULL; }
+    }
+    for (m = pl ? pl->child : NULL; m && np < 64; m = m->next) {
+        JNode *id, *f;
+        char path[64];
+        pathf(path, sizeof path, "pools[%d]", np);
+        if (m->type != J_OBJ) { ERR(m, path, "a pool is {\"id\", \"file\"}"); continue; }
+        id = need(c, m, "id", J_STR, path);
+        f = need(c, m, "file", J_STR, path);
+        unknown_keys(c, m, path);
+        if (!id) continue;
+        if (!id_ok(id->str, NULL)) ERR(id, path, "pool id \"%s\": lower-case words joined by '.', '-' or '_'", id->str);
+        for (j = 0; j < np; j++) if (!strcmp(pid[j], id->str)) ERR(id, path, "pool id \"%s\" used twice", id->str);
+        pid[np++] = id->str;
+        if (f && g_loader) {
+            size_t n = 0;
+            char *text = g_loader(f->str, c->file, &n), err[256];
+            const char *spec_file = c->file;
+            JNode *root;
+            if (!text) { ERR(f, path, "pool file \"%s\" cannot be read", f->str); continue; }
+            root = json_parse(text, n, err, sizeof err);
+            c->file = f->str;
+            if (!root) ERR(NULL, "", "(syntax): %s", err);
+            else check_pool_file(c, root, id->str, &ids, &nids);
+            c->file = spec_file;
+            if (root) json_free(root);      /* (ids point into it: the checks are done) */
+            nids = 0;                       /* ... so ids are compared within one file, and against the world's */
+            free(text);
+        }
+    }
+    free((void *)ids);
+    for (i = 0; i < c->ncomps; i++) {
+        const char *pp = jstr(c->comps[i], "pool");
+        JNode *at = json_get(c->comps[i], "pool");
+        if (!pp) continue;
+        for (j = 0; j < np && strcmp(pid[j], pp); j++) ;
+        if (j == np) ERR(at, jstr(c->comps[i], "id") ? jstr(c->comps[i], "id") : "?", "pool \"%s\" is not in the world's 'pools'", pp);
+    }
+    for (i = 0; i < c->ncomps; i++) {                   /* realloc / chain: every league of a level agrees */
+        JNode *a = c->comps[i], *la = json_get(a, "level");
+        const char *ca = jstr(a, "country"), *ra = jstr(a, "realloc");
+        JNode *cha = json_get(a, "chain");
+        for (j = 0; j < i; j++) {
+            JNode *b = c->comps[j], *lb = json_get(b, "level"), *chb = json_get(b, "chain");
+            const char *cb = jstr(b, "country"), *rb = jstr(b, "realloc");
+            if (!la || !lb || la->type != J_NUM || lb->type != J_NUM || la->num != lb->num || !ca || !cb || strcmp(ca, cb)) continue;
+            if ((ra == NULL) != (rb == NULL) || (ra && strcmp(ra, rb)))
+                ERR(a, jstr(a, "id") ? jstr(a, "id") : "?", "realloc: \"%s\" and \"%s\" are one level of %s: every league of a level says the same", jstr(a, "id"), jstr(b, "id"), ca);
+            if ((cha && cha->type == J_BOOL && cha->b) != (chb && chb->type == J_BOOL && chb->b))
+                ERR(a, jstr(a, "id") ? jstr(a, "id") : "?", "chain: \"%s\" and \"%s\" are one level of %s: every league of a level says the same", jstr(a, "id"), jstr(b, "id"), ca);
+        }
+    }
+}
+
 /* v1.3: a second team (a club with a 'parent') never in its parent's league, never above its country's
    second_teams.highest level */
 static void check_second_teams(C *c)
@@ -1330,6 +1513,7 @@ int swcc_compile(const char *spec, size_t len, const char *name, const char *pro
                 for (i = 0; i < c->ncomps; i++) do_comp(c, i, st, &nst);
                 if (c->errors == 0) check_links(c);
                 if (c->errors == 0) check_second_teams(c);
+                check_pools(c);
             }
             unknown_keys(c, c->root, "");
         }

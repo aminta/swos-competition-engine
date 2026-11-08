@@ -27,6 +27,28 @@ static char *slurp(const char *path, size_t *n)
     return b;
 }
 
+/* the pool files a spec names: relative to the spec's own directory */
+static char *load_near(const char *path, const char *from, size_t *n)
+{
+    char full[4096];
+    const char *slash = strrchr(from, '/');
+    FILE *f;
+    char *b;
+    long k;
+    if (path[0] == '/' || !slash) snprintf(full, sizeof full, "%s", path);
+    else snprintf(full, sizeof full, "%.*s/%s", (int)(slash - from), from, path);
+    if (!(f = fopen(full, "rb"))) return NULL;
+    fseek(f, 0, SEEK_END);
+    k = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    b = malloc((size_t)k + 1);
+    if (!b || fread(b, 1, (size_t)k, f) != (size_t)k) { fclose(f); free(b); return NULL; }
+    fclose(f);
+    b[k] = 0;
+    *n = (size_t)k;
+    return b;
+}
+
 static int dump(const char *path)
 {
     size_t n;
@@ -91,6 +113,7 @@ int main(int argc, char **argv)
     }
     if (!spec || (!strcmp(cmd, "compile") && !out)) { fprintf(stderr, "swcc: missing SPEC or -o\n"); return 2; }
     if (!prof) prof = SWCC_DEFAULT_PROFILE;
+    swcc_set_loader(load_near);
     ptext = slurp(prof, &pn);
     stext = slurp(spec, &sn);
     errors = swcc_compile(stext, sn, spec, ptext, pn, out ? &bin : NULL, &bn, &diag);
