@@ -298,12 +298,30 @@ static int chain_case(int chain, int *outside)
     return n[0] == 2 && n[1] == 2 && n[2] == 2 && n[3] == 2;
 }
 
+/* D (Davide 08/11): a club down from N / S takes the pool strength at its own N / S position */
+static void rank_strength(void)
+{
+    const uint16_t above[5] = { 500, 450, 400, 350, 306 }, pool[3] = { 262, 200, 100 };
+    int ok = sr_lp_rank_strength(500, above, 5, pool, 3) == 262 && sr_lp_rank_strength(306, above, 5, pool, 3) == 100
+          && sr_lp_rank_strength(600, above, 5, pool, 3) == 262 && sr_lp_rank_strength(250, above, 5, pool, 3) == 100
+          && sr_lp_rank_strength(400, above, 5, pool, 3) == 200                 /* (the middle -> the middle) */
+          && sr_lp_rank_strength(425, above, 5, pool, 3) == 216;                /* (1.5 of 4 -> 0.75 of 2: 262 - 46, truncated) */
+    for (int v = 300, last = 0; v <= 510; v++) {            /* monotone: stronger above, stronger below */
+        const int x = sr_lp_rank_strength((uint16_t)v, above, 5, pool, 3);
+        if (x < last) ok = 0;
+        last = x;
+    }
+    check(ok, "D: a club down from N / S takes the pool's strength at its N / S position (ends, middle, between, monotone)");
+    check(sr_lp_rank_strength(400, above, 1, pool, 3) == -1, "control: D refuses a list of fewer than 2");
+}
+
 int main(int argc, char **argv)
 {
     const int n = argc > 1 ? atoi(argv[1]) : 2000;
     light_tables(n);
     playoffs(n);
     reallocation(n);
+    rank_strength();
     int out_c = -1, out_m = -1;
     const int ok_c = chain_case(1, &out_c), ok_m = chain_case(0, &out_m);
     char m[160];

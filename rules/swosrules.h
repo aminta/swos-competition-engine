@@ -411,6 +411,13 @@ int32_t sr_pg_realloc(const sr_pg_league *pg, int32_t l, const uint8_t *rank, co
  * identity (its pool record), which also seeds its matches */
 typedef struct { uint16_t ident; uint16_t strength; } sr_lp_club;
 
+/* The light tables' spread: a match's strength 30 .. 30 + SR_LP_SPREAD over 0.00 .. 2.50 (squared). Calibrated
+ * (Davide 08/11, D) so that a club relegated from N / S goes straight back up as often as in reality: 7.3%, 4 of 55
+ * over 2011-12 .. 2023-24 (en.wikipedia; the Mod's internal/nonleague2627/bounce). */
+#ifndef SR_LP_SPREAD
+#define SR_LP_SPREAD 40
+#endif
+
 /* Division d's light table of n clubs (n <= SR_LP_CLUBS), a double round robin: each match's goals by
  * the two strengths (home advantage, draws ~ 1 in 4) from seed, d and the two idents only -- the same
  * clubs give the same table whatever their order. out[0 .. n), best first (points, goal difference,
@@ -426,6 +433,11 @@ int32_t sr_lp_playoff(uint32_t seed, int32_t d, const sr_row *table, int32_t n, 
 /* A pool season: nd divisions' light tables, then each one's champion and play-off winner up.
  * up[2 * d] / up[2 * d + 1]: their indices in division d's c[d] (champion, then play-off winner).
  * 0; -1 a division out of range. */
+/* A club down from the level above (N / S) into the pool (Davide 08/11, D): the strength at its own position in
+ * the level above's strength order (above[0 .. na), strongest first) taken at the same position of the pool's
+ * (pool[0 .. np), strongest first), both linear between neighbours. -1 lists of fewer than 2. */
+int32_t sr_lp_rank_strength(uint16_t own, const uint16_t *above, int32_t na, const uint16_t *pool, int32_t np);
+
 int32_t sr_lp_season(uint32_t seed, int32_t nd, const sr_lp_club *const *c, const int32_t *n, int32_t *up);
 
 #endif
