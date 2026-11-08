@@ -1453,6 +1453,13 @@ int swcc_compile(const char *spec, size_t len, const char *name, const char *pro
             if ((v = need(c, c->root, "id", J_STR, "")) && !id_ok(v->str, NULL)) ERR(v, "", "world id \"%s\": lower-case words joined by '.', '-' or '_'", v->str);
             int_in(c, opt(c, c->root, "host_world", J_NUM, ""), "host_world", "", 0, 65535, &world);
             {
+                JNode *sq = opt(c, c->root, "squad", J_NUM, "");    /* v1.3: the host world's squad size */
+                if (sq) {
+                    need_minor(c, sq, "squad", 3, "'squad'");
+                    if (!sq->is_int || (sq->num != 16 && sq->num != 20)) ERR(sq, "squad", "squad must be 16 or 20 (players per club)");
+                }
+            }
+            {
                 SwcMeta me;
                 JNode *ver = opt(c, c->root, "version", J_STR, "");
                 me.id = str_add(c, v && v->type == J_STR ? v->str : "");
