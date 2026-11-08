@@ -15,6 +15,7 @@ typedef uint8_t  u8;
 typedef uint16_t u16;
 typedef uint32_t u32;
 typedef int32_t  i32;
+typedef int8_t   i8;
 
 enum { N = SR_STAGE_CLUBS };
 
@@ -250,4 +251,207 @@ i32 sr_group_sizes(i32 n, i32 g, u8 *size)
     if (g < 1 || n / g < 2 || (n + g - 1) / g > 255) return -1;
     for (i32 k = 0; k < g; k++) size[k] = (u8)(n / g + (k < n % g));
     return g;
+}
+
+/* ---- draws ---- */
+
+enum { BUDGET = 200000 };                                       /* search steps before a draw gives up */
+
+/* ord = 0..n-1 by the hash of the seed, the salt and the club */
+static void hash_order(u32 seed, u32 salt, i32 n, u8 *ord)
+{
+    u32 h[N];
+    for (i32 k = 0; k < n; k++) {
+        const u32 v = mix(seed, salt + (u32)k);
+        i32 j = k;
+        while (j > 0 && h[j - 1] > v) { h[j] = h[j - 1]; ord[j] = ord[j - 1]; j--; }
+        h[j] = v; ord[j] = (u8)k;
+    }
+}
+
+typedef struct {
+    i32 n, g; const u8 *assoc; u32 seed; const u8 *size;
+    u8 club[N], cnt[N];                                         /* the draw's order; clubs in each group */
+    u32 has[N][8];                                              /* the associations in each group (bits) */
+    u8 left[256], with[256];                                    /* an association's clubs still to draw; groups with it */
+    i32 steps;
+} sr_gdraw;
+
+static u8 assoc_of(const sr_gdraw *d, i32 c) { return d->assoc ? d->assoc[c] : 0; }
+
+static int gfree(const sr_gdraw *d, i32 j, i32 c, i32 p)       /* group j open to club c of pot p */
+{
+    const u8 a = assoc_of(d, c);
+    return d->size[j] > p && d->cnt[j] <= p && !(d->assoc && (d->has[j][a >> 5] >> (a & 31) & 1));
+}
+
+/* Kuhn's augmenting path: pot club q (of the list) to a group, moving the ones placed before it */
+static int augment(const sr_gdraw *d, const u8 *list, i32 q, i32 p, i8 *owner, u8 *seen)
+{
+    for (i32 j = 0; j < d->g; j++) {
+        if (seen[j] || !gfree(d, j, list[q], p)) continue;
+        seen[j] = 1;
+        if (owner[j] < 0 || augment(d, list, owner[j], p, owner, seen)) { owner[j] = (i8)q; return 1; }
+    }
+    return 0;
+}
+
+/* still possible after club i: every pot's clubs not yet drawn can each take a group of their own (a matching),
+ * and no association has more clubs left than groups without it */
+static int gdraw_open(const sr_gdraw *d, i32 i)
+{
+    if (d->assoc)
+        for (i32 a = 0; a < 256; a++) if (d->left[a] > d->g - d->with[a]) return 0;
+    for (i32 p = i / d->g; p * d->g < d->n; p++) {
+        const i32 b = p * d->g > i + 1 ? p * d->g : i + 1, end = (p + 1) * d->g < d->n ? (p + 1) * d->g : d->n;
+        if (b >= end) continue;
+        u8 list[N];
+        i32 nl = 0;
+        for (i32 k = b; k < end; k++) list[nl++] = d->club[k];
+        i8 owner[N];
+        for (i32 j = 0; j < d->g; j++) owner[j] = -1;
+        for (i32 q = 0; q < nl; q++) {
+            u8 seen[N];
+            for (i32 j = 0; j < d->g; j++) seen[j] = 0;
+            if (!augment(d, list, q, p, owner, seen)) return 0;
+        }
+    }
+    return 1;
+}
+
+/* club i of the draw's order (pot p = i / g) into a group, the rest after it */
+static int gdraw(sr_gdraw *d, u8 *grp, i32 i)
+{
+    if (i == d->n) return 1;
+    if (--d->steps < 0) return 0;
+    const i32 c = d->club[i], p = i / d->g;
+    const u8 a = assoc_of(d, c);
+    u8 go[N];
+    hash_order(d->seed, 0x6D000000u + (u32)c * 64u, d->g, go);
+    for (i32 k = 0; k < d->g; k++) {
+        const i32 j = go[k];
+        if (d->cnt[j] != p || d->size[j] <= p) continue;        /* this pot's club there already, or the group full */
+        if (d->assoc && (d->has[j][a >> 5] >> (a & 31) & 1)) continue;
+        grp[c] = (u8)j; d->cnt[j]++;
+        if (d->assoc) { d->has[j][a >> 5] |= 1u << (a & 31); d->left[a]--; d->with[a]++; }
+        if (gdraw_open(d, i) && gdraw(d, grp, i + 1)) return 1;
+        if (d->assoc) { d->has[j][a >> 5] &= ~(1u << (a & 31)); d->left[a]++; d->with[a]--; }
+        d->cnt[j]--;
+    }
+    return 0;
+}
+
+i32 sr_group_draw(i32 n, i32 g, const u8 *assoc, u32 seed, u8 *grp)
+{
+    u8 size[N];
+    if (n > N || sr_group_sizes(n, g, size) < 0) return -1;
+    sr_gdraw d;
+    d.n = n; d.g = g; d.assoc = assoc; d.seed = seed; d.size = size; d.steps = BUDGET;
+    for (i32 j = 0; j < g; j++) { d.cnt[j] = 0; for (i32 w = 0; w < 8; w++) d.has[j][w] = 0; }
+    for (i32 a = 0; a < 256; a++) d.left[a] = d.with[a] = 0;
+    for (i32 c = 0; assoc && c < n; c++) d.left[assoc[c]]++;
+    for (i32 p = 0; p * g < n; p++) {                           /* pot by pot, each pot in hashed order */
+        const i32 b = p * g, len = n - b < g ? n - b : g;
+        u8 o[N];
+        hash_order(seed, 0x90700000u + (u32)p * 64u, len, o);
+        for (i32 k = 0; k < len; k++) d.club[b + k] = (u8)(b + o[k]);
+    }
+    return gdraw(&d, grp, 0) ? g : -2;
+}
+
+i32 sr_best_placed(const sr_group *g, i32 ng, i32 place, i32 win, i32 draw, i32 loss, const u8 *tieb, u32 seed,
+                   u8 *ord)
+{
+    for (const u8 *t = tieb; t && *t; t++)
+        if (!usable(*t) || (*t >= SR_TB_H2H_POINTS && *t <= SR_TB_H2H_AWAY_GOALS) || *t == SR_TB_H2H_REAPPLIED) return -1;
+    if (ng < 1 || ng > N) return -1;
+    i32 least = g[0].n;
+    for (i32 j = 1; j < ng; j++) if (g[j].n < least) least = g[j].n;
+    sr_srow row[N];
+    u8 gi[N];
+    i32 e = 0;
+    for (i32 j = 0; j < ng; j++) {
+        if (place >= g[j].n) continue;
+        u8 pos[N];
+        for (i32 k = 0; k < g[j].n; k++) pos[g[j].table[k].club] = (u8)k;
+        const i32 c = g[j].table[place].club;
+        sr_srow *r = &row[e];
+        r->club = (u8)e; r->pad = 0; r->pts = 0;
+        r->pl = r->w = r->d = r->l = r->gf = r->ga = r->aw = r->agf = 0;
+        for (i32 k = 0; k < g[j].nm; k++) {
+            const sr_match *x = &g[j].m[k];
+            if (!x->played || (x->home != c && x->away != c)) continue;
+            const i32 o = x->home == c ? x->away : x->home;
+            if (pos[o] >= least) continue;                      /* against the extra clubs of a larger group */
+            const int home = x->home == c;
+            const i32 f = home ? x->hg : x->ag, a = home ? x->ag : x->hg;
+            r->pl++; r->gf = (u16)(r->gf + f); r->ga = (u16)(r->ga + a);
+            if (!home) r->agf = (u16)(r->agf + f);
+            if (f > a)       { r->w++; if (!home) r->aw++; r->pts = (int16_t)(r->pts + win); }
+            else if (f == a) { r->d++; r->pts = (int16_t)(r->pts + draw); }
+            else             { r->l++; r->pts = (int16_t)(r->pts + loss); }
+        }
+        gi[e++] = (u8)j;
+    }
+    u8 o[N], cut[N + 1], in[N];
+    for (i32 k = 0; k < e; k++) { o[k] = (u8)k; cut[k] = k == 0; in[k] = 1; }
+    cut[e] = 1;
+    const sr_tctx x = { row, 0, 0, e, win, draw, loss, seed };
+    for (const u8 *t = tieb; t && *t; t++)
+        for (i32 b = 0; b < e;) {
+            i32 f = b + 1;
+            while (!cut[f]) f++;
+            if (f - b > 1) split(&x, *t, in, o, cut, b, f);
+            b = f;
+        }
+    for (i32 k = 0; k < e; k++) ord[k] = gi[o[k]];
+    return e;
+}
+
+typedef struct { i32 mode, n; const u8 *avoid; u32 seed; u8 order[N]; u8 used[N]; i32 steps; } sr_pdraw;
+
+/* pair d of the round: the first club of the hashed order still free (the top half's, seeded) v a free club
+ * the round can still be finished with */
+static int pdraw(sr_pdraw *d, u8 *out, i32 k)
+{
+    if (2 * k == d->n) return 1;
+    if (--d->steps < 0) return 0;
+    const i32 half = d->mode == SR_PAIR_SEEDED ? d->n / 2 : d->n;
+    i32 a = -1;
+    for (i32 q = 0; q < d->n && a < 0; q++) if (!d->used[d->order[q]] && d->order[q] < half) a = d->order[q];
+    if (a < 0) return 0;
+    d->used[a] = 1;
+    u8 go[N];
+    hash_order(d->seed, 0xBA000000u + (u32)a * 64u, d->n, go);
+    for (i32 q = 0; q < d->n; q++) {
+        const i32 b = go[q];
+        if (d->used[b] || (d->mode == SR_PAIR_SEEDED && b < half) || (d->avoid && d->avoid[a] == d->avoid[b])) continue;
+        d->used[b] = 1; out[2 * k] = (u8)a; out[2 * k + 1] = (u8)b;
+        if (pdraw(d, out, k + 1)) return 1;
+        d->used[b] = 0;
+    }
+    d->used[a] = 0;
+    return 0;
+}
+
+i32 sr_ko_pairs(i32 mode, i32 n, const u8 *avoid, u32 seed, u8 *out)
+{
+    if (n < 2 || n > N || (n & 1)) return -1;
+    if (mode == SR_PAIR_FIXED || mode == SR_PAIR_BRACKET) {
+        if (mode == SR_PAIR_FIXED) for (i32 k = 0; k < n; k++) out[k] = (u8)k;
+        else {
+            if (n & (n - 1)) return -1;
+            out[0] = 0;                                         /* order(2m) = x, 2m-1-x for each x of order(m) */
+            for (i32 m = 1; m < n; m *= 2)
+                for (i32 k = m - 1; k >= 0; k--) { const u8 v = out[k]; out[2 * k] = v; out[2 * k + 1] = (u8)(2 * m - 1 - v); }
+        }
+        for (i32 k = 0; avoid && k < n; k += 2) if (avoid[out[k]] == avoid[out[k + 1]]) return -3;
+        return n / 2;
+    }
+    if (mode != SR_PAIR_DRAW && mode != SR_PAIR_SEEDED) return -1;
+    sr_pdraw d;
+    d.mode = mode; d.n = n; d.avoid = avoid; d.seed = seed; d.steps = BUDGET;
+    for (i32 k = 0; k < n; k++) d.used[k] = 0;
+    hash_order(seed, 0xD7000000u, n, d.order);
+    return pdraw(&d, out, 0) ? n / 2 : -2;
 }

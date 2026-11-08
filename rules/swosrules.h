@@ -492,4 +492,35 @@ int32_t sr_ko_tie(const sr_leg *leg, int32_t nlegs, const sr_tie_extra *x, const
  * (29 in 3: 10, 10, 9). Returns g, -1 when g < 1 or a group would have fewer than 2 clubs. */
 int32_t sr_group_sizes(int32_t n, int32_t g, uint8_t *size);
 
+/* A groups stage's draw: clubs 0..n-1 in seeding order (0 the best) into g groups sized by sr_group_sizes. Pot p =
+ * clubs p*g .. p*g+g-1, one club of a pot per group; the last pot, when short, goes to the larger groups. assoc (NULL
+ * = none): two clubs with one value never in one group. The draw goes pot by pot, the pot's clubs in an order hashed
+ * from the seed, each to the first group (in an order hashed from the seed and the club) that still leaves a whole
+ * draw possible -- UEFA's computer draw. grp[c] = club c's group. Returns g; -1 sizes refused (sr_group_sizes);
+ * -2 no draw keeps the clubs of one association apart. */
+int32_t sr_group_draw(int32_t n, int32_t g, const uint8_t *assoc, uint32_t seed, uint8_t *grp);
+
+/* One group of a groups stage, for sr_best_placed: its clubs (0..n-1 inside it), its matches, its final table. */
+typedef struct { const sr_match *m; int32_t nm, n; const sr_srow *table; } sr_group;
+
+/* The clubs placed `place` (0 = the winners) across the groups, ranked best first: ord[k] = the k-th one's group.
+ * A group without that place is left out. With groups of different sizes, each club's matches against the clubs
+ * placed at or below the smallest group's size are dropped first (UEFA's best thirds). Criteria: sr_rr_table's
+ * without head to head (clubs of different groups never met); 'name' = the groups' order. Returns the groups
+ * ranked, -1 a criterion refused. */
+int32_t sr_best_placed(const sr_group *g, int32_t ng, int32_t place, int32_t win, int32_t draw, int32_t loss,
+                       const uint8_t *tieb, uint32_t seed, uint8_t *ord);
+
+/* A knockout round's pairs (swcc's pairing codes): clubs 0..n-1 in seeding order, out[2k] v out[2k+1].
+ *   fixed    0 v 1, 2 v 3, ... (the caller's order)
+ *   bracket  n a power of 2: the top seeds meet last (8: 0 v 7, 3 v 4, 1 v 6, 2 v 5; halves 0..3 / 4..7 of out)
+ *   seeded   each club of the top half v one of the bottom half, drawn; the seeded club first
+ *   draw     any v any, drawn; the first drawn first
+ * avoid (NULL = none): two clubs with one value (a group, an association) never paired. Draws by hashes, as
+ * sr_group_draw (each pick leaves a whole round possible). Returns n / 2; -1 n odd or above SR_STAGE_CLUBS, bracket
+ * not a power of 2, an unknown mode; -2 no pairing keeps them apart; -3 fixed / bracket pairs two clubs avoid
+ * keeps apart. */
+enum { SR_PAIR_DRAW = 0, SR_PAIR_SEEDED, SR_PAIR_BRACKET, SR_PAIR_FIXED };
+int32_t sr_ko_pairs(int32_t mode, int32_t n, const uint8_t *avoid, uint32_t seed, uint8_t *out);
+
 #endif
