@@ -198,6 +198,7 @@ typedef struct sr_state {
         uint32_t rng;
         uint8_t  lot[5 * 24];
         uint8_t  test_held;
+        uint8_t  cgap[5];           /* Serie C's play-out gap per group (the spec's playout of that division; 8 if none) */
         const sr_force *force;      /* (tests: sr_season.force) */
     } dp;
     /* gplay.c */

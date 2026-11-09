@@ -170,16 +170,36 @@ static void serie_b(sr_state *st)
  * the best 11th of the groups. 4.1 (FIGC C.U. 209/A, 27/04/2026, NOIF art. 49 II.1 d-e; the
  * Mod's dplay.c 353984f): a winner relegated directly or in a play-out place has no place
  * either -- the 11th of its group (the Mod's declared stand-in for the other finalist). The
- * play-out places of a group of n: n-5 v n-2 and n-4 v n-3, each not played when 8+ points
- * apart (the better placed safe, the other down) */
+ * play-out places of a group of n: n-5 v n-2 and n-4 v n-3, each not played when its gap or
+ * more points apart (the better placed safe, the other down). 4.2: the gap is the group's own
+ * play-out's (st->dp.cgap, from the spec: the same bytes gp_season's 'too far apart' reads; 8
+ * without one, 0 = always played) -- a constant 8 here once let the cup winner win the play-off
+ * and lose a play-out held at 8 points with a spec gap of 9 (simdrv SIMDRV_CGAP=9) */
 static int cup_out(const sr_state *st, int g, int k)
 {
     const sr_row *t = st->dp.t[g];
-    const int n = st->dp.n[g];
+    const int n = st->dp.n[g], gap = st->dp.cgap[g];
     if (n < 6 || k < n - 5) return 0;
-    if (k == n - 5) return t[n - 5].pts - t[n - 2].pts < 8;
-    if (k == n - 4) return t[n - 4].pts - t[n - 3].pts < 8;
+    if (k == n - 5) return !gap || t[n - 5].pts - t[n - 2].pts < gap;
+    if (k == n - 4) return !gap || t[n - 4].pts - t[n - 3].pts < gap;
     return 1;
+}
+
+/* the gap of division d's play-out in the spec: the first round's of the first playout (kind 4)
+ * whose entrants are all [d, place]; 8 without one */
+static uint8_t spec_cgap(const sr_league *lg, int32_t d)
+{
+    const uint8_t *s = lg->spec, *end = lg->spec ? lg->spec + lg->spec_len : 0;
+    while (s && s < end && *s) {
+        const int kind = s[0] & 0x3F, n = s[1], nr = s[2];
+        const uint8_t *e = s + 6 + (s[0] & 0x40 ? 1 + s[6] : 0), *r = e + 4 * n;
+        int all = n > 0;
+        for (int i = 0; i < n; i++) if (e[4 * i] != 0 || e[4 * i + 1] != d) all = 0;
+        if (kind == 4 && all && nr > 0) return r[5];
+        if (kind != 7) for (int k = 0; k < nr; k++) r += 6 + 2 * r[0];
+        s = r;
+    }
+    return 8;
 }
 static int cup_place(const sr_state *st, int ng)
 {
@@ -265,6 +285,7 @@ int32_t sr_italy(sr_state *st, const sr_league *lg, const sr_season *se)
     st->dp.cpo_win = se->cpo_win;
     st->dp.cupw = se->cup_winner;
     st->dp.test_held = se->test_held;
+    for (int32_t g = 0; g < NDIV; g++) st->dp.cgap[g] = g && g <= lg->groups ? spec_cgap(lg, lg->group_first + g - 1) : 8;
     st->dp.force = se->force;
     for (int32_t d = 0; d < NDIV; d++) {    /* Serie B, then Serie C's groups */
         const int32_t src = d == 0 ? lg->serie_b : lg->group_first + d - 1;
