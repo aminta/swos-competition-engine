@@ -6,4 +6,5 @@ sr_lp_cross_sp 4280
 sr_lp_season_cross 2532
 sr_rr_table 1540
 sr_group_draw 2872
-sr_best_placed 1664
+sr_best_placed 1672
+# sr_best_placed: 1664 -> 1672 (42-S1, MC 09/11: the table context carries the results block and the names' order for sr_league_rank, +8 B; host-only, not in the exe path)

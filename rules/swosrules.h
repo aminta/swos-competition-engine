@@ -588,6 +588,19 @@ typedef struct { uint8_t club, pad; int16_t pts; uint16_t pl, w, d, l, gf, ga, a
 int32_t sr_rr_table(int32_t n, const sr_match *m, int32_t nm, int32_t win, int32_t draw, int32_t loss,
                     const uint8_t *tieb, uint32_t seed, sr_srow *out);
 
+/* 4.2 S1: a league's table ranked by its tie-breaker list, from the game's own rows (the record criteria) and
+ * the season's results between the clubs (head to head). row[c]: club c's record (club = c); pairs: n x n
+ * bytes, pairs[h * n + a] = the result of h at home to a, home goals << 4 | away goals (each 0..14, 14 = 14 or
+ * more: 15-15 would be SR_PAIR_NONE), SR_PAIR_NONE not played; NULL = no results kept (an old save, a season begun before them): the
+ * head-to-head criteria are left out. namek[c]: club c's place in the names' order (the game's unsigned byte
+ * compare), for 'name' and faithful_1996 (NULL: the caller's order). faithful_1996 = the 1996 game's own sort
+ * (cseg_883DD): points, goal difference, goals for, name. ord[k] = the k-th club. No match list, no rows on
+ * the stack: the DOS build's frames. Returns n, -1 for n outside 1..SR_STAGE_CLUBS or a criterion that needs
+ * the game's data (fair play, coefficient, previous stage rank, play-off match). */
+#define SR_PAIR_NONE 0xFF
+int32_t sr_league_rank(int32_t n, const sr_srow *row, const uint8_t *pairs, const uint8_t *namek, int32_t win,
+                       int32_t draw, int32_t loss, const uint8_t *tieb, uint32_t seed, uint8_t *ord);
+
 /* A knockout's rounds: ties and byes per round, entrants the clubs that reach the first. Returns the clubs
  * left at the end; -(k + 1) when round k does not take the clubs that reach it (2 * ties + byes), as swcc. */
 typedef struct { uint16_t ties, byes; } sr_round_size;

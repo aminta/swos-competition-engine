@@ -70,11 +70,16 @@ static int usable(u8 c)
                                         c != SR_TB_COEFFICIENT && c != SR_TB_PREVIOUS_STAGE_RANK && c != SR_TB_PLAY_OFF_MATCH);
 }
 
+typedef struct { const sr_srow *row; const sr_match *m; i32 nm, n, win, draw, loss; u32 seed;
+                 const u8 *pairs, *namek; } sr_tctx;    /* (pairs: sr_league_rank's results, n x n; namek: the names' order) */
+
 /* the key of club c under criterion t (higher is better); the head-to-head ones over the clubs in `in` */
-static i32 key(u8 t, const sr_srow *row, i32 c, const sr_match *m, i32 nm, const u8 *in,
-               i32 win, i32 draw, i32 loss, u32 seed)
+static i32 key(const sr_tctx *x, u8 t, i32 c, const u8 *in)
 {
-    const sr_srow *r = &row[c];
+    const sr_srow *r = &x->row[c];
+    const sr_match *m = x->m;
+    const i32 nm = x->nm, win = x->win, draw = x->draw, loss = x->loss;
+    const u32 seed = x->seed;
     switch (t) {
     case SR_TB_POINTS:          return r->pts;
     case SR_TB_GOAL_DIFFERENCE: return (i32)r->gf - (i32)r->ga;
@@ -84,10 +89,22 @@ static i32 key(u8 t, const sr_srow *row, i32 c, const sr_match *m, i32 nm, const
     case SR_TB_AWAY_WINS:       return r->aw;
     case SR_TB_AWAY_GOALS_FOR:  return r->agf;
     case SR_TB_DRAW_LOTS:       return (i32)(mix(seed, 0x51A6E000u + (u32)c) >> 1);
-    case SR_TB_NAME:            return -c;
+    case SR_TB_NAME:            return x->namek ? -(i32)x->namek[c] : -c;
     default: break;
     }
     i32 pts = 0, gd = 0, gf = 0, ag = 0;                        /* head to head */
+    if (x->pairs)                                               /* (sr_league_rank: the results block) */
+        for (i32 j = 0; j < x->n; j++) {
+            if (j == c || !in[j]) continue;
+            for (int home = 1; home >= 0; home--) {
+                const u8 v = home ? x->pairs[c * x->n + j] : x->pairs[j * x->n + c];
+                if (v == SR_PAIR_NONE) continue;
+                const i32 hg = v >> 4, ag2 = v & 15, f = home ? hg : ag2, a = home ? ag2 : hg;
+                pts += f > a ? win : f == a ? draw : loss;
+                gd += f - a; gf += f;
+                if (!home) ag += f;
+            }
+        }
     for (i32 k = 0; k < nm; k++) {
         const sr_match *x = &m[k];
         if (!x->played || !in[x->home] || !in[x->away] || (x->home != c && x->away != c)) continue;
@@ -100,8 +117,6 @@ static i32 key(u8 t, const sr_srow *row, i32 c, const sr_match *m, i32 nm, const
     return t == SR_TB_H2H_POINTS ? pts : t == SR_TB_H2H_GOAL_DIFFERENCE ? gd : t == SR_TB_H2H_GOALS_FOR ? gf : ag;
 }
 
-typedef struct { const sr_srow *row; const sr_match *m; i32 nm, n, win, draw, loss; u32 seed; } sr_tctx;
-
 static void block_in(i32 n, const u8 *ord, i32 b, i32 e, u8 *in)
 {
     for (i32 k = 0; k < n; k++) in[k] = 0;
@@ -112,7 +127,7 @@ static void block_in(i32 n, const u8 *ord, i32 b, i32 e, u8 *in)
 static void split(const sr_tctx *x, u8 t, const u8 *in, u8 *ord, u8 *cut, i32 b, i32 e)
 {
     i32 kv[N];
-    for (i32 k = b; k < e; k++) kv[ord[k]] = key(t, x->row, ord[k], x->m, x->nm, in, x->win, x->draw, x->loss, x->seed);
+    for (i32 k = b; k < e; k++) kv[ord[k]] = key(x, t, ord[k], in);
     for (i32 k = b + 1; k < e; k++) {
         const u8 c = ord[k];
         i32 j = k;
@@ -143,6 +158,50 @@ static void reapply(const sr_tctx *x, u8 *ord, u8 *cut, i32 b, i32 e)
     }
 }
 
+/* each criterion once, in order, inside the blocks the ones before left tied (a stable sort there);
+ * faithful_1996 = points, goal difference, goals for, name (the 1996 game's cseg_883DD) */
+static void crit(const sr_tctx *x, u8 t, u8 *ord, u8 *cut)
+{
+    for (i32 b = 0; b < x->n;) {
+        i32 e = b + 1;
+        while (!cut[e]) e++;
+        if (e - b > 1) {
+            if (t == SR_TB_H2H_REAPPLIED) reapply(x, ord, cut, b, e);
+            else {
+                u8 in[N];
+                block_in(x->n, ord, b, e, in);
+                split(x, t, in, ord, cut, b, e);
+            }
+        }
+        b = e;
+    }
+}
+static void rank(const sr_tctx *x, const u8 *tieb, u8 *ord)
+{
+    static const u8 F96[] = { SR_TB_POINTS, SR_TB_GOAL_DIFFERENCE, SR_TB_GOALS_FOR, SR_TB_NAME, 0 };
+    u8 cut[N + 1];                                              /* cut[k]: a block starts at k */
+    for (i32 k = 0; k < x->n; k++) { ord[k] = (u8)k; cut[k] = k == 0; }
+    cut[x->n] = 1;
+    for (const u8 *t = tieb; t && *t; t++)
+        if (*t == SR_TB_FAITHFUL_1996) for (const u8 *f = F96; *f; f++) crit(x, *f, ord, cut);
+        else crit(x, *t, ord, cut);
+}
+
+i32 sr_league_rank(i32 n, const sr_srow *row, const u8 *pairs, const u8 *namek, i32 win, i32 draw, i32 loss,
+                   const u8 *tieb, u32 seed, u8 *ord)
+{
+    if (n < 1 || n > N) return -1;
+    for (const u8 *t = tieb; t && *t; t++) if (!usable(*t) && *t != SR_TB_FAITHFUL_1996) return -1;
+    u8 tl[24];                                                  /* (no results: the head-to-head criteria left out) */
+    i32 k = 0;
+    for (const u8 *t = tieb; t && *t && k < 23; t++)
+        if (pairs || !((*t >= SR_TB_H2H_POINTS && *t <= SR_TB_H2H_AWAY_GOALS) || *t == SR_TB_H2H_REAPPLIED)) tl[k++] = *t;
+    tl[k] = 0;
+    const sr_tctx x = { row, 0, 0, n, win, draw, loss, seed, pairs, namek };
+    rank(&x, tl, ord);
+    return n;
+}
+
 i32 sr_rr_table(i32 n, const sr_match *m, i32 nm, i32 win, i32 draw, i32 loss, const u8 *tieb, u32 seed,
                 sr_srow *out)
 {
@@ -166,26 +225,9 @@ i32 sr_rr_table(i32 n, const sr_match *m, i32 nm, i32 win, i32 draw, i32 loss, c
         else if (x->hg < x->ag) { a->w++; a->aw++; h->l++; a->pts = (int16_t)(a->pts + win); h->pts = (int16_t)(h->pts + loss); }
         else                    { h->d++; a->d++; h->pts = (int16_t)(h->pts + draw); a->pts = (int16_t)(a->pts + draw); }
     }
-    /* each criterion once, in order, inside the blocks the ones before left tied (a stable sort there) */
-    u8 ord[N], cut[N + 1];                                      /* cut[k]: a block starts at k */
-    for (i32 k = 0; k < n; k++) { ord[k] = (u8)k; cut[k] = k == 0; }
-    cut[n] = 1;
-    const sr_tctx x = { row, m, nm, n, win, draw, loss, seed };
-    for (const u8 *t = tieb; t && *t; t++) {
-        for (i32 b = 0; b < n;) {
-            i32 e = b + 1;
-            while (!cut[e]) e++;
-            if (e - b > 1) {
-                if (*t == SR_TB_H2H_REAPPLIED) reapply(&x, ord, cut, b, e);
-                else {
-                    u8 in[N];
-                    block_in(n, ord, b, e, in);
-                    split(&x, *t, in, ord, cut, b, e);
-                }
-            }
-            b = e;
-        }
-    }
+    u8 ord[N];
+    const sr_tctx x = { row, m, nm, n, win, draw, loss, seed, 0, 0 };
+    rank(&x, tieb, ord);
     for (i32 k = 0; k < n; k++) {                               /* (field by field: a struct copy is a memcpy call) */
         const sr_srow *r = &row[ord[k]];
         sr_srow *o = &out[k];
@@ -396,7 +438,7 @@ i32 sr_best_placed(const sr_group *g, i32 ng, i32 place, i32 win, i32 draw, i32 
     u8 o[N], cut[N + 1], in[N];
     for (i32 k = 0; k < e; k++) { o[k] = (u8)k; cut[k] = k == 0; in[k] = 1; }
     cut[e] = 1;
-    const sr_tctx x = { row, 0, 0, e, win, draw, loss, seed };
+    const sr_tctx x = { row, 0, 0, e, win, draw, loss, seed, 0, 0 };
     for (const u8 *t = tieb; t && *t; t++)
         for (i32 b = 0; b < e;) {
             i32 f = b + 1;
