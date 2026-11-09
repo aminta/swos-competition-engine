@@ -113,6 +113,7 @@ typedef struct { uint32_t tag, off, len; } SwcSection;       /* directory entry,
 #define SWC_S_TOLS  SWC_TAG('T','O','L','S')   /* SwcTarget records: every target of an outcome with a 'to' list (v1.2) */
 #define SWC_S_PRNT  SWC_TAG('P','R','N','T')   /* SwcParent records: a second team's parent club (v1.3) */
 #define SWC_S_SECT  SWC_TAG('S','E','C','T')   /* SwcSecondTeams records: a country's highest level for second teams (v1.3) */
+#define SWC_S_SECF  SWC_TAG('S','E','C','F')   /* SwcSecondTeams records: a country's lowest level for second teams, their floor (v1.4) */
 
 #define SWC_LANGS   4                          /* it, en, fr, de: the order of SwcName.str */
 
@@ -210,6 +211,7 @@ typedef struct {
     const SwcTarget *tols;  uint32_t ntols;
     const SwcParent *prnt;  uint32_t nprnt;
     const SwcSecondTeams *sect; uint32_t nsect;
+    const SwcSecondTeams *secf; uint32_t nsecf;     /* (highest = the floor: below it a second team leaves the world) */
 } SwcSpec;
 
 /* Checks the header, the directory, the hash and every section's bounds and record size, and decodes the records

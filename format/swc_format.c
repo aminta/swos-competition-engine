@@ -99,6 +99,7 @@ const char *swc_layout(uint32_t tag)
     case SWC_S_TOLS: return "22";
     case SWC_S_PRNT: return "22";
     case SWC_S_SECT: return "22";
+    case SWC_S_SECF: return "22";
     default:         return 0;
     }
 }
@@ -200,6 +201,7 @@ SwcStatus swc_spec_open(SwcSpec *s, const void *bin, uint32_t len, SwcArena *a)
     SEC(SWC_S_TOLS, SwcTarget, tols, ntols, 0)
     SEC(SWC_S_PRNT, SwcParent, prnt, nprnt, 0)
     SEC(SWC_S_SECT, SwcSecondTeams, sect, nsect, 0)
+    SEC(SWC_S_SECF, SwcSecondTeams, secf, nsecf, 0)
 #undef SEC
     if (!s->nstrs || s->strs[s->nstrs - 1]) return SWC_E_TRUNC;       /* the string table ends with a NUL */
     for (i = 0; i < s->ncomps; i++) {                                  /* cross-references in range */

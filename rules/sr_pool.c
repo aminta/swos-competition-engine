@@ -240,10 +240,19 @@ int32_t sr_lp_season_cross(uint32_t seed, int32_t nd, const sr_lp_club *const *c
     const int sp = s && s->spread >= 0 ? s->spread : SR_LP_SPREAD;
     if (!c || !n || !s || !s->rpo || !s->urn || !up || nd < 1 || nd > SR_LP_DIVS || s->extra < 0 || s->nov < 0
         || (s->nov && !s->override)) return -1;
+    if (s->nbarred < 0 || (s->nbarred && !s->barred)) return -1;
     for (int d = 0; d < nd; d++) {
+        int nt = 0;
         if (n[d] < 2 || sr_lp_table_sp(seed, d, c[d], n[d], t, sp) != 0) return -1;
         for (int k = 0; k < n[d]; k++) { place[d][t[k].team] = (uint8_t)k; isup[d][k] = 0; }
-        const int p = sr_lp_regional_sp(seed, d, t, n[d], c[d], &s->rpo[d], sp);
+        for (int k = 0; k < n[d]; k++) {        /* (the barred clubs out of the table: the next ones move up a place) */
+            int b = 0;
+            for (int j = 0; j < s->nbarred && !b; j++) b = s->barred[j] == c[d][t[k].team].ident;
+            if (b) isup[d][t[k].team] = 1;      /* (and never taken by the extra rule) */
+            else t[nt++] = t[k];
+        }
+        if (nt < 2) return -1;
+        const int p = sr_lp_regional_sp(seed, d, t, nt, c[d], &s->rpo[d], sp);
         if (p < 0) return -1;
         up[nup++] = (sr_lp_up){ (int16_t)d, (int16_t)t[0].team, SR_LP_UP_CHAMPION };
         isup[d][t[0].team] = 1;

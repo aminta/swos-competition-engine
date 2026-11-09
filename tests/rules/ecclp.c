@@ -192,6 +192,20 @@ static void seasons_it(int seasons)
         check(n2 == IT_UP + 1 && up2[35].how == SR_LP_UP_OVERRIDE && up2[35].div == 22 && up2[35].idx == 13
               && up2[36].how == SR_LP_UP_EXTRA, "override list: passed over when not in the pool or up, then the rule");
     }
+    {   /* barred (4.2, a B team whose first team plays Serie D or lower): group 0's champion and the national play-off's
+         * first winner may not go up -- the next club of group 0 is its champion, neither barred club is up, 36 up */
+        it_shape(&sh, rpo, urn, NULL, 0);
+        const int n0 = sr_lp_season_cross(5, IT_GROUPS, pp, pn, &sh, up);
+        sr_row t[SR_LP_CLUBS];
+        sr_lp_table(5, 0, pp[0], pn[0], t);
+        const uint16_t bar[2] = { pp[0][t[0].team].ident, pp[up[IT_GROUPS].div][up[IT_GROUPS].idx].ident };
+        sh.barred = bar; sh.nbarred = 2;
+        const int n2 = sr_lp_season_cross(5, IT_GROUPS, pp, pn, &sh, up2);
+        int seen = 0;
+        for (int k = 0; k < n2; k++) for (int b = 0; b < 2; b++) seen |= pp[up2[k].div][up2[k].idx].ident == bar[b];
+        check(n0 == IT_UP && n2 == IT_UP && !seen && up2[0].idx == t[1].team,
+              "barred clubs (4.2 B teams): passed over -- the next club the champion, neither up, still 36");
+    }
     /* controls: up_bad on broken copies */
     it_shape(&sh, rpo, urn, NULL, 0);
     nup = sr_lp_season_cross(5, IT_GROUPS, pp, pn, &sh, up);

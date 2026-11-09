@@ -69,7 +69,7 @@ typedef struct {
     void *stinfo;               /* StageInfo[], all stages in order */
     int nstinfo;
     /* output */
-    Buf strs, names, club, comp, stag, entr, tieb, deci, roun, outc, reg, meta, fixt, grps, srce, tols, prnt, sect;
+    Buf strs, names, club, comp, stag, entr, tieb, deci, roun, outc, reg, meta, fixt, grps, srce, tols, prnt, sect, secf;
     uint32_t arena;
 } C;
 
@@ -1485,6 +1485,26 @@ static void check_second_teams(C *c)
     }
 }
 
+/* v1.4: second_teams.lowest is a level some league of that country plays */
+static void check_second_floor(C *c)
+{
+    JNode *m;
+    if (!c->countries || c->countries->type != J_OBJ) return;
+    for (m = c->countries->child; m; m = m->next) {
+        JNode *lo = json_get(json_get(m, "second_teams"), "lowest");
+        int i, found = 0;
+        char path[128];
+        if (!lo || lo->type != J_NUM) continue;
+        for (i = 0; i < c->ncomps && !found; i++) {
+            JNode *cp = c->comps[i], *kind = json_get(cp, "kind"), *lv = json_get(cp, "level"), *cc = json_get(cp, "country");
+            found = kind && kind->type == J_STR && !strcmp(kind->str, "league") && lv && lv->type == J_NUM && lv->num == lo->num
+                    && cc && cc->type == J_STR && !strcmp(cc->str, m->key);
+        }
+        pathf(path, sizeof path, "countries.%s.second_teams", m->key);
+        if (!found) ERR(lo, path, "second_teams.lowest %d: no league of %s plays level %d", (int)lo->num, m->key, (int)lo->num);
+    }
+}
+
 static void check_links(C *c)
 {
     /* every league keeps its size: the clubs that leave it (promoted, relegated, out of the world) = the clubs that
@@ -1581,7 +1601,7 @@ static uint8_t *write_bin(C *c, int world, size_t *len)
         { SWC_S_STAG, &c->stag }, { SWC_S_ENTR, &c->entr }, { SWC_S_TIEB, &c->tieb }, { SWC_S_DECI, &c->deci },
         { SWC_S_ROUN, &c->roun }, { SWC_S_OUTC, &c->outc }, { SWC_S_REG, &c->reg }, { SWC_S_META, &c->meta },
         { SWC_S_FIXT, &c->fixt }, { SWC_S_GRPS, &c->grps }, { SWC_S_SRCE, &c->srce }, { SWC_S_TOLS, &c->tols },
-        { SWC_S_PRNT, &c->prnt }, { SWC_S_SECT, &c->sect } };
+        { SWC_S_PRNT, &c->prnt }, { SWC_S_SECT, &c->sect }, { SWC_S_SECF, &c->secf } };
     int ns = (int)(sizeof sec / sizeof sec[0]), i;
     while (ns > 13 && !sec[ns - 1].b->n) ns--;           /* sections added after the first release: only when used */
     Buf out = { 0 };
@@ -1710,6 +1730,14 @@ int swcc_compile(const char *spec, size_t len, const char *name, const char *pro
                         uint16_t st2[2] = { (uint16_t)str_add(c, m->key), (uint16_t)hi };
                         bput(&c->sect, st2, 4);
                     }
+                    JNode *lo = opt(c, cn, "lowest", J_NUM, cpth);                 /* v1.4: the floor */
+                    long lw = 0;
+                    if (lo) need_minor(c, lo, cpth, 4, "'second_teams.lowest'");
+                    if (lo && int_in(c, lo, "lowest", cpth, 1, 32, &lw)) {
+                        if (hi && lw < hi) ERR(lo, cpth, "second_teams: 'lowest' %ld above 'highest' %ld", lw, hi);
+                        uint16_t sf[2] = { (uint16_t)str_add(c, m->key), (uint16_t)lw };
+                        bput(&c->secf, sf, 4);
+                    }
                     unknown_keys(c, cn, cpth);
                 }
                 unknown_keys(c, m, cpth);
@@ -1735,6 +1763,7 @@ int swcc_compile(const char *spec, size_t len, const char *name, const char *pro
                 for (i = 0; i < c->ncomps; i++) do_comp(c, i, st, &nst);
                 if (c->errors == 0) check_links(c);
                 if (c->errors == 0) check_second_teams(c);
+                if (c->errors == 0) check_second_floor(c);
                 check_pools(c);
             }
             unknown_keys(c, c->root, "");
@@ -1754,7 +1783,7 @@ int swcc_compile(const char *spec, size_t len, const char *name, const char *pro
     json_free(proot);
     free(c->clubs); free(c->comps); free(st);
     free(c->strs.p); free(c->names.p); free(c->club.p); free(c->comp.p); free(c->stag.p); free(c->entr.p);
-    free(c->tieb.p); free(c->deci.p); free(c->roun.p); free(c->outc.p); free(c->reg.p); free(c->meta.p); free(c->fixt.p); free(c->grps.p); free(c->srce.p); free(c->tols.p); free(c->prnt.p); free(c->sect.p);
+    free(c->tieb.p); free(c->deci.p); free(c->roun.p); free(c->outc.p); free(c->reg.p); free(c->meta.p); free(c->fixt.p); free(c->grps.p); free(c->srce.p); free(c->tols.p); free(c->prnt.p); free(c->sect.p); free(c->secf.p);
     return c->errors;
 }
 

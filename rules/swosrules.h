@@ -96,6 +96,12 @@ typedef struct {
                                        bytes); 1 file << 8 | ordinal (OpenSWOS). A spec names a club
                                        as its (file, ordinal) bytes -- entrant type 8 -- the same in
                                        both games; the rules make the word from them this way */
+    uint8_t         second_floor;   /* the B teams' floor (4.2, swc second_teams.lowest; MC 09/11): 0 the Mod 4.1's
+                                       sec_post as it is (its lowest level the floor); n >= 1 the level n the floor and
+                                       the 4.2 rules -- the stays loop passes over every B team (order-independent), a
+                                       final guard puts a B team at or above its first team's new level one below it, or
+                                       out of the league from the floor (and when its first team is below the league),
+                                       and the B teams that leave are reported (sr_state.b_exit) */
 } sr_league;
 
 /* A league's levels when some are groups of parallel divisions (Serie C's, Serie D's): where each
@@ -188,6 +194,11 @@ typedef struct sr_state {
         int32_t  ce_club[64], ce_n; /* the last contest's entrants (sr_contest_entrants) */
     } gp;
     int8_t    want[SR_DIVS][SR_CLUBS];      /* each club's move, a level: -1 up, 1 down (sr_final_moves) */
+    /* The B teams that leave the league this season end by the B-team rules (sr_b_teams, second_floor >= 1): their
+     * global numbers. Each one's want is 1; it goes out of the world (the off-file pool), not to the level below, and
+     * the pool sends up one club more for each (swc up.extra). Relegations by place from the floor are not counted. */
+    int32_t   b_exits;
+    uint16_t  b_exit[8];
 } sr_state;
 
 void     sr_reset(sr_state *st);
@@ -504,6 +515,9 @@ typedef struct {
     const uint16_t *override;
     int32_t nov;
     int32_t spread;                 /* < 0: SR_LP_SPREAD (0 is a spread: pure chance) */
+    const uint16_t *barred;         /* idents that may not go up this season (4.2: a B team whose first team plays the */
+    int32_t nbarred;                /* level above or lower, MC F4): passed over as if not in their tables -- the champion,
+                                       the play-off places and the extra rule take the next club; 0 none */
 } sr_lp_shape;
 
 /* How a club went up: its division's champion, the cross play-off, the extra rule, an override club. */

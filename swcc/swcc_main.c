@@ -72,6 +72,8 @@ static int dump(const char *path)
            s.nclubs, s.ncomps, s.nstages, s.nrounds, s.noutc, s.nreg, s.nnames, s.nfixt);
     for (i = 0; i < s.nsect; i++)                       /* v1.3 sections: printed only when present */
         printf("  second teams of %s: level %u or lower\n", swc_str(&s, s.sect[i].country), s.sect[i].highest);
+    for (i = 0; i < s.nsecf; i++)
+        printf("  second teams of %s: floor level %u (below it: out of the world)\n", swc_str(&s, s.secf[i].country), s.secf[i].highest);
     for (i = 0; i < s.nprnt; i++)
         printf("  second team %s of %s\n", swc_str(&s, s.clubs[s.prnt[i].club].id), swc_str(&s, s.clubs[s.prnt[i].parent].id));
     for (i = 0; i < s.ncomps; i++) {

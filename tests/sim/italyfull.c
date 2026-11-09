@@ -17,15 +17,17 @@
  * Invariants (every summer): every club in exactly one place; every division its size; up = down at A/B, B/C, C/D and
  * D/Eccellenza (36); no B team in its first team's level or above, nor above Serie B; strengths 0 .. 375; the library
  * refusing nothing.
- * Library gaps (counted, not failed; reported to MC 2026-11-09): sr_b_teams (= the Mod's sec_post) acts only when a
- * first team comes into its B team's level -- a B team leaving Serie D frees a place the pool fills (extra), a B team
- * and its first team relegated together into Serie D share it a season, a B team stays over a first team fallen to
- * the Eccellenza, and two B teams of one division whose first teams both come in: the second's stay undoes the
- * first's drop. dplay gives a Coppa Italia Serie C winner in the play-out places both: the cup winner is drawn from
- * Serie C's top 10.
+ * B teams: the 4.2 rules by default (sr_league.second_floor = Serie D; MC internal/handoff/mc-bteams-gaps-20261109.md
+ * F2-F4): order-free stays, the final guard, out of the league below the floor (each exit: one more up from the pool,
+ * up.extra's rule), a pool's B team whose first team plays Serie D or lower barred from going up -- any B-team
+ * violation fails. BFLOOR=0 runs the Mod 4.1's rules (= sec_post) and counts their gaps instead (reported to MC
+ * 2026-11-09). dplay gives a Coppa Italia Serie C winner in the play-out places both (F1, MC's fix in the Mod): the cup
+ * winner is drawn from Serie C's top 10.
+ * GAME_SPREAD=n: the light tables of A .. D with sr_lp_table_sp at spread n instead of the game's; valid up to ~80
+ * (sr_pool.c below() overflows past ~88 at strength 375).
  * Real (tests/sim/itwiki_rates.py, it.wikipedia 2014-15 .. 2025-26): play-out ties the 8-point gap skips, Serie C
  * 31.6% (12 of 38), Serie D 22.1% (30 of 136); straight back up C/D 12.3% (9 of 73).
- * Usage: [SPREAD=n] italyfull [CHAINS [SEASONS]] (default 1000 100). Exit 1 on any broken invariant.
+ * Usage: [SPREAD=n] [GAME_SPREAD=n] [BFLOOR=n] italyfull [CHAINS [SEASONS]] (default 1000 100). Exit 1 on any broken invariant.
  * Controls: ITALYFULL_BREAK=drop (a club lost), bteam (a B team into its first team's division), updown (one club too
  * many up from Serie D) must FAIL. */
 #include <stdio.h>
@@ -54,6 +56,9 @@ static uint8_t letter_c[DG];                /* the Serie C area most real clubs 
 
 static int brk;
 static int spread = SR_LP_SPREAD;
+#define FLOOR_LEVEL (LEVELS - 1)
+static int floor_lv = LEVELS - 1;           /* the B teams' floor (sr_league.second_floor): Serie D; BFLOOR=0 the Mod 4.1's */
+static int game_spread = -1;              /* A .. D: GAME_SPREAD=n, else the game copy (sr_pool_game.o, 40) */
 static sr_state S;
 
 static uint32_t h32(uint32_t x) { x ^= x >> 16; x *= 0x7FEB352Du; x ^= x >> 15; x *= 0x846CA68Bu; return x ^ (x >> 16); }
@@ -69,7 +74,7 @@ typedef struct {
     long rank_sum[2], rank_n[2], top4[2];   /* D's promoted, Eccellenza's promoted: strength rank in their group */
     long po_c[2], po_d[2], gap_c, gap_d;                  /* play-out ties: played, skipped by the gap (C, D) */
 
-    long bt_ko, gap_same, gap_below, gap_two, gap_carry, surplus, surplus_n;                    /* B-team rule: moves it changed (want differs from places) */
+    long barred, bt_ko, gap_same, gap_below, gap_two, gap_carry, surplus, surplus_n, exits_d, exits_above;                    /* B-team rule: moves it changed (want differs from places) */
     long dec_sum[LEVELS + 1][10], dec_cnt[10];
 } stats;
 
@@ -125,6 +130,7 @@ static void chain_run(uint32_t chain, int seasons, stats *st)
     lg.spec = ITF_SPEC; lg.spec_len = sizeof ITF_SPEC;
     lg.seconds = (uint8_t)ns; lg.second = (const uint8_t (*)[2])second; lg.second_top = ITF_SECOND_TOP;
     lg.second_flags = (uint8_t)(ITF_SECOND_PO | 2);
+    lg.second_floor = (uint8_t)floor_lv;
     const sr_levels lv = { LEVELS, LEVEL_FIRST };
     sr_pg_level pl[LEVELS];
     memset(pl, 0, sizeof pl);
@@ -155,7 +161,8 @@ static void chain_run(uint32_t chain, int seasons, stats *st)
                     sl[n] = i; c[n].ident = (uint16_t)slot_ident[i]; c[n].strength = str_of[slot_ident[i]]; n++;
                 }
             if (n != ITF_SIZE[d]) bad |= 1u << W_SIZE;
-            sr_lp_table_game(seed, 100 + d, c, n, t);
+            if (game_spread < 0) sr_lp_table_game(seed, 100 + d, c, n, t);
+            else sr_lp_table_sp(seed, 100 + d, c, n, t, game_spread);
             S.t.n[d] = (uint8_t)n;
             for (int k = 0; k < n; k++) {
                 sr_row *r = &S.t.t[d][k];
@@ -201,10 +208,19 @@ static void chain_run(uint32_t chain, int seasons, stats *st)
             st->bound[l][0] += down[l]; st->bound[l][1] += up[l + 1];
             if (down[l] != up[l + 1]) bad |= 1u << W_UPDOWN;
         }
-        if (down[3] < IT_UP) bad |= 1u << W_UPDOWN;
-        if (down[3] > IT_UP) st->surplus += down[3] - IT_UP, st->surplus_n++;
+        int ex_d = 0, ex_above = 0;             /* the B teams out of the league (4.2): from Serie D, from above it */
+        for (int e = 0; e < S.b_exits; e++)
+            for (int d = 0; d < ITF_NDIV; d++) for (int k = 0; k < S.t.n[d]; k++)
+                if (S.t.t[d][k].glob == S.b_exit[e]) { if (d >= FIRST_D) ex_d++; else ex_above++; }
+        if (floor_lv ? down[3] - ex_d != IT_UP : down[3] < IT_UP) bad |= 1u << W_UPDOWN;
+        const int need = down[3] + ex_above;    /* (the pool's up = Serie D's down + every B team out) */
+        if (need > IT_UP) st->surplus += need - IT_UP, st->surplus_n++;
+        st->exits_d += ex_d; st->exits_above += ex_above;
         st->bound[3][0] += down[3];
-        sh.extra = 1 + (down[3] > IT_UP ? down[3] - IT_UP : 0);   /* (the pool fills what a B team leaving frees) */
+        sh.extra = 1 + need - IT_UP;            /* (up.extra: one more for each B team out) */
+        static int bdiv[NI];                    /* each club's division at the season end, -1 out of the league */
+        for (int i = 0; i < NI; i++) bdiv[i] = -1;
+        for (int d = 0; d < ITF_NDIV; d++) for (int k = 0; k < S.t.n[d]; k++) bdiv[S.t.t[d][k].glob] = d;
         /* the Eccellenza */
         sr_lp_club pcl[IT_GROUPS][SR_LP_CLUBS];
         const sr_lp_club *pp[IT_GROUPS];
@@ -214,8 +230,24 @@ static void chain_run(uint32_t chain, int seasons, stats *st)
             for (int i = 0; i < IT_G[g].size; i++) pcl[g][i].ident = (uint16_t)pgrp[g][i], pcl[g][i].strength = str_of[pgrp[g][i]];
             pp[g] = pcl[g]; pn[g] = IT_G[g].size;
         }
+        uint16_t barred[8];                     /* (4.2: a B team of the pool whose first team ends at Serie D or lower) */
+        int nbar = 0;
+        if (floor_lv)
+            for (int i = 0; i < NI && nbar < 8; i++) {
+                if (first_of[i] < 0 || bdiv[i] >= 0) continue;
+                const int f = first_of[i], fd = bdiv[f];
+                int fl = LEVELS;
+                if (fd >= 0) {
+                    for (int k = 0; k < S.t.n[fd]; k++)
+                        if (S.t.t[fd][k].glob == f) fl = level_of(fd) + S.want[fd][k];
+                    for (int e = 0; e < S.b_exits; e++) if (S.b_exit[e] == f) fl = LEVELS;
+                }
+                if (fl >= FLOOR_LEVEL) barred[nbar++] = (uint16_t)i;
+            }
+        sh.barred = barred; sh.nbarred = nbar;
+        st->barred += nbar;
         const int nup = sr_lp_season_cross(seed, IT_GROUPS, pp, pn, &sh, pu);
-        if (nup != down[3]) bad |= 1u << (nup < 0 ? W_REFUSED : W_UPDOWN);
+        if (nup != need) bad |= 1u << (nup < 0 ? W_REFUSED : W_UPDOWN);
         st->bound[3][1] += nup > 0 ? nup : 0;
         if (bad & ((1u << W_UPDOWN) | (1u << W_REFUSED))) {
             st->summers++; st->bad++; for (int k = 0; k < W_N; k++) if (bad & (1u << k)) st->why[k]++;
@@ -241,9 +273,6 @@ static void chain_run(uint32_t chain, int seasons, stats *st)
             st->rank_sum[1] += r; st->rank_n[1]++; st->top4[1] += r < 4;
             if (down_de[upid[k]] == s - 1) st->de_back++;
         }
-        static int bdiv[NI];                    /* each B team's division at the season end, -1 out of the league */
-        for (int i = 0; i < NI; i++) bdiv[i] = -1;
-        for (int d = 0; d < ITF_NDIV; d++) for (int k = 0; k < S.t.n[d]; k++) bdiv[S.t.t[d][k].glob] = d;
         /* the summer: the game's moves, the pool's swap, then the groups */
         static int8_t old_off[NF], new_off[NF];
         static uint8_t entering[NF];
@@ -252,7 +281,9 @@ static void chain_run(uint32_t chain, int seasons, stats *st)
             for (int k = 0; k < S.t.n[d]; k++) {
                 const int i = tslot[d][k];
                 old_off[i] = (int8_t)d; new_off[i] = (int8_t)(d + S.want[d][k]); entering[i] = 0;
-                if (d >= FIRST_D && S.want[d][k] > 0 && nrel < 48) rel[nrel++] = i;
+                int out = d >= FIRST_D && S.want[d][k] > 0;
+                for (int e = 0; e < S.b_exits && !out; e++) out = S.t.t[d][k].glob == S.b_exit[e];
+                if (out && nrel < 48) rel[nrel++] = i;
                 if (d >= FIRST_C && d < FIRST_D && S.want[d][k] > 0) { down_cd[slot_ident[i]] = s; st->cd_n++; }
             }
         {   /* the 36 down into the promoted clubs' Eccellenza places, nearest by ground (both sorted north to south) */
@@ -314,7 +345,8 @@ static void chain_run(uint32_t chain, int seasons, stats *st)
                 const int lb = lev_of_id[i], lf = lev_of_id[first_of[i]], was = viol[i];
                 viol[i] = lb < LEVELS && (lb <= lf || lb < ITF_SECOND_TOP);
                 if (!viol[i]) continue;
-                if (was) st->gap_carry++;           /* (the library acts only when the first team comes into its level) */
+                if (floor_lv) bad |= 1u << W_BTEAM;    /* (4.2's rules: none of the gaps below) */
+                else if (was) st->gap_carry++;           /* (the library acts only when the first team comes into its level) */
                 else if (lb == LEVELS - 1 && lf == LEVELS - 1) st->gap_same++;     /* (library gaps: reported, see the head) */
                 else if (lf == LEVELS || bdiv[first_of[i]] < 0) st->gap_below++;   /* (its first team in the pool now or at the season end) */
                 else if (lb == lf && other_b_in(bdiv, i))
@@ -339,6 +371,8 @@ int main(int argc, char **argv)
     static stats st;
     const char *b = getenv("ITALYFULL_BREAK"), *spv = getenv("SPREAD");
     if (spv) spread = atoi(spv);
+    if (getenv("GAME_SPREAD")) game_spread = atoi(getenv("GAME_SPREAD"));
+    if (getenv("BFLOOR")) floor_lv = atoi(getenv("BFLOOR"));
     brk = !b ? 0 : !strcmp(b, "drop") ? 1 : !strcmp(b, "bteam") ? 2 : !strcmp(b, "updown") ? 3 : 0;
     {   /* each Serie D group's most common Serie C area among the real clubs */
         int cnt[DG][256];
@@ -364,9 +398,10 @@ int main(int argc, char **argv)
            100.0 * st.po_d[1] / (st.po_d[0] + st.po_d[1]), st.po_d[0] + st.po_d[1]);
     printf("  a play-out tie's mean gap in points: Serie C %.2f, Serie D %.2f\n", (double)st.gap_c / (st.po_c[0] + st.po_c[1]),
            (double)st.gap_d / (st.po_d[0] + st.po_d[1]));
-    printf("  B teams: moves the B-team rules changed %ld; a B team leaving Serie D (its first team come down): %ld "
-           "summers, the pool's extra places filled them (%ld)\n", st.bt_ko, st.surplus_n, st.surplus);
-    printf("  library gaps (reported, not failed): a B team and its first team both in Serie D %ld summers, a B team "
+    printf("  B teams (floor %d): moves the B-team rules changed %ld; out of the league %ld from Serie D, %ld from "
+           "above; %ld summers the pool's extra places filled them (%ld); B teams of the pool barred from going up %ld\n",
+           floor_lv, st.bt_ko, st.exits_d, st.exits_above, st.surplus_n, st.surplus, st.barred);
+    if (!floor_lv) printf("  the Mod 4.1's gaps (BFLOOR=0, reported, not failed): a B team and its first team both in Serie D %ld summers, a B team "
            "over its first team in the Eccellenza %ld,\n    two B teams in one division whose first teams both come in (the "
            "second's stay undoes the first's drop) %ld,\n    still over its first team from the summer before %ld\n",
            st.gap_same, st.gap_below, st.gap_two, st.gap_carry);
