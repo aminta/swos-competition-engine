@@ -2,7 +2,9 @@
  * sr_pool.c -- a light pool's divisions at the season end: England's step 3 (the Northern Premier
  * League, the Southern League Premier Central and South, the Isthmian Premier; Davide 07/11 B).
  * No matches are played: each division's table comes from the clubs' strengths and the season's
- * seed, then its champion and its play-off winner (2nd-7th, the National League's shape) go up.
+ * seed, then its champion and its play-off winner (2nd-7th, the National League's shape) go up. The semi-finals:
+ * SR_LP_FIXED (the default, declared: 2nd v W(5v6), 3rd v W(4v7), the National League's bracket) or SR_LP_RESEED
+ * (2nd v the lower placed winner).
  * The 2026-27 step-3 play-offs are that shape (the NPL, SPL Central / South and Isthmian Premier tables on
  * en.wikipedia, "2026-27 ...": "six teams play for one spot", 2nd-3rd into the semi-finals, 4th-7th the
  * quarter-finals); tests/rules/step3real.c runs the chain on the 2026-27 clubs.
@@ -102,26 +104,51 @@ static int tie(rng *r, const sr_row *t, const sr_lp_club *c, int a, int b, int s
     return below(r, sa + sb) < sa ? a : b;
 }
 
-int32_t sr_lp_playoff_sp(uint32_t seed, int32_t d, const sr_row *table, int32_t n, const sr_lp_club *c, int32_t sp)
+int32_t sr_lp_semis(int32_t w47, int32_t w56, int32_t bracket, int32_t *v2, int32_t *v3)
 {
-    if (!table || !c || n < 7) return -1;
+    if (!v2 || !v3 || (bracket != SR_LP_FIXED && bracket != SR_LP_RESEED)) return -1;
+    if (bracket == SR_LP_FIXED) { *v2 = w56; *v3 = w47; return 0; }
+    *v2 = w47 > w56 ? w47 : w56;            /* (the lower placed: the larger index) */
+    *v3 = w47 > w56 ? w56 : w47;
+    return 0;
+}
+
+int32_t sr_lp_playoff_b(uint32_t seed, int32_t d, const sr_row *table, int32_t n, const sr_lp_club *c, int32_t sp,
+                        int32_t bracket)
+{
+    if (!table || !c || n < 7 || (bracket != SR_LP_FIXED && bracket != SR_LP_RESEED)) return -1;
     rng r = { mix(mix(seed, (u32)d), 0x504Fu) };
     const int q1 = tie(&r, table, c, 3, 6, sp), q2 = tie(&r, table, c, 4, 5, sp);   /* 4v7, 5v6 */
-    const int lo = q1 > q2 ? q1 : q2, hi = q1 > q2 ? q2 : q1;
-    const int s1 = tie(&r, table, c, 1, lo, sp), s2 = tie(&r, table, c, 2, hi, sp);  /* 2 v the lower placed */
+    int32_t a, b;
+    sr_lp_semis(q1, q2, bracket, &a, &b);
+    const int s1 = tie(&r, table, c, 1, a, sp), s2 = tie(&r, table, c, 2, b, sp);
     return s1 < s2 ? tie(&r, table, c, s1, s2, sp) : tie(&r, table, c, s2, s1, sp);
 }
 
-int32_t sr_lp_season_sp(uint32_t seed, int32_t nd, const sr_lp_club *const *c, const int32_t *n, int32_t *up, int32_t sp)
+int32_t sr_lp_playoff_sp(uint32_t seed, int32_t d, const sr_row *table, int32_t n, const sr_lp_club *c, int32_t sp)
+{
+    return sr_lp_playoff_b(seed, d, table, n, c, sp, SR_LP_FIXED);
+}
+
+int32_t sr_lp_season_b(uint32_t seed, int32_t nd, const sr_lp_club *const *c, const int32_t *n, int32_t *up, int32_t sp,
+                       int32_t bracket)
 {
     sr_row t[SR_LP_CLUBS];
     if (!c || !n || !up || nd < 1 || nd > SR_LP_DIVS) return -1;
     for (int d = 0; d < nd; d++) {
         if (n[d] < 7 || sr_lp_table_sp(seed, d, c[d], n[d], t, sp) != 0) return -1;
+        const int32_t w = sr_lp_playoff_b(seed, d, t, n[d], c[d], sp, bracket);
+        if (w < 0) return -1;
         up[2 * d] = t[0].team;
-        up[2 * d + 1] = t[sr_lp_playoff_sp(seed, d, t, n[d], c[d], sp)].team;
+        up[2 * d + 1] = t[w].team;
     }
     return 0;
+}
+
+int32_t sr_lp_season_sp(uint32_t seed, int32_t nd, const sr_lp_club *const *c, const int32_t *n, int32_t *up,
+                        int32_t sp)
+{
+    return sr_lp_season_b(seed, nd, c, n, up, sp, SR_LP_FIXED);
 }
 
 /* ---- a pool with a cross play-off (Italy's Eccellenza) ---- */

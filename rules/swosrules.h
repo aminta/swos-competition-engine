@@ -466,8 +466,16 @@ typedef struct { uint16_t ident; uint16_t strength; } sr_lp_club;
 int32_t sr_lp_table(uint32_t seed, int32_t d, const sr_lp_club *c, int32_t n, sr_row *out);
 
 /* The play-off of a light table (2nd-7th: quarter-finals 4v7 and 5v6, semi-finals 2 and 3 v the
- * winners -- 2 v the lower placed --, the final; one match each, the better placed at home, extra time
- * and penalties near a coin toss): the winner's place in the table (1..6). n < 7: no play-off, -1. */
+ * winners, the final; one match each, the better placed at home, extra time and penalties near a coin
+ * toss): the winner's place in the table (1..6). n < 7: no play-off, -1. The semi-finals by `bracket`
+ * (the _b forms; the others take SR_LP_FIXED): SR_LP_FIXED 2nd v W(5v6), 3rd v W(4v7) -- the National
+ * League's bracket, declared for England's step 3 (its leagues' 2026-27 bracket unpublished; Davide to
+ * confirm, Regia 09/11) --; SR_LP_RESEED 2nd v the lower placed winner (4.2 before 09/11). */
+#define SR_LP_FIXED  0
+#define SR_LP_RESEED 1
+/* The semi-finals' opponents of the 2nd and the 3rd (indices in the table: 1, 2) from the quarter-finals' winners
+ * (w47 of 4v7, w56 of 5v6: their indices) by bracket. 0; -1 a bracket unknown. */
+int32_t sr_lp_semis(int32_t w47, int32_t w56, int32_t bracket, int32_t *v2, int32_t *v3);
 int32_t sr_lp_playoff(uint32_t seed, int32_t d, const sr_row *table, int32_t n, const sr_lp_club *c);
 
 /* A pool season: nd divisions' light tables, then each one's champion and play-off winner up.
@@ -491,6 +499,10 @@ int32_t sr_lp_table_sp(uint32_t seed, int32_t d, const sr_lp_club *c, int32_t n,
 int32_t sr_lp_playoff_sp(uint32_t seed, int32_t d, const sr_row *table, int32_t n, const sr_lp_club *c, int32_t spread);
 int32_t sr_lp_season_sp(uint32_t seed, int32_t nd, const sr_lp_club *const *c, const int32_t *n, int32_t *up,
                         int32_t spread);
+int32_t sr_lp_playoff_b(uint32_t seed, int32_t d, const sr_row *table, int32_t n, const sr_lp_club *c, int32_t spread,
+                        int32_t bracket);
+int32_t sr_lp_season_b(uint32_t seed, int32_t nd, const sr_lp_club *const *c, const int32_t *n, int32_t *up,
+                       int32_t spread, int32_t bracket);
 
 /* ---- A pool with a cross play-off (swc/1.4 'up.cross'; Italy's Eccellenza 2026-27, 4.2 light; MC 42-ecclp) ----
  * Each division sends up its champion and one club to a play-off across the pool's divisions through its own

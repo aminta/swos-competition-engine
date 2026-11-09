@@ -3,7 +3,8 @@
  * so these are invariants, each with a control that breaks it and must be caught.
  *   light tables  complete and consistent (42 played, points = 3-1-0, goals balance, ranking),
  *                 the same whatever the clubs' order, the stronger clubs higher on average
- *   play-offs     the winner one of 2nd-7th, every place able to win, 2nd more often than 7th
+ *   play-offs     the winner one of 2nd-7th, every place able to win, 2nd more often than 7th; the semi-finals
+ *                 fixed (the default) or reseeded, forced quarter-final winners
  *   season        8 distinct clubs up, each division's champion among them
  *   re-allocation 24 / 24, no strict club across, the flexible ones split by rank (north first),
  *                 the same clubs give the same split in any slots, a second pass changes nothing;
@@ -127,6 +128,32 @@ static void playoffs(int seasons)
     check(up_ok, "pool seasons: 8 distinct clubs up, each division's champion and a 2nd-7th play-off winner");
     sr_row t6[6];
     check(sr_lp_playoff(1, 0, t6, 6, c) == -1, "control: no play-off below 7 clubs");
+    /* the semi-finals by bracket (Regia / MC 09/11): forced quarter-final winners 7th (index 6) and 5th (4) */
+    int32_t a2, a3, r2, r3;
+    sr_lp_semis(6, 4, SR_LP_FIXED, &a2, &a3);
+    sr_lp_semis(6, 4, SR_LP_RESEED, &r2, &r3);
+    check(a2 == 4 && a3 == 6 && r2 == 6 && r3 == 4,
+          "semi-finals, QF winners 7th and 5th: fixed 2v5 / 3v7 (the National League's, the default), reseeded 2v7 / 3v5");
+    sr_lp_semis(3, 5, SR_LP_FIXED, &a2, &a3);
+    sr_lp_semis(3, 5, SR_LP_RESEED, &r2, &r3);
+    check(a2 == 5 && a3 == 3 && r2 == 5 && r3 == 3, "semi-finals, QF winners 4th and 6th: both brackets 2v6 / 3v4");
+    check(sr_lp_semis(3, 4, 2, &a2, &a3) == -1 && sr_lp_playoff_b(1, 0, t, N, c, SR_LP_SPREAD, 2) == -1,
+          "control: a bracket unknown refused");
+    {   /* both brackets play, the default = the fixed one, and they differ on some seasons */
+        int same_def = 1, differ = 0, in_range = 1;
+        for (int s = 0; s < seasons; s++) {
+            make_div(c, N, 900u + (unsigned)s);
+            sr_lp_table((uint32_t)s, 1, c, N, t);
+            const int f = sr_lp_playoff_b((uint32_t)s, 1, t, N, c, SR_LP_SPREAD, SR_LP_FIXED);
+            const int r = sr_lp_playoff_b((uint32_t)s, 1, t, N, c, SR_LP_SPREAD, SR_LP_RESEED);
+            same_def &= f == sr_lp_playoff((uint32_t)s, 1, t, N, c);
+            differ += f != r;
+            in_range &= f >= 1 && f <= 6 && r >= 1 && r <= 6;
+        }
+        snprintf(m, sizeof m, "brackets: the default = fixed, both winners 2nd-7th, the two differ in %d of %d seasons",
+                 differ, seasons);
+        check(same_def && in_range && differ > 0, m);
+    }
 }
 
 /* ---- the re-allocation ---- */

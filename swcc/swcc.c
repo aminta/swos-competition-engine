@@ -2002,6 +2002,16 @@ static void check_pool_file(C *c, JNode *p, const char *pid, const char ***ids, 
         int_in(c, need(c, up, "champion", J_NUM, "up"), "champion", "up", 0, 8, &ch);
         if (na && pmin < 4) ERR(na, "up", "'up.cross' is swc/1.4: this pool file says \"swc/1.3\"");
         if (ex && pmin < 4) ERR(ex, "up", "'up.extra' is swc/1.4: this pool file says \"swc/1.3\"");
+        {                                               /* v1.4 (Regia / MC 09/11): the 2nd-7th play-off's semi-finals */
+            JNode *pb = opt(c, up, "playoff_bracket", J_STR, "up");
+            if (pb) {
+                if (pmin < 4) ERR(pb, "up", "'up.playoff_bracket' is swc/1.4: this pool file says \"swc/1.3\"");
+                if (strcmp(pb->str, "fixed") && strcmp(pb->str, "reseeded"))
+                    ERR(pb, "up", "playoff_bracket \"%s\": \"fixed\" (2nd v W(5v6), 3rd v W(4v7)) or \"reseeded\" (2nd v the "
+                        "lower placed winner)", pb->str);
+                if (na) ERR(pb, "up", "'playoff_bracket' is a light pool's own 2nd-7th play-off: not with 'up.cross'");
+            }
+        }
         if (po && !na) {                                /* a playoff stage's shape: the engine reads it (S3) */
             const char *ty = jstr(po, "type");
             JNode *rr = json_get(po, "rounds");
