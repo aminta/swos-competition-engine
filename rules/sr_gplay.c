@@ -38,6 +38,10 @@ enum { K_TITLE = SR_KIND_TITLE, K_CONT = SR_KIND_CONTINENTAL, K_PROM = SR_KIND_P
 enum { GS = 2, SS_BASE = 4, SS_N = SR_STAGE_TABLES };
 enum { PO_SUPER = 4, PO_SKIP2 = 0x80 };    /* (a play-off's flags: the next season's supercup, not played at the
                                               season end; 'skip_second': its k-th placing that is no B team) */
+enum { PO_DECIDER = 1 };                  /* (4.2, Serie D Art. 51 c.6, the Mod's gplay.c d7a1c34: flag bit 0 -- the
+                                             europe kind's 'skip_qualified', uefaq's -- on the other kinds 'decider':
+                                             the last tie's winner takes the loser's better place in the tables, so
+                                             the later play-offs read the new order; the moves are by global number) */
 enum { ABSENT = -2 };                      /* (an entrant by team word not in these tables: a group round goes on
                                               without it -- NZ's A-League reserves) */
 
@@ -662,6 +666,13 @@ static void gp_begin(sr_state *st, const sr_season *se)
     st->gp.srl_div = -1;
 }
 
+static void dswap(sr_state *st, int a, int b)   /* rows a, b of one division: their places exchanged */
+{
+    sr_row x = st->t.t[DV(a)][PL(a)];
+    st->t.t[DV(a)][PL(a)] = st->t.t[DV(b)][PL(b)];
+    st->t.t[DV(b)][PL(b)] = x;
+}
+
 static void gp_season(sr_state *st, const sr_league *lg)
 {
     const u8 *s = lg->spec;
@@ -677,6 +688,7 @@ static void gp_season(sr_state *st, const sr_league *lg)
     }
     int prev_loser = -1;                        /* the last tie's loser of the play-off before (type 4) */
     st->gp.srl_div = -1;
+    st->gp.ndsw = 0;
     st->gp.ss_used = 0;
     st->gp.wn_on = 0;                           /* (the career club's league: its titles into WN_ST) */
     int wn_div = 0;
@@ -873,8 +885,17 @@ static void gp_season(sr_state *st, const sr_league *lg)
         if (ok && kind == K_TITLE && glast < 0)  /* (a title play-off's last three ties: the MLS conference finals) */
             for (int t = nt > 3 ? nt - 3 : 0; t < nt && t < GN; t++) wn_add(st, 0x80 | (pidx & 0x7F), t, gp_row(st, W[t])->team);
         prev_loser = ok && last >= 0 ? L[last] : -1;
+        if (ok && last >= 0 && (s[5] & PO_DECIDER) && DV(W[last]) == DV(L[last]) && PL(W[last]) > PL(L[last])) {
+            dswap(st, W[last], L[last]);        /* (the winner up to the loser's place) */
+            prev_loser = W[last];               /* (the loser: now on the winner's old row) */
+            if (st->gp.ndsw < 8) {
+                st->gp.dsw[2 * st->gp.ndsw] = (u16)W[last]; st->gp.dsw[2 * st->gp.ndsw + 1] = (u16)L[last]; st->gp.ndsw++;
+            }
+        }
         s = r;
     }
+    if (st->gp.se->preview)                     /* (the preview: the tables as they were) */
+        while (st->gp.ndsw) { st->gp.ndsw--; dswap(st, st->gp.dsw[2 * st->gp.ndsw], st->gp.dsw[2 * st->gp.ndsw + 1]); }
     st->gp.wn_on = 0;
     st->gp.scroll_from = 0;                     /* (the cup place's scroll: this season end's only -- a contest
                                                    reads the places as they are) */
@@ -995,6 +1016,24 @@ int32_t sr_contest_entrants(sr_state *st, const sr_league *lg, const sr_season *
 /* gplay.c playable: a knockout a career club can play (promotion, placement, play-out, title,
  * continental, stage; entrants by place or stage, members entrants / W / L, no group round, a
  * best-of-three not last). */
+/* 4.2 (the Mod's gp_need gap_done, d7a1c34): a one-round play-off whose ties are all decided by their gap on the
+ * final table (gp_season's 'too far apart': no tie to play) -- not the career club's contest. */
+static int gap_done(sr_state *st, const sr_league *lg, const u8 *s)
+{
+    const u8 *e = ents_of(s), *r = e + 4 * s[1];
+    if (s[2] != 1 || !r[5] || (r[1] & 0x80)) return 0;
+    for (int i = 0; i < r[0]; i++) {
+        int a = r[6 + 2 * i], b = r[7 + 2 * i];
+        if (a >= s[1] || b >= s[1]) return 0;
+        a = ent_code(st, lg, e + 4 * a, -1, s[0] & 0x3F);
+        b = ent_code(st, lg, e + 4 * b, -1, s[0] & 0x3F);
+        if (a < 0 || b < 0) return 0;
+        const int d = (int)gp_row(st, a)->pts - (int)gp_row(st, b)->pts;
+        if (d < r[5] && -d < r[5]) return 0;
+    }
+    return 1;
+}
+
 static int gp_playable(const u8 *s)
 {
     /* (42-s3shape, deliberate: an extended play-off -- kind | 0x40, so s[0] > 6 below -- is played at the season end
@@ -1071,8 +1110,8 @@ int32_t sr_club_playoff(sr_state *st, const sr_league *lg, const sr_season *se, 
         if (!s)
             break;
         const int t2 = sr_group_shape_of(s, 0);
-        if ((!gp_playable(s) && !t2) || s[0] == K_STAGE)
-            continue;                           /* (stage titles: built mid-season) */
+        if ((!gp_playable(s) && !t2) || s[0] == K_STAGE || gap_done(st, lg, s))
+            continue;                           /* (stage titles: built mid-season; a gap-decided one: none to play) */
         int in = 0, ok = 1, no = 0;
         st->gp.by_rec = s[5] & 2;
         for (int i = 0; i < s[1]; i++) {

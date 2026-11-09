@@ -207,6 +207,8 @@ typedef struct sr_state {
         uint16_t mgr, played_a, played_b, played_w;
         sr_result res[4], sres[3], srl[3];
         int32_t  nres;
+        uint16_t dsw[16];           /* (4.2 'decider': a preview's row swaps, undone at its end) */
+        int32_t  ndsw;
         uint8_t  nst[2];            /* the kept 'keep' tables (gp_keep) */
         sr_row   st[2][SR_CLUBS];
         sr_stage_bank *ssb, no_bank;
