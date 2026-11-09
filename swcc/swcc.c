@@ -1429,6 +1429,13 @@ static void do_comp(C *c, int ci, StageInfo *all_st, int *nall)
                             need_minor(c, d, rp, 4, d->str[0] == 's' ? "the decider \"seed\"" : "the decider \"better_placed_unless_level_on_points\"");
                             if (d->str[0] == 's' && pr != 1) ERR(d, rp, "the decider \"seed\" goes in a seeded round (\"pairing\": \"seeded\")");
                         }
+                    {                                       /* v1.4 (4.2 S1.3b): FIGC C.U. 244/A (iv) -- a tie of a club in a */
+                        JNode *uf = opt(c, r, "skip_if_uefa_finalist", J_BOOL, rp);   /* UEFA final: not played */
+                        if (uf) {
+                            need_minor(c, uf, rp, 4, "'skip_if_uefa_finalist'");
+                            if (t != SWC_ST_PLAYOFF) ERR(uf, rp, "'skip_if_uefa_finalist' goes on a playoff stage's round");
+                        }
+                    }
                     {                                       /* v1.4: a seeded round's seeds, the clubs drawn against them */
                         JNode *se = opt(c, r, "seeds", J_ARR, rp), *dr = opt(c, r, "drawn", J_ARR, rp), *q;
                         if (se) {

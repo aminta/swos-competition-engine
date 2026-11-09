@@ -243,7 +243,8 @@
         "better_placed_unless_level_on_points",
         "extra_time",
         "penalties"
-       ]
+       ],
+       "skip_if_uefa_finalist": true
       },
       {
        "ties": 1,

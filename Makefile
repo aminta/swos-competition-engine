@@ -91,7 +91,6 @@ $(OUT)/uefa_final: tests/rules/uefa_final.c $(RULES) rules/swosrules.h | $(OUT)
 	$(CC) -std=c99 -O1 -g -Wall -Wextra -Wno-missing-field-initializers -Wno-unused-function $(SANITIZE) -Irules -o $@ \
 	    tests/rules/uefa_final.c $(RULES)
 
-
 # 42-s2ko: the Coppa Italia / Supercoppa numbers and bracket (sr_kn) on the real 2025-26 season end and 2026-27 ties
 $(OUT)/s2ko_gen.h: tests/rules/s2ko.py tests/specs/ok/v14_ita_cups.json tests/rules/ita_cups_2526.json | $(OUT)
 	python3 -I tests/rules/s2ko.py $@
