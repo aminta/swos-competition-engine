@@ -487,7 +487,7 @@ static const char *const TIEBS[] = { NULL, "points", "goal_difference", "goals_f
                                      "previous_stage_rank", "play_off_match", "draw_lots", "name", "faithful_1996",
                                      "head_to_head_reapplied", "avulsa", "losses_fewer",
                                      "home_losses_fewer", "head_to_head_table_once",
-                                     "only_if_two_level" };
+                                     "only_if_two_level", "away_goal_difference" };
 static const char *const DECIS[] = { NULL, "aggregate", "away_goals", "extra_time", "penalties", "better_placed", "replay",
                                      "draw_lots", "golden_goal",
                                      "better_placed_unless_level_on_points", "seed" };   /* (9, 10: swc/1.4, 42-s3shape) */

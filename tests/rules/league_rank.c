@@ -225,6 +225,9 @@ static long rf_key(uint8_t t, int c, const int *s, int k)
     case SR_TB_HOME_LOSSES_FEWER:
         for (int i = 0; i < rf_nm; i++) hl += rf_m[i].played && rf_m[i].home == c && rf_m[i].hg < rf_m[i].ag;
         return -hl;
+    case SR_TB_AWAY_GOAL_DIFFERENCE:
+        for (int i = 0; i < rf_nm; i++) if (rf_m[i].played && rf_m[i].away == c) hl += rf_m[i].ag - rf_m[i].hg;
+        return hl;
     case SR_TB_NAME: return -c;
     }
     return 0;
@@ -259,17 +262,18 @@ static void figc_random(int nt)
         EF[] = { SR_TB_POINTS, SR_TB_GOAL_DIFFERENCE, SR_TB_GOALS_FOR, SR_TB_H2H_TABLE_ONCE, SR_TB_NAME, 0 },
         BR[] = { SR_TB_POINTS, SR_TB_WINS, SR_TB_ONLY_IF_TWO, SR_TB_H2H_POINTS, SR_TB_ONLY_IF_TWO,
                  SR_TB_H2H_GOAL_DIFFERENCE, SR_TB_NAME, 0 },
+        BE[] = { SR_TB_POINTS, SR_TB_WINS, SR_TB_AWAY_GOAL_DIFFERENCE, SR_TB_NAME, 0 },
         BRN[] = { SR_TB_POINTS, SR_TB_WINS, SR_TB_H2H_POINTS, SR_TB_H2H_GOAL_DIFFERENCE, SR_TB_NAME, 0 },
         E1[] = { SR_TB_POINTS, SR_TB_H2H_TABLE_ONCE, SR_TB_NAME, 0 }, EA[] = { SR_TB_POINTS, SR_TB_AVULSA, SR_TB_NAME, 0 },
         OLD[] = { SR_TB_POINTS, SR_TB_H2H_POINTS, SR_TB_H2H_GOAL_DIFFERENCE, SR_TB_GOAL_DIFFERENCE, SR_TB_GOALS_FOR,
                   SR_TB_NAME, 0 };
-    static const uint8_t *const L[4] = { SB, SC, EF, BR };
+    static const uint8_t *const L[5] = { SB, SC, EF, BR, BE };
     static sr_match m[24 * 23];
     static uint8_t pairs[24 * 24];
     int bad = 0, differ = 0, gfdiff = 0, two = 0;
     for (int t = 0; t < nt; t++) {
         const int n = 3 + (int)rnd(22), nm = season(n, 3, m, pairs);
-        const uint8_t *lst = L[t % 4];
+        const uint8_t *lst = L[t % 5];
         sr_srow tab[24], row[24];
         uint8_t ord[24], o2[24];
         int ref[24];
@@ -304,7 +308,7 @@ static void figc_random(int nt)
     CHECK(two, "only_if_two_level: never differs from the plain list (the control proves nothing)");
     if (!bad && differ)
         printf("PASS: FIGC lists (Serie B avulsa; Serie C's 10 criteria: avulsa, h2h GD of the still level, ..., fewer "
-               "losses, away wins, fewer home losses; EFL 9.2 h2h table once; CBF only_if_two_level) = a brute-force reference from the C.U. texts on %d random seasons, "
+               "losses, away wins, fewer home losses; EFL 9.2 h2h table once; CBF only_if_two_level; RBFA away goal difference) = a brute-force reference from the C.U. texts on %d random seasons, "
                "sr_rr_table and sr_league_rank; the avulsa orders %d seasons unlike per-block head to head, the EFL table %d unlike "
                "the avulsa, the CBF list %d unlike its plain codes (controls)\n", nt, differ, gfdiff, two);
 }
