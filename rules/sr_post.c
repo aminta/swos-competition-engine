@@ -77,7 +77,7 @@ static void b_exit(sr_state *st, u16 g)
     for (int32_t i = 0; i < st->b_exits; i++)
         if (st->b_exit[i] == g)
             return;
-    if (st->b_exits < 8)
+    if (st->b_exits < SR_B_EXITS)
         st->b_exit[st->b_exits++] = g;
 }
 

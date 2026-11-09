@@ -27,6 +27,7 @@
 #define SR_DIVS  16                 /* a league's divisions (gplay.c GD) */
 #define SR_CLUBS 32                 /* a division's clubs (gplay.c GT) */
 #define SR_MOVES 48
+#define SR_B_EXITS 8               /* a league's B teams under the 4.2 rules (second_floor >= 1): each may leave */
 
 /* A club as both games name it: the Mod's team word (team file | ordinal << 8) and its global
  * number (the league table's index); its record. */
@@ -101,7 +102,8 @@ typedef struct {
                                        the 4.2 rules -- the stays loop passes over every B team (order-independent), a
                                        final guard puts a B team at or above its first team's new level one below it, or
                                        out of the league from the floor (and when its first team is below the league),
-                                       and the B teams that leave are reported (sr_state.b_exit) */
+                                       and the B teams that leave are reported (sr_state.b_exit); at most SR_B_EXITS
+                                       B teams (sr_league_check) */
 } sr_league;
 
 /* A league's levels when some are groups of parallel divisions (Serie C's, Serie D's): where each
@@ -198,7 +200,7 @@ typedef struct sr_state {
      * global numbers. Each one's want is 1; it goes out of the world (the off-file pool), not to the level below, and
      * the pool sends up one club more for each (swc up.extra). Relegations by place from the floor are not counted. */
     int32_t   b_exits;
-    uint16_t  b_exit[8];
+    uint16_t  b_exit[SR_B_EXITS];
 } sr_state;
 
 void     sr_reset(sr_state *st);

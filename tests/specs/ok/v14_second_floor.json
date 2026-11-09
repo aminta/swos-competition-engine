@@ -176,6 +176,7 @@
    "kind": "league",
    "country": "TST",
    "level": 2,
+   "refill": "pool",
    "names": {
     "it": [
      "SECONDA",

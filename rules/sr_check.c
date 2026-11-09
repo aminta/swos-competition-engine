@@ -149,6 +149,8 @@ int32_t sr_league_check(const sr_league *lg, sr_check_error *err)
         return fail(err, SR_CHECK_INDEX, -1, 0, "the Italian rules' divisions (Serie B, Serie C's groups)");
     if (lg->seconds && !lg->second)
         return fail(err, SR_CHECK_COUNT, -1, 0, "B teams");
+    if (lg->second_floor && lg->seconds > SR_B_EXITS)
+        return fail(err, SR_CHECK_COUNT, -1, 0, "B teams with a floor (at most 8: each may leave)");
     if (lg->spec && !lg->spec_len)
         return fail(err, SR_CHECK_COUNT, -1, 0, "spec_len (a spec's bytes: required)");
     if (lg->spec)

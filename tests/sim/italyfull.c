@@ -23,8 +23,9 @@
  * violation fails. BFLOOR=0 runs the Mod 4.1's rules (= sec_post) and counts their gaps instead (reported to MC
  * 2026-11-09). The Coppa Italia Serie C winner is drawn from all of Serie C:
  * relegated or in a play-out it takes no place (F1, the Mod's dplay.c 353984f).
- * GAME_SPREAD=n: the light tables of A .. D with sr_lp_table_sp at spread n instead of the game's; valid up to ~80
- * (sr_pool.c below() overflows past ~88 at strength 375).
+ * GAME_SPREAD=n: the light tables of A .. D with sr_lp_table_sp at spread n instead of the game's (40). No value brings
+ * the play-out gaps to the real ones (80: C 3.9, D 3.6 points v 5.8, 4.8): they come from the in-group strength
+ * dispersion the light tables don't model -- a recorded model limit (MC 2026-11-09), 40 kept; the Mod plays A .. D.
  * Real (tests/sim/itwiki_rates.py, it.wikipedia 2014-15 .. 2025-26): play-out ties the 8-point gap skips, Serie C
  * 31.6% (12 of 38), Serie D 22.1% (30 of 136); straight back up C/D 12.3% (9 of 73).
  * Usage: [SPREAD=n] [GAME_SPREAD=n] [BFLOOR=n] italyfull [CHAINS [SEASONS]] (default 1000 100). Exit 1 on any broken invariant.

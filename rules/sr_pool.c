@@ -23,10 +23,12 @@ static u32 mix(u32 h, u32 v)
 }
 
 typedef struct { u32 h; } rng;
-static u32 below(rng *r, u32 n)                 /* 0 .. n-1 */
+static u32 below(rng *r, u32 n)                 /* 0 .. n-1; n may exceed 65536 (squared strengths summed): a 64-bit
+                                                   product (as gplay.c's light seasons, statesim), the same result
+                                                   for every n <= 65536 */
 {
     r->h = r->h * 1103515245u + 12345u;
-    return ((r->h >> 16) * n) >> 16;
+    return (u32)(((uint64_t)(r->h >> 16) * n) >> 16);
 }
 
 static u32 str2(int strength, int home, int sp)  /* 30 .. 30 + spread for 0.00 .. 2.50, linear on to 3.75 */

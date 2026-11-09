@@ -119,6 +119,19 @@ int main(void)
         }
         if (m[0] == m[1]) { printf("FAIL floor 0: the Mod 4.1's order dependence not reproduced (%d)\n", m[0]); fails++; }
     }
+    /* more B teams than b_exit holds, with a floor: refused (a silent cap would lose an exit); without one: accepted */
+    {
+        static const uint8_t NINE[9][2] = { { 40, 0 }, { 41, 1 }, { 42, 2 }, { 43, 3 }, { 44, 4 }, { 45, 5 }, { 46, 6 },
+                                            { 47, 7 }, { 48, 8 } };
+        sr_league lp = league(0, 3);
+        sr_check_error e;
+        lp.seconds = 9; lp.second = NINE;
+        if (sr_league_check(&lp, &e) != SR_CHECK_COUNT) { printf("FAIL 9 B teams with a floor: not refused\n"); fails++; }
+        lp.second_floor = 0;
+        if (sr_league_check(&lp, &e) != SR_CHECK_OK) { printf("FAIL 9 B teams, floor 0: refused\n"); fails++; }
+        lp = league(0, 3);
+        if (sr_league_check(&lp, &e) != SR_CHECK_OK) { printf("FAIL 3 B teams with a floor: refused\n"); fails++; }
+    }
     printf("%s: the 4.2 B-team rules (F2 order-free, F3 guard, F4 floor and exits), %d case(s) failed\n",
            fails ? "FAIL" : "PASS", fails);
     return fails != 0;

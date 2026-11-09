@@ -1485,23 +1485,31 @@ static void check_second_teams(C *c)
     }
 }
 
-/* v1.4: second_teams.lowest is a level some league of that country plays */
+/* v1.4: second_teams.lowest is a level some league of that country plays, with a way out below it -- a league of that
+   level refilled from a pool ("refill": "pool": the pool sends one more up for each second team that leaves), or a
+   league of that country below it (where the second team goes) */
 static void check_second_floor(C *c)
 {
     JNode *m;
     if (!c->countries || c->countries->type != J_OBJ) return;
     for (m = c->countries->child; m; m = m->next) {
         JNode *lo = json_get(json_get(m, "second_teams"), "lowest");
-        int i, found = 0;
+        int i, found = 0, out = 0;
         char path[128];
         if (!lo || lo->type != J_NUM) continue;
-        for (i = 0; i < c->ncomps && !found; i++) {
+        for (i = 0; i < c->ncomps; i++) {
             JNode *cp = c->comps[i], *kind = json_get(cp, "kind"), *lv = json_get(cp, "level"), *cc = json_get(cp, "country");
-            found = kind && kind->type == J_STR && !strcmp(kind->str, "league") && lv && lv->type == J_NUM && lv->num == lo->num
-                    && cc && cc->type == J_STR && !strcmp(cc->str, m->key);
+            if (!kind || kind->type != J_STR || strcmp(kind->str, "league") || !lv || lv->type != J_NUM || !cc ||
+                cc->type != J_STR || strcmp(cc->str, m->key))
+                continue;
+            if (lv->num == lo->num) { found = 1; out |= json_get(cp, "refill") != NULL; }
+            if (lv->num > lo->num) out = 1;
         }
         pathf(path, sizeof path, "countries.%s.second_teams", m->key);
         if (!found) ERR(lo, path, "second_teams.lowest %d: no league of %s plays level %d", (int)lo->num, m->key, (int)lo->num);
+        else if (!out)
+            ERR(lo, path, "second_teams.lowest needs a pool below level %d (where the B team goes): a league of that level "
+                "with \"refill\": \"pool\", or a league of %s below it", (int)lo->num, m->key);
     }
 }
 
