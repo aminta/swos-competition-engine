@@ -3,8 +3,8 @@
  * League, the Southern League Premier Central and South, the Isthmian Premier; Davide 07/11 B).
  * No matches are played: each division's table comes from the clubs' strengths and the season's
  * seed, then its champion and its play-off winner (2nd-7th, the National League's shape) go up. The semi-finals:
- * SR_LP_FIXED (the default, declared: 2nd v W(5v6), 3rd v W(4v7), the National League's bracket) or SR_LP_RESEED
- * (2nd v the lower placed winner).
+ * SR_LP_FIXED (the default, declared: 2nd v W(5v6), 3rd v W(4v7), the National League's bracket; approved by
+ * Davide 09/11, until the leagues publish their 2026-27 bracket) or SR_LP_RESEED (2nd v the lower placed winner).
  * The 2026-27 step-3 play-offs are that shape (the NPL, SPL Central / South and Isthmian Premier tables on
  * en.wikipedia, "2026-27 ...": "six teams play for one spot", 2nd-3rd into the semi-finals, 4th-7th the
  * quarter-finals); tests/rules/step3real.c runs the chain on the 2026-27 clubs.
