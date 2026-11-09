@@ -23,7 +23,7 @@ typedef uint16_t u16;
 typedef uint32_t u32;
 
 enum { GT = SR_CLUBS, GD = SR_DIVS, GN = 64, RESERVE = 0xFE, BEST_LOSER = 0x3F };
-enum { HOST_LISTED, HOST_BETTER, HOST_DRAWN, HOST_NEUTRAL, HOST_SKIP_SAME = 0x80 };
+enum { HOST_LISTED, HOST_BETTER, HOST_DRAWN, HOST_NEUTRAL, HOST_UEFA_FINAL = 0x40, HOST_SKIP_SAME = 0x80 };
 enum { LV_BETTER, LV_ET_PENS, LV_ET_BETTER, LV_PENS, LV_AWAY_PENS, LV_AWAY_BETTER,
        LV_BETTER_PTS, LV_SECOND };      /* (42-s3shape: the better placed unless level on points, then e.t. + penalties;
                                            the listed second -- a seeded round's seed) */
@@ -93,6 +93,14 @@ static int gp_better(const sr_state *st, int a, int b)     /* the higher tier, t
         if (x->gf != y->gf) return x->gf > y->gf;
     }
     return PL(a) < PL(b);
+}
+
+static int uefa_final(const sr_state *st, int a, int b)    /* a or b already in a UEFA final (sr_season.uefa_final) */
+{
+    const uint16_t *f = st->gp.se->uefa_final, ta = gp_row(st, a)->team, tb = gp_row(st, b)->team;
+    for (int i = 0; i < 2; i++)
+        if (f[i] && (f[i] == ta || f[i] == tb)) return 1;
+    return 0;
 }
 
 static u32 gp_str2(const sr_state *st, int c, int home)    /* strength: the place in its division, the tier */
@@ -736,7 +744,8 @@ static void gp_season(sr_state *st, const sr_league *lg)
             for (; nr; nr--) r += 6 + 2 * r[0];     /* (its rounds passed over) */
         }
         for (int k = 0; k < nr; k++) {
-            int ties = r[0], legs = r[1], host = r[2] & 0x7F, skip = r[2] & HOST_SKIP_SAME, level = r[3];
+            int ties = r[0], legs = r[1], host = r[2] & 0x3F, skip = r[2] & HOST_SKIP_SAME, level = r[3];
+            int fin = r[2] & HOST_UEFA_FINAL;
             int pairing = r[4], gap = r[5];
             const u8 *m = r + 6;
             int mem[2 * GN], gm = legs & 0x80 ? ties : 2 * ties;     /* (a group round: ties = its members) */
@@ -802,6 +811,7 @@ static void gp_season(sr_state *st, const sr_league *lg)
                     int a = mem[2 * i], b = mem[2 * i + 1], d = (int)gp_row(st, a)->pts - (int)gp_row(st, b)->pts;
                     int w = a == b && skip ? a                                               /* (one club: no tie) */
                           : gap && (d >= gap || -d >= gap) ? (gp_better(st, a, b) ? a : b)  /* (too far apart) */
+                          : fin && uefa_final(st, a, b) ? (gp_better(st, a, b) ? a : b)    /* (C.U. 244/A (iv)) */
                           : legs == 3 ? gp_series(st, a, b, level) : gp_tie(st, a, b, legs, host, level);
                     w = gp_played(st, a, b, w);
                     W[nt] = w; L[nt] = w == mem[2 * i] ? mem[2 * i + 1] : mem[2 * i];

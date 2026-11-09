@@ -86,6 +86,11 @@ $(OUT)/s3shape: tests/rules/s3shape.c tests/rules/tables.h $(RULES) rules/swosru
 	$(CC) -std=c99 -O1 -g -Wall -Wextra -Wno-missing-field-initializers -Wno-unused-function $(SANITIZE) -Irules -Itests/rules -o $@ \
 	    tests/rules/s3shape.c $(RULES)
 
+# 4.2 S1.3: the C.U. 244/A exception (iv) -- a play-off match not played when a club is in a UEFA final (host bit 0x40)
+$(OUT)/uefa_final: tests/rules/uefa_final.c $(RULES) rules/swosrules.h | $(OUT)
+	$(CC) -std=c99 -O1 -g -Wall -Wextra -Wno-missing-field-initializers -Wno-unused-function $(SANITIZE) -Irules -o $@ \
+	    tests/rules/uefa_final.c $(RULES)
+
 # Italy's Eccellenza: the light pool with regional + national play-offs and the cup rule (invariants + controls)
 $(OUT)/ecclp: tests/rules/ecclp.c tests/sim/ecclp_italy.h $(RULES) rules/swosrules.h | $(OUT)
 	$(CC) -std=c99 -O1 -g -Wall -Wextra -Wno-missing-field-initializers $(SANITIZE) -Irules -o $@ \
@@ -120,7 +125,7 @@ sim: $(OUT)/masssim $(OUT)/italysim $(OUT)/italyfull
 	@for b in drop bteam updown regdrop regdup regdiv; do if ITALYFULL_BREAK=$$b $(OUT)/italyfull 2 3 >/dev/null; then echo "italyfull control $$b NOT caught"; exit 1; fi; done
 	@echo "italyfull controls: a club dropped, a B team in its first team's division, one too many up, a swap dropped, a slot twice, a wrong division byte -> caught"
 
-test: $(OUT)/test_format $(OUT)/swcc $(OUT)/swc_i486.o $(RULES_I486) $(OUT)/spec_check $(OUT)/team_order $(OUT)/groups_guard $(OUT)/nonleague $(OUT)/ecclp $(OUT)/stage $(OUT)/bteams42 $(OUT)/cupplace $(OUT)/reg $(OUT)/s3shape $(OUT)/league_rank
+test: $(OUT)/test_format $(OUT)/swcc $(OUT)/swc_i486.o $(RULES_I486) $(OUT)/spec_check $(OUT)/team_order $(OUT)/groups_guard $(OUT)/nonleague $(OUT)/ecclp $(OUT)/stage $(OUT)/bteams42 $(OUT)/cupplace $(OUT)/reg $(OUT)/s3shape $(OUT)/league_rank $(OUT)/uefa_final
 	$(OUT)/swcc compile packs/sample/world.json -o $(OUT)/sample.swc >/dev/null
 	$(OUT)/test_format $(OUT)/sample.swc
 	sh tests/run_specs.sh $(OUT)/swcc
@@ -147,6 +152,7 @@ test: $(OUT)/test_format $(OUT)/swcc $(OUT)/swc_i486.o $(RULES_I486) $(OUT)/spec
 	cmp $(OUT)/files_one.swc $(OUT)/files_none.swc && echo "PASS: one 'files' entry = no 'files': the same bytes"
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/stage 500
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/league_rank
+	ASAN_OPTIONS=detect_leaks=0 $(OUT)/uefa_final
 	@if grep -n '(const Swc[A-Za-z]* \*)\|(const uint16_t \*)\|(const uint32_t \*)' format/*.c; then echo "the reader reads the spec buffer through a cast (big-endian rule: BE accessors only)"; exit 1; fi
 	@echo "reader: no casts over the spec buffer (BE accessors only)"
 

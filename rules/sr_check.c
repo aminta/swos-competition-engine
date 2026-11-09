@@ -103,7 +103,7 @@ int32_t sr_spec_check(const uint8_t *spec, uint32_t len, int32_t divisions, sr_c
             if (len - at < 6)
                 return fail(err, SR_CHECK_TRUNCATED, pidx, at, "round header");
             const u8 *r = spec + at;
-            const int32_t ties = r[0], legs = r[1], host = r[2] & 0x7F, level = r[3];
+            const int32_t ties = r[0], legs = r[1], host = r[2] & 0x3F, level = r[3];
             const int32_t group = legs & 0x80, members = group ? ties : 2 * ties;
             if (group ? ties > GT : ties > GN)
                 return fail(err, SR_CHECK_COUNT, pidx, at, group ? "group members (at most 32)" : "ties (at most 64)");

@@ -9,6 +9,7 @@ const u8 GP_PROM_TAB[1] = { 0 };
 u16 GP_TOPW[9];
 u8 GP_TOPR[9 * 684];
 const u8 GP_HLT[4] = { 0 };
+const u8 GP_SEASP = 0;                  /* (4.2 S1.3 gplay.c uefa_fin: no UEFA cup recorded, GP_USRP 1) */
 static u8 tab[4096];
 static s8 slt[4096];
 int main(int argc, char **argv)
