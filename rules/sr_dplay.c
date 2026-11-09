@@ -7,7 +7,7 @@
  * bits on every target) -- so it reads against dplay.c line by line, and the same final tables
  * give the same ties. Its file statics are the caller's state (st->dp).
  *
- * The rules (2025-26: FIGC C.U. 39/A for Serie B, NOIF art. 49 + C.U. 114/A for Serie C):
+ * The rules (2026-27: FIGC C.U. 25/A for Serie B, NOIF art. 49 as amended by C.U. 179/A + C.U. 209/A for Serie C - the play-out gap "superiore a 8": the spec gap 9, st->dp.cgap):
  *   - Serie B: the 3rd up directly if it leads the 4th by more than 14 points, else the
  *     play-off winner (3rd-8th: preliminary 5v8, 6v7 single at the better placed's, a draw
  *     -> the better placed; semis 3rd v W(6v7), 4th v W(5v8), two legs, level -> the better
