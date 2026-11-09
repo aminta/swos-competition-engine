@@ -66,7 +66,7 @@ i32 sr_rr_calendar(i32 n, i32 legs, sr_match *out, i32 room)
 
 static int usable(u8 c)
 {
-    return c == SR_TB_H2H_REAPPLIED || (c >= SR_TB_POINTS && c <= SR_TB_NAME && c != SR_TB_FAIR_PLAY &&
+    return (c >= SR_TB_H2H_REAPPLIED && c <= SR_TB_HOME_LOSSES_FEWER) || (c >= SR_TB_POINTS && c <= SR_TB_NAME && c != SR_TB_FAIR_PLAY &&
                                         c != SR_TB_COEFFICIENT && c != SR_TB_PREVIOUS_STAGE_RANK && c != SR_TB_PLAY_OFF_MATCH);
 }
 
@@ -90,6 +90,17 @@ static i32 key(const sr_tctx *x, u8 t, i32 c, const u8 *in)
     case SR_TB_AWAY_GOALS_FOR:  return r->agf;
     case SR_TB_DRAW_LOTS:       return (i32)(mix(seed, 0x51A6E000u + (u32)c) >> 1);
     case SR_TB_NAME:            return x->namek ? -(i32)x->namek[c] : -c;
+    case SR_TB_LOSSES_FEWER:    return -(i32)r->l;
+    case SR_TB_HOME_LOSSES_FEWER: {                             /* over the whole season, not the tied clubs */
+        i32 hl = 0;
+        if (x->pairs)
+            for (i32 j = 0; j < x->n; j++) {
+                const u8 v = j == c ? SR_PAIR_NONE : x->pairs[c * x->n + j];
+                if (v != SR_PAIR_NONE && (v >> 4) < (v & 15)) hl++;
+            }
+        for (i32 k = 0; k < nm; k++) if (m[k].played && m[k].home == c && m[k].hg < m[k].ag) hl++;
+        return -hl;
+    }
     default: break;
     }
     i32 pts = 0, gd = 0, gf = 0, ag = 0;                        /* head to head */
@@ -158,6 +169,21 @@ static void reapply(const sr_tctx *x, u8 *ord, u8 *cut, i32 b, i32 e)
     }
 }
 
+/* avulsa (FIGC, NOIF art. 51 / 49 X): head-to-head points, then head-to-head goal difference, BOTH over the matches
+ * among all the clubs of the block (the clubs level when it starts), once; the smaller blocks it leaves stay tied */
+static void avulsa(const sr_tctx *x, u8 *ord, u8 *cut, i32 b, i32 e)
+{
+    u8 in[N];
+    block_in(x->n, ord, b, e, in);
+    for (u8 t = SR_TB_H2H_POINTS; t <= SR_TB_H2H_GOAL_DIFFERENCE; t++)
+        for (i32 s = b; s < e;) {
+            i32 f = s + 1;
+            while (f < e && !cut[f]) f++;
+            if (f - s > 1) split(x, t, in, ord, cut, s, f);
+            s = f;
+        }
+}
+
 /* each criterion once, in order, inside the blocks the ones before left tied (a stable sort there);
  * faithful_1996 = points, goal difference, goals for, name (the 1996 game's cseg_883DD) */
 static void crit(const sr_tctx *x, u8 t, u8 *ord, u8 *cut)
@@ -167,6 +193,7 @@ static void crit(const sr_tctx *x, u8 t, u8 *ord, u8 *cut)
         while (!cut[e]) e++;
         if (e - b > 1) {
             if (t == SR_TB_H2H_REAPPLIED) reapply(x, ord, cut, b, e);
+            else if (t == SR_TB_AVULSA) avulsa(x, ord, cut, b, e);
             else {
                 u8 in[N];
                 block_in(x->n, ord, b, e, in);
@@ -195,7 +222,8 @@ i32 sr_league_rank(i32 n, const sr_srow *row, const u8 *pairs, const u8 *namek, 
     u8 tl[24];                                                  /* (no results: the head-to-head criteria left out) */
     i32 k = 0;
     for (const u8 *t = tieb; t && *t && k < 23; t++)
-        if (pairs || !((*t >= SR_TB_H2H_POINTS && *t <= SR_TB_H2H_AWAY_GOALS) || *t == SR_TB_H2H_REAPPLIED)) tl[k++] = *t;
+        if (pairs || !((*t >= SR_TB_H2H_POINTS && *t <= SR_TB_H2H_AWAY_GOALS) || *t == SR_TB_H2H_REAPPLIED ||
+                       *t == SR_TB_AVULSA || *t == SR_TB_HOME_LOSSES_FEWER)) tl[k++] = *t;
     tl[k] = 0;
     const sr_tctx x = { row, 0, 0, n, win, draw, loss, seed, pairs, namek };
     rank(&x, tl, ord);
@@ -405,7 +433,8 @@ i32 sr_best_placed(const sr_group *g, i32 ng, i32 place, i32 win, i32 draw, i32 
                    u8 *ord)
 {
     for (const u8 *t = tieb; t && *t; t++)
-        if (!usable(*t) || (*t >= SR_TB_H2H_POINTS && *t <= SR_TB_H2H_AWAY_GOALS) || *t == SR_TB_H2H_REAPPLIED) return -1;
+        if (!usable(*t) || (*t >= SR_TB_H2H_POINTS && *t <= SR_TB_H2H_AWAY_GOALS) || *t == SR_TB_H2H_REAPPLIED ||
+            *t == SR_TB_AVULSA) return -1;
     if (ng < 1 || ng > N) return -1;
     i32 least = g[0].n;
     for (i32 j = 1; j < ng; j++) if (g[j].n < least) least = g[j].n;

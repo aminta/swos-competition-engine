@@ -187,14 +187,115 @@ static void h2h_random(int nt)
                "reapplied); no block: the head-to-head criteria left out\n", nt);
 }
 
+/* ---- the FIGC lists (S1.2): a brute-force reference, written from the C.U. texts, not from sr_stage ---- */
+static int rf_n, rf_nm;
+static const sr_match *rf_m;
+static const sr_srow *rf_row;
+
+/* club c's head-to-head points (what 0) / goal difference (1) over the matches among the clubs in s[0..k) */
+static int rf_h2h(int c, const int *s, int k, int what)
+{
+    int in[24] = { 0 }, pts = 0, gd = 0;
+    for (int i = 0; i < k; i++) in[s[i]] = 1;
+    for (int i = 0; i < rf_nm; i++) {
+        const sr_match *x = &rf_m[i];
+        if (!x->played || !in[x->home] || !in[x->away] || (x->home != c && x->away != c)) continue;
+        const int f = x->home == c ? x->hg : x->ag, a = x->home == c ? x->ag : x->hg;
+        pts += f > a ? 3 : f == a; gd += f - a;
+    }
+    return what ? gd : pts;
+}
+
+static long rf_key(uint8_t t, int c, const int *s, int k)
+{
+    const sr_srow *r = &rf_row[c];
+    int hl = 0;
+    switch (t) {
+    case SR_TB_POINTS: return r->pts;
+    case SR_TB_AVULSA: return (long)rf_h2h(c, s, k, 0) * 4096 + rf_h2h(c, s, k, 1);   /* pts, then GD: lexicographic */
+    case SR_TB_H2H_GOAL_DIFFERENCE: return rf_h2h(c, s, k, 1);
+    case SR_TB_GOAL_DIFFERENCE: return (long)r->gf - r->ga;
+    case SR_TB_GOALS_FOR: return r->gf;
+    case SR_TB_GOALS_AGAINST: return -(long)r->ga;
+    case SR_TB_WINS: return r->w;
+    case SR_TB_LOSSES_FEWER: return -(long)r->l;
+    case SR_TB_AWAY_WINS: return r->aw;
+    case SR_TB_HOME_LOSSES_FEWER:
+        for (int i = 0; i < rf_nm; i++) hl += rf_m[i].played && rf_m[i].home == c && rf_m[i].hg < rf_m[i].ag;
+        return -hl;
+    case SR_TB_NAME: return -c;
+    }
+    return 0;
+}
+
+/* rank the clubs s[0..k) by the list: the first criterion over this set, then each group of equal keys by the rest */
+static void rf_rank(int *s, int k, const uint8_t *t)
+{
+    if (k < 2 || !*t) return;
+    long kv[24];
+    for (int i = 0; i < k; i++) kv[s[i]] = rf_key(*t, s[i], s, k);
+    for (int i = 1; i < k; i++)                                 /* insertion sort, best first */
+        for (int j = i; j > 0 && kv[s[j - 1]] < kv[s[j]]; j--) { int x = s[j]; s[j] = s[j - 1]; s[j - 1] = x; }
+    for (int i = 0; i < k;) {
+        int j = i + 1;
+        while (j < k && kv[s[j]] == kv[s[i]]) j++;
+        rf_rank(s + i, j - i, t + 1);
+        i = j;
+    }
+}
+
+static void figc_random(int nt)
+{
+    static const uint8_t SB[] = { SR_TB_POINTS, SR_TB_AVULSA, SR_TB_GOAL_DIFFERENCE, SR_TB_GOALS_FOR, SR_TB_NAME, 0 },
+        SC[] = { SR_TB_POINTS, SR_TB_AVULSA, SR_TB_H2H_GOAL_DIFFERENCE, SR_TB_GOAL_DIFFERENCE, SR_TB_GOALS_FOR,
+                 SR_TB_GOALS_AGAINST, SR_TB_WINS, SR_TB_LOSSES_FEWER, SR_TB_AWAY_WINS, SR_TB_HOME_LOSSES_FEWER,
+                 SR_TB_NAME, 0 },
+        OLD[] = { SR_TB_POINTS, SR_TB_H2H_POINTS, SR_TB_H2H_GOAL_DIFFERENCE, SR_TB_GOAL_DIFFERENCE, SR_TB_GOALS_FOR,
+                  SR_TB_NAME, 0 };
+    static const uint8_t *const L[2] = { SB, SC };
+    static sr_match m[24 * 23];
+    static uint8_t pairs[24 * 24];
+    int bad = 0, differ = 0;
+    for (int t = 0; t < nt; t++) {
+        const int n = 3 + (int)rnd(22), nm = season(n, 3, m, pairs);
+        const uint8_t *lst = L[t & 1];
+        sr_srow tab[24], row[24];
+        uint8_t ord[24], o2[24];
+        int ref[24];
+        if (sr_rr_table(n, m, nm, 3, 1, 0, lst, 1, tab) != n) { bad++; continue; }
+        for (int k = 0; k < n; k++) row[tab[k].club] = tab[k];
+        rf_n = n; rf_nm = nm; rf_m = m; rf_row = row;
+        for (int k = 0; k < n; k++) ref[k] = k;
+        rf_rank(ref, n, lst);
+        sr_league_rank(n, row, pairs, NULL, 3, 1, 0, lst, 1, ord);
+        for (int k = 0; k < n; k++) bad += tab[k].club != ref[k] || ord[k] != ref[k];
+        sr_league_rank(n, row, pairs, NULL, 3, 1, 0, OLD, 1, o2);         /* the control: per-block head to head */
+        if (lst == SB) for (int k = 0; k < n; k++) if (o2[k] != ord[k]) { differ++; break; }
+    }
+    CHECK(!bad, "FIGC lists: %d places unlike the brute-force reference", bad);
+    CHECK(differ, "FIGC avulsa: never differs from per-block head to head (the control proves nothing)");
+    if (!bad && differ)
+        printf("PASS: FIGC lists (Serie B avulsa; Serie C's 10 criteria: avulsa, h2h GD of the still level, ..., fewer "
+               "losses, away wins, fewer home losses) = a brute-force reference from the C.U. texts on %d random seasons, "
+               "sr_rr_table and sr_league_rank; the avulsa orders %d seasons unlike per-block head to head (control)\n",
+               nt, differ);
+}
+
 static void refused(void)
 {
     sr_srow row[2] = { { 0 }, { 0 } };
     uint8_t ord[2];
     static const uint8_t FP[] = { SR_TB_POINTS, SR_TB_FAIR_PLAY, 0 }, PO[] = { SR_TB_POINTS, SR_TB_PLAY_OFF_MATCH, 0 };
+    static const uint8_t AV[] = { SR_TB_POINTS, SR_TB_AVULSA, SR_TB_HOME_LOSSES_FEWER, SR_TB_NAME, 0 },
+                         AVN[] = { SR_TB_POINTS, SR_TB_NAME, 0 };
+    uint8_t o2[2];
     row[1].club = 1;
     CHECK(sr_league_rank(2, row, NULL, NULL, 3, 1, 0, FP, 0, ord) == -1, "fair play not refused");
     CHECK(sr_league_rank(2, row, NULL, NULL, 3, 1, 0, PO, 0, ord) == -1, "play-off match not refused");
+    row[0].pts = row[1].pts = 3;
+    sr_league_rank(2, row, NULL, NULL, 3, 1, 0, AV, 0, ord);
+    sr_league_rank(2, row, NULL, NULL, 3, 1, 0, AVN, 0, o2);
+    CHECK(ord[0] == o2[0] && ord[1] == o2[1], "no results block: avulsa / home losses not left out");
     CHECK(sr_league_rank(0, row, NULL, NULL, 3, 1, 0, F96, 0, ord) == -1, "n 0 not refused");
     CHECK(sr_league_rank(SR_STAGE_CLUBS + 1, row, NULL, NULL, 3, 1, 0, F96, 0, ord) == -1, "n 65 not refused");
     printf("PASS: refused: fair play, a play-off match (they need the game's data), n 0 and 65\n");
@@ -206,6 +307,7 @@ int main(int argc, char **argv)
     faithful_random(nt);
     faithful_real();
     h2h_random(nt / 5);
+    figc_random(nt / 5);
     refused();
     if (fails) printf("FAIL: %d check(s)\n", fails);
     return fails != 0;
