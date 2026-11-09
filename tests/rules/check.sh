@@ -78,6 +78,10 @@ for f, real in (('ita_s3', False), ('ita_s3r', True)):
         sys.exit(1)
 PY
     echo "PASS: Serie B / C play-offs as data (ita_s3, ita_s3r: the real cup rule; the Mod's compile_spec of ita_s3.json the same bytes), $N seasons each: every move and result the Mod's"
+    # ... and written in swc (tests/specs/ok/v14_ita_playoffs.json): swcc/swc_gplay.py's play-offs, the Mod's
+    # compile_spec of them = ita_s3 / ita_s3r.spec byte for byte
+    $CC -O1 -w -DSWCC_DEFAULT_PROFILE="\"$PWD/profiles/swos9697.json\"" -o "$OUT/swcc" swcc/swcc.c swcc/json.c swcc/swcc_main.c format/swc_format.c
+    python3 -I $T/s3swc.py "$OUT/swcc" "$MOD/tools" || exit 1
 else
     echo "SKIP: Serie B / C play-offs as data (this Mod's gplay.c has no 4.2 s3shape codes)"
 fi

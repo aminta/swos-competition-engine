@@ -134,6 +134,7 @@ test: $(OUT)/test_format $(OUT)/swcc $(OUT)/swc_i486.o $(RULES_I486) $(OUT)/spec
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/bteams42
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/cupplace
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/s3shape
+	python3 -I tests/rules/s3swc.py $(OUT)/swcc
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/reg
 	sh tests/rules/frames.sh $(CC) $(I486) -Wno-error=frame-larger-than
 	$(OUT)/swcc compile tests/specs/ok/v14_files_one.json -o $(OUT)/files_one.swc >/dev/null

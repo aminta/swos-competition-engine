@@ -1,0 +1,1751 @@
+{
+ "schema": "swc/1.3",
+ "id": "test.minor-13-league-entrants",
+ "host_world": 9,
+ "_expect": "a playoff competition's entrants \"<league>#N-M\" is swc/1.4",
+ "languages": [
+  "it",
+  "en",
+  "fr",
+  "de"
+ ],
+ "countries": {
+  "ITA": {
+   "names": {
+    "it": "ITALIA",
+    "en": "ITALY",
+    "fr": "ITALIE",
+    "de": "ITALIEN"
+   }
+  }
+ },
+ "clubs": [
+  {
+   "id": "club:ita.c000",
+   "name": "CLUB 0",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 0
+   }
+  },
+  {
+   "id": "club:ita.c001",
+   "name": "CLUB 1",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 1
+   }
+  },
+  {
+   "id": "club:ita.c002",
+   "name": "CLUB 2",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 2
+   }
+  },
+  {
+   "id": "club:ita.c003",
+   "name": "CLUB 3",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 3
+   }
+  },
+  {
+   "id": "club:ita.c004",
+   "name": "CLUB 4",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 4
+   }
+  },
+  {
+   "id": "club:ita.c005",
+   "name": "CLUB 5",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 5
+   }
+  },
+  {
+   "id": "club:ita.c006",
+   "name": "CLUB 6",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 6
+   }
+  },
+  {
+   "id": "club:ita.c007",
+   "name": "CLUB 7",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 7
+   }
+  },
+  {
+   "id": "club:ita.c008",
+   "name": "CLUB 8",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 8
+   }
+  },
+  {
+   "id": "club:ita.c009",
+   "name": "CLUB 9",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 9
+   }
+  },
+  {
+   "id": "club:ita.c010",
+   "name": "CLUB 10",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 10
+   }
+  },
+  {
+   "id": "club:ita.c011",
+   "name": "CLUB 11",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 11
+   }
+  },
+  {
+   "id": "club:ita.c012",
+   "name": "CLUB 12",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 12
+   }
+  },
+  {
+   "id": "club:ita.c013",
+   "name": "CLUB 13",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 13
+   }
+  },
+  {
+   "id": "club:ita.c014",
+   "name": "CLUB 14",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 14
+   }
+  },
+  {
+   "id": "club:ita.c015",
+   "name": "CLUB 15",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 15
+   }
+  },
+  {
+   "id": "club:ita.c016",
+   "name": "CLUB 16",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 16
+   }
+  },
+  {
+   "id": "club:ita.c017",
+   "name": "CLUB 17",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 17
+   }
+  },
+  {
+   "id": "club:ita.c018",
+   "name": "CLUB 18",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 18
+   }
+  },
+  {
+   "id": "club:ita.c019",
+   "name": "CLUB 19",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 19
+   }
+  },
+  {
+   "id": "club:ita.c020",
+   "name": "CLUB 20",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 20
+   }
+  },
+  {
+   "id": "club:ita.c021",
+   "name": "CLUB 21",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 21
+   }
+  },
+  {
+   "id": "club:ita.c022",
+   "name": "CLUB 22",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 22
+   }
+  },
+  {
+   "id": "club:ita.c023",
+   "name": "CLUB 23",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 23
+   }
+  },
+  {
+   "id": "club:ita.c024",
+   "name": "CLUB 24",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 24
+   }
+  },
+  {
+   "id": "club:ita.c025",
+   "name": "CLUB 25",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 25
+   }
+  },
+  {
+   "id": "club:ita.c026",
+   "name": "CLUB 26",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 26
+   }
+  },
+  {
+   "id": "club:ita.c027",
+   "name": "CLUB 27",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 27
+   }
+  },
+  {
+   "id": "club:ita.c028",
+   "name": "CLUB 28",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 28
+   }
+  },
+  {
+   "id": "club:ita.c029",
+   "name": "CLUB 29",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 29
+   }
+  },
+  {
+   "id": "club:ita.c030",
+   "name": "CLUB 30",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 30
+   }
+  },
+  {
+   "id": "club:ita.c031",
+   "name": "CLUB 31",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 31
+   }
+  },
+  {
+   "id": "club:ita.c032",
+   "name": "CLUB 32",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 32
+   }
+  },
+  {
+   "id": "club:ita.c033",
+   "name": "CLUB 33",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 33
+   }
+  },
+  {
+   "id": "club:ita.c034",
+   "name": "CLUB 34",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 34
+   }
+  },
+  {
+   "id": "club:ita.c035",
+   "name": "CLUB 35",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 35
+   }
+  },
+  {
+   "id": "club:ita.c036",
+   "name": "CLUB 36",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 36
+   }
+  },
+  {
+   "id": "club:ita.c037",
+   "name": "CLUB 37",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 37
+   }
+  },
+  {
+   "id": "club:ita.c038",
+   "name": "CLUB 38",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 38
+   }
+  },
+  {
+   "id": "club:ita.c039",
+   "name": "CLUB 39",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 39
+   }
+  },
+  {
+   "id": "club:ita.c040",
+   "name": "CLUB 40",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 40
+   }
+  },
+  {
+   "id": "club:ita.c041",
+   "name": "CLUB 41",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 41
+   }
+  },
+  {
+   "id": "club:ita.c042",
+   "name": "CLUB 42",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 42
+   }
+  },
+  {
+   "id": "club:ita.c043",
+   "name": "CLUB 43",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 43
+   }
+  },
+  {
+   "id": "club:ita.c044",
+   "name": "CLUB 44",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 44
+   }
+  },
+  {
+   "id": "club:ita.c045",
+   "name": "CLUB 45",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 45
+   }
+  },
+  {
+   "id": "club:ita.c046",
+   "name": "CLUB 46",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 46
+   }
+  },
+  {
+   "id": "club:ita.c047",
+   "name": "CLUB 47",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 47
+   }
+  },
+  {
+   "id": "club:ita.c048",
+   "name": "CLUB 48",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 48
+   }
+  },
+  {
+   "id": "club:ita.c049",
+   "name": "CLUB 49",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 49
+   }
+  },
+  {
+   "id": "club:ita.c050",
+   "name": "CLUB 50",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 50
+   }
+  },
+  {
+   "id": "club:ita.c051",
+   "name": "CLUB 51",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 51
+   }
+  },
+  {
+   "id": "club:ita.c052",
+   "name": "CLUB 52",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 52
+   }
+  },
+  {
+   "id": "club:ita.c053",
+   "name": "CLUB 53",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 53
+   }
+  },
+  {
+   "id": "club:ita.c054",
+   "name": "CLUB 54",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 54
+   }
+  },
+  {
+   "id": "club:ita.c055",
+   "name": "CLUB 55",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 55
+   }
+  },
+  {
+   "id": "club:ita.c056",
+   "name": "CLUB 56",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 56
+   }
+  },
+  {
+   "id": "club:ita.c057",
+   "name": "CLUB 57",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 57
+   }
+  },
+  {
+   "id": "club:ita.c058",
+   "name": "CLUB 58",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 58
+   }
+  },
+  {
+   "id": "club:ita.c059",
+   "name": "CLUB 59",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 59
+   }
+  },
+  {
+   "id": "club:ita.c060",
+   "name": "CLUB 60",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 60
+   }
+  },
+  {
+   "id": "club:ita.c061",
+   "name": "CLUB 61",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 61
+   }
+  },
+  {
+   "id": "club:ita.c062",
+   "name": "CLUB 62",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 62
+   }
+  },
+  {
+   "id": "club:ita.c063",
+   "name": "CLUB 63",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 63
+   }
+  },
+  {
+   "id": "club:ita.c064",
+   "name": "CLUB 64",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 64
+   }
+  },
+  {
+   "id": "club:ita.c065",
+   "name": "CLUB 65",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 65
+   }
+  },
+  {
+   "id": "club:ita.c066",
+   "name": "CLUB 66",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 66
+   }
+  },
+  {
+   "id": "club:ita.c067",
+   "name": "CLUB 67",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 67
+   }
+  },
+  {
+   "id": "club:ita.c068",
+   "name": "CLUB 68",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 68
+   }
+  },
+  {
+   "id": "club:ita.c069",
+   "name": "CLUB 69",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 69
+   }
+  },
+  {
+   "id": "club:ita.c070",
+   "name": "CLUB 70",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 70
+   }
+  },
+  {
+   "id": "club:ita.c071",
+   "name": "CLUB 71",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 71
+   }
+  },
+  {
+   "id": "club:ita.c072",
+   "name": "CLUB 72",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 72
+   }
+  },
+  {
+   "id": "club:ita.c073",
+   "name": "CLUB 73",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 73
+   }
+  },
+  {
+   "id": "club:ita.c074",
+   "name": "CLUB 74",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 74
+   }
+  },
+  {
+   "id": "club:ita.c075",
+   "name": "CLUB 75",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 75
+   }
+  },
+  {
+   "id": "club:ita.c076",
+   "name": "CLUB 76",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 76
+   }
+  },
+  {
+   "id": "club:ita.c077",
+   "name": "CLUB 77",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 77
+   }
+  },
+  {
+   "id": "club:ita.c078",
+   "name": "CLUB 78",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 78
+   }
+  },
+  {
+   "id": "club:ita.c079",
+   "name": "CLUB 79",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 79
+   }
+  },
+  {
+   "id": "club:ita.c080",
+   "name": "CLUB 80",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 80
+   }
+  },
+  {
+   "id": "club:ita.c081",
+   "name": "CLUB 81",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 81
+   }
+  },
+  {
+   "id": "club:ita.c082",
+   "name": "CLUB 82",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 82
+   }
+  },
+  {
+   "id": "club:ita.c083",
+   "name": "CLUB 83",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 83
+   }
+  },
+  {
+   "id": "club:ita.c084",
+   "name": "CLUB 84",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 84
+   }
+  },
+  {
+   "id": "club:ita.c085",
+   "name": "CLUB 85",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 85
+   }
+  },
+  {
+   "id": "club:ita.c086",
+   "name": "CLUB 86",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 86
+   }
+  },
+  {
+   "id": "club:ita.c087",
+   "name": "CLUB 87",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 87
+   }
+  },
+  {
+   "id": "club:ita.c088",
+   "name": "CLUB 88",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 88
+   }
+  },
+  {
+   "id": "club:ita.c089",
+   "name": "CLUB 89",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 89
+   }
+  },
+  {
+   "id": "club:ita.c090",
+   "name": "CLUB 90",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 90
+   }
+  },
+  {
+   "id": "club:ita.c091",
+   "name": "CLUB 91",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 91
+   }
+  },
+  {
+   "id": "club:ita.c092",
+   "name": "CLUB 92",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 92
+   }
+  },
+  {
+   "id": "club:ita.c093",
+   "name": "CLUB 93",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 93
+   }
+  },
+  {
+   "id": "club:ita.c094",
+   "name": "CLUB 94",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 94
+   }
+  },
+  {
+   "id": "club:ita.c095",
+   "name": "CLUB 95",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 95
+   }
+  },
+  {
+   "id": "club:ita.c096",
+   "name": "CLUB 96",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 96
+   }
+  },
+  {
+   "id": "club:ita.c097",
+   "name": "CLUB 97",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 97
+   }
+  },
+  {
+   "id": "club:ita.c098",
+   "name": "CLUB 98",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 98
+   }
+  },
+  {
+   "id": "club:ita.c099",
+   "name": "CLUB 99",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 99
+   }
+  }
+ ],
+ "competitions": [
+  {
+   "id": "ita.a",
+   "kind": "league",
+   "country": "ITA",
+   "level": 1,
+   "names": {
+    "it": [
+     "SERIE A",
+     "SERIE A"
+    ],
+    "en": [
+     "SERIE A",
+     "SERIE A"
+    ],
+    "fr": [
+     "SERIE A",
+     "SERIE A"
+    ],
+    "de": [
+     "SERIE A",
+     "SERIE A"
+    ]
+   },
+   "participants": {
+    "count": 20,
+    "clubs": [
+     "club:ita.c000",
+     "club:ita.c001",
+     "club:ita.c002",
+     "club:ita.c003",
+     "club:ita.c004",
+     "club:ita.c005",
+     "club:ita.c006",
+     "club:ita.c007",
+     "club:ita.c008",
+     "club:ita.c009",
+     "club:ita.c010",
+     "club:ita.c011",
+     "club:ita.c012",
+     "club:ita.c013",
+     "club:ita.c014",
+     "club:ita.c015",
+     "club:ita.c016",
+     "club:ita.c017",
+     "club:ita.c018",
+     "club:ita.c019"
+    ]
+   },
+   "points": {
+    "win": 3,
+    "draw": 1,
+    "loss": 0
+   },
+   "stages": [
+    {
+     "id": "table",
+     "type": "round_robin",
+     "legs": 2,
+     "tiebreakers": [
+      "points",
+      "goal_difference",
+      "goals_for",
+      "draw_lots"
+     ]
+    }
+   ],
+   "outcomes": [
+    {
+     "stage": "table",
+     "positions": "1",
+     "tag": "champion"
+    },
+    {
+     "stage": "table",
+     "positions": "18-20",
+     "tag": "relegated",
+     "zone": "RETR",
+     "to": "ita.b",
+     "season": "next"
+    }
+   ],
+   "modes": [
+    "career",
+    "season",
+    "friendly"
+   ]
+  },
+  {
+   "id": "ita.b",
+   "kind": "league",
+   "country": "ITA",
+   "level": 2,
+   "names": {
+    "it": [
+     "SERIE B",
+     "SERIE B"
+    ],
+    "en": [
+     "SERIE B",
+     "SERIE B"
+    ],
+    "fr": [
+     "SERIE B",
+     "SERIE B"
+    ],
+    "de": [
+     "SERIE B",
+     "SERIE B"
+    ]
+   },
+   "participants": {
+    "count": 20,
+    "clubs": [
+     "club:ita.c020",
+     "club:ita.c021",
+     "club:ita.c022",
+     "club:ita.c023",
+     "club:ita.c024",
+     "club:ita.c025",
+     "club:ita.c026",
+     "club:ita.c027",
+     "club:ita.c028",
+     "club:ita.c029",
+     "club:ita.c030",
+     "club:ita.c031",
+     "club:ita.c032",
+     "club:ita.c033",
+     "club:ita.c034",
+     "club:ita.c035",
+     "club:ita.c036",
+     "club:ita.c037",
+     "club:ita.c038",
+     "club:ita.c039"
+    ]
+   },
+   "points": {
+    "win": 3,
+    "draw": 1,
+    "loss": 0
+   },
+   "stages": [
+    {
+     "id": "table",
+     "type": "round_robin",
+     "legs": 2,
+     "tiebreakers": [
+      "points",
+      "goal_difference",
+      "goals_for",
+      "draw_lots"
+     ]
+    },
+    {
+     "id": "playoff",
+     "type": "playoff",
+     "entrants": "table#3-8",
+     "direct_if": {
+      "points_gap_ge": 15
+     },
+     "rounds": [
+      {
+       "ties": 2,
+       "byes": 2,
+       "legs": 1,
+       "home": "fixed",
+       "pairing": "fixed",
+       "fixed": [
+        [
+         "table#5",
+         "table#8"
+        ],
+        [
+         "table#6",
+         "table#7"
+        ]
+       ],
+       "decider": [
+        "better_placed"
+       ]
+      },
+      {
+       "ties": 2,
+       "legs": 2,
+       "home": "fixed",
+       "pairing": "fixed",
+       "fixed": [
+        [
+         "winner:1.2",
+         "table#3"
+        ],
+        [
+         "winner:1.1",
+         "table#4"
+        ]
+       ],
+       "decider": [
+        "aggregate",
+        "better_placed"
+       ]
+      },
+      {
+       "ties": 1,
+       "legs": 2,
+       "home": "better_placed_second_leg",
+       "pairing": "fixed",
+       "fixed": [
+        [
+         "winner:2.1",
+         "winner:2.2"
+        ]
+       ],
+       "decider": [
+        "aggregate",
+        "better_placed_unless_level_on_points",
+        "extra_time",
+        "penalties"
+       ]
+      }
+     ]
+    },
+    {
+     "id": "playout",
+     "type": "playoff",
+     "entrants": "table#16-17",
+     "skip_if": {
+      "points_gap_ge": 5
+     },
+     "rounds": [
+      {
+       "ties": 1,
+       "legs": 2,
+       "home": "better_placed_second_leg",
+       "pairing": "fixed",
+       "fixed": [
+        [
+         "table#16",
+         "table#17"
+        ]
+       ],
+       "decider": [
+        "aggregate",
+        "better_placed_unless_level_on_points",
+        "extra_time",
+        "penalties"
+       ]
+      }
+     ]
+    }
+   ],
+   "outcomes": [
+    {
+     "stage": "table",
+     "positions": "1-2",
+     "tag": "promoted",
+     "zone": "PROM",
+     "to": "ita.a",
+     "season": "next"
+    },
+    {
+     "stage": "playoff",
+     "positions": "1",
+     "tag": "promoted",
+     "to": "ita.a",
+     "season": "next"
+    },
+    {
+     "stage": "playout",
+     "positions": "2",
+     "tag": "relegated",
+     "to": "ita.c-a",
+     "season": "next"
+    },
+    {
+     "stage": "table",
+     "positions": "18",
+     "tag": "relegated",
+     "zone": "RETR",
+     "to": "ita.c-a",
+     "season": "next"
+    },
+    {
+     "stage": "table",
+     "positions": "19",
+     "tag": "relegated",
+     "zone": "RETR",
+     "to": "ita.c-b",
+     "season": "next"
+    },
+    {
+     "stage": "table",
+     "positions": "20",
+     "tag": "relegated",
+     "zone": "RETR",
+     "to": "ita.c-c",
+     "season": "next"
+    }
+   ],
+   "modes": [
+    "career",
+    "season",
+    "friendly"
+   ]
+  },
+  {
+   "id": "ita.c-a",
+   "kind": "league",
+   "country": "ITA",
+   "level": 3,
+   "names": {
+    "it": [
+     "SERIE C A",
+     "SERIE C A"
+    ],
+    "en": [
+     "SERIE C A",
+     "SERIE C A"
+    ],
+    "fr": [
+     "SERIE C A",
+     "SERIE C A"
+    ],
+    "de": [
+     "SERIE C A",
+     "SERIE C A"
+    ]
+   },
+   "participants": {
+    "count": 20,
+    "clubs": [
+     "club:ita.c040",
+     "club:ita.c041",
+     "club:ita.c042",
+     "club:ita.c043",
+     "club:ita.c044",
+     "club:ita.c045",
+     "club:ita.c046",
+     "club:ita.c047",
+     "club:ita.c048",
+     "club:ita.c049",
+     "club:ita.c050",
+     "club:ita.c051",
+     "club:ita.c052",
+     "club:ita.c053",
+     "club:ita.c054",
+     "club:ita.c055",
+     "club:ita.c056",
+     "club:ita.c057",
+     "club:ita.c058",
+     "club:ita.c059"
+    ]
+   },
+   "points": {
+    "win": 3,
+    "draw": 1,
+    "loss": 0
+   },
+   "stages": [
+    {
+     "id": "table",
+     "type": "round_robin",
+     "legs": 2,
+     "tiebreakers": [
+      "points",
+      "goal_difference",
+      "goals_for",
+      "draw_lots"
+     ]
+    }
+   ],
+   "outcomes": [
+    {
+     "stage": "table",
+     "positions": "1",
+     "tag": "promoted",
+     "zone": "PROM",
+     "to": "ita.b",
+     "season": "next"
+    },
+    {
+     "stage": "table",
+     "positions": "2-10",
+     "tag": "playoff",
+     "zone": "P.OFF",
+     "to": "ita.c-po"
+    }
+   ],
+   "modes": [
+    "career",
+    "season",
+    "friendly"
+   ]
+  },
+  {
+   "id": "ita.c-b",
+   "kind": "league",
+   "country": "ITA",
+   "level": 3,
+   "names": {
+    "it": [
+     "SERIE C B",
+     "SERIE C B"
+    ],
+    "en": [
+     "SERIE C B",
+     "SERIE C B"
+    ],
+    "fr": [
+     "SERIE C B",
+     "SERIE C B"
+    ],
+    "de": [
+     "SERIE C B",
+     "SERIE C B"
+    ]
+   },
+   "participants": {
+    "count": 20,
+    "clubs": [
+     "club:ita.c060",
+     "club:ita.c061",
+     "club:ita.c062",
+     "club:ita.c063",
+     "club:ita.c064",
+     "club:ita.c065",
+     "club:ita.c066",
+     "club:ita.c067",
+     "club:ita.c068",
+     "club:ita.c069",
+     "club:ita.c070",
+     "club:ita.c071",
+     "club:ita.c072",
+     "club:ita.c073",
+     "club:ita.c074",
+     "club:ita.c075",
+     "club:ita.c076",
+     "club:ita.c077",
+     "club:ita.c078",
+     "club:ita.c079"
+    ]
+   },
+   "points": {
+    "win": 3,
+    "draw": 1,
+    "loss": 0
+   },
+   "stages": [
+    {
+     "id": "table",
+     "type": "round_robin",
+     "legs": 2,
+     "tiebreakers": [
+      "points",
+      "goal_difference",
+      "goals_for",
+      "draw_lots"
+     ]
+    }
+   ],
+   "outcomes": [
+    {
+     "stage": "table",
+     "positions": "1",
+     "tag": "promoted",
+     "zone": "PROM",
+     "to": "ita.b",
+     "season": "next"
+    },
+    {
+     "stage": "table",
+     "positions": "2-10",
+     "tag": "playoff",
+     "zone": "P.OFF",
+     "to": "ita.c-po"
+    }
+   ],
+   "modes": [
+    "career",
+    "season",
+    "friendly"
+   ]
+  },
+  {
+   "id": "ita.c-c",
+   "kind": "league",
+   "country": "ITA",
+   "level": 3,
+   "names": {
+    "it": [
+     "SERIE C C",
+     "SERIE C C"
+    ],
+    "en": [
+     "SERIE C C",
+     "SERIE C C"
+    ],
+    "fr": [
+     "SERIE C C",
+     "SERIE C C"
+    ],
+    "de": [
+     "SERIE C C",
+     "SERIE C C"
+    ]
+   },
+   "participants": {
+    "count": 20,
+    "clubs": [
+     "club:ita.c080",
+     "club:ita.c081",
+     "club:ita.c082",
+     "club:ita.c083",
+     "club:ita.c084",
+     "club:ita.c085",
+     "club:ita.c086",
+     "club:ita.c087",
+     "club:ita.c088",
+     "club:ita.c089",
+     "club:ita.c090",
+     "club:ita.c091",
+     "club:ita.c092",
+     "club:ita.c093",
+     "club:ita.c094",
+     "club:ita.c095",
+     "club:ita.c096",
+     "club:ita.c097",
+     "club:ita.c098",
+     "club:ita.c099"
+    ]
+   },
+   "points": {
+    "win": 3,
+    "draw": 1,
+    "loss": 0
+   },
+   "stages": [
+    {
+     "id": "table",
+     "type": "round_robin",
+     "legs": 2,
+     "tiebreakers": [
+      "points",
+      "goal_difference",
+      "goals_for",
+      "draw_lots"
+     ]
+    }
+   ],
+   "outcomes": [
+    {
+     "stage": "table",
+     "positions": "1",
+     "tag": "promoted",
+     "zone": "PROM",
+     "to": "ita.b",
+     "season": "next"
+    },
+    {
+     "stage": "table",
+     "positions": "2-10",
+     "tag": "playoff",
+     "zone": "P.OFF",
+     "to": "ita.c-po"
+    }
+   ],
+   "modes": [
+    "career",
+    "season",
+    "friendly"
+   ]
+  },
+  {
+   "id": "ita.coppa-c",
+   "kind": "cup",
+   "country": "ITA",
+   "names": {
+    "it": [
+     "COPPA ITALIA C",
+     "COPPA ITALIA C"
+    ],
+    "en": [
+     "COPPA ITALIA C",
+     "COPPA ITALIA C"
+    ],
+    "fr": [
+     "COPPA ITALIA C",
+     "COPPA ITALIA C"
+    ],
+    "de": [
+     "COPPA ITALIA C",
+     "COPPA ITALIA C"
+    ]
+   },
+   "participants": {
+    "count": 4,
+    "clubs": [
+     "club:ita.c040",
+     "club:ita.c060",
+     "club:ita.c080",
+     "club:ita.c041"
+    ]
+   },
+   "stages": [
+    {
+     "id": "ko",
+     "type": "knockout",
+     "rounds": [
+      {
+       "ties": 2,
+       "legs": 1,
+       "home": "draw",
+       "pairing": "draw",
+       "decider": [
+        "extra_time",
+        "penalties"
+       ]
+      },
+      {
+       "ties": 1,
+       "legs": 2,
+       "home": "draw",
+       "pairing": "draw",
+       "decider": [
+        "aggregate",
+        "extra_time",
+        "penalties"
+       ]
+      }
+     ]
+    }
+   ],
+   "outcomes": [
+    {
+     "stage": "ko",
+     "positions": "1",
+     "tag": "champion"
+    }
+   ],
+   "modes": [
+    "career",
+    "season"
+   ]
+  },
+  {
+   "id": "ita.c-po",
+   "kind": "playoff",
+   "country": "ITA",
+   "names": {
+    "it": [
+     "PLAY-OFF C",
+     "PLAY-OFF C"
+    ],
+    "en": [
+     "PLAY-OFF C",
+     "PLAY-OFF C"
+    ],
+    "fr": [
+     "PLAY-OFF C",
+     "PLAY-OFF C"
+    ],
+    "de": [
+     "PLAY-OFF C",
+     "PLAY-OFF C"
+    ]
+   },
+   "participants": {
+    "count": 28,
+    "from": "link",
+    "source": [
+     "ita.c-a",
+     "ita.c-b",
+     "ita.c-c"
+    ]
+   },
+   "stages": [
+    {
+     "id": "po",
+     "type": "playoff",
+     "rank": "place_then_record",
+     "entrants": [
+      "ita.c-a#2-10",
+      "ita.c-b#2-10",
+      "ita.c-c#2-10",
+      {
+       "cup_place": {
+        "cup": "ita.coppa-c",
+        "groups": [
+         "ita.c-a",
+         "ita.c-b",
+         "ita.c-c"
+        ],
+        "takes": "table#11-15",
+        "takes_if_safe": "table#16-17",
+        "playout_gap": 8,
+        "instead": [
+         "group#11"
+        ],
+        "unknown": "best_of:#11"
+       }
+      }
+     ],
+     "rounds": [
+      {
+       "per": [
+        "ita.c-a",
+        "ita.c-b",
+        "ita.c-c"
+       ],
+       "ties": 3,
+       "byes": 10,
+       "legs": 1,
+       "home": "better_placed",
+       "pairing": "by_place",
+       "clubs": [
+        "#5-10"
+       ],
+       "decider": [
+        "better_placed"
+       ]
+      },
+      {
+       "per": [
+        "ita.c-a",
+        "ita.c-b",
+        "ita.c-c"
+       ],
+       "ties": 2,
+       "byes": 7,
+       "legs": 1,
+       "home": "better_placed",
+       "pairing": "by_place",
+       "clubs": [
+        "#4",
+        "winners:1"
+       ],
+       "decider": [
+        "better_placed"
+       ]
+      },
+      {
+       "ties": 5,
+       "byes": 3,
+       "legs": 2,
+       "home": "fixed",
+       "pairing": "seeded",
+       "seeds": [
+        "ita.c-a#3",
+        "ita.c-b#3",
+        "ita.c-c#3",
+        "cup_place",
+        {
+         "best_of": "winners:2"
+        }
+       ],
+       "drawn": [
+        {
+         "rest_of": "winners:2"
+        }
+       ],
+       "decider": [
+        "aggregate",
+        "seed"
+       ]
+      },
+      {
+       "ties": 4,
+       "legs": 2,
+       "home": "fixed",
+       "pairing": "seeded",
+       "seeds": [
+        "ita.c-a#2",
+        "ita.c-b#2",
+        "ita.c-c#2",
+        {
+         "best_of": "winners:3"
+        }
+       ],
+       "drawn": [
+        {
+         "rest_of": "winners:3"
+        }
+       ],
+       "decider": [
+        "aggregate",
+        "seed"
+       ]
+      },
+      {
+       "ties": 2,
+       "legs": 2,
+       "home": "fixed",
+       "pairing": "draw",
+       "decider": [
+        "aggregate",
+        "extra_time",
+        "penalties"
+       ]
+      },
+      {
+       "ties": 1,
+       "legs": 2,
+       "home": "fixed",
+       "pairing": "bracket",
+       "decider": [
+        "aggregate",
+        "extra_time",
+        "penalties"
+       ]
+      }
+     ]
+    }
+   ],
+   "outcomes": [
+    {
+     "stage": "po",
+     "positions": "1",
+     "tag": "promoted",
+     "to": "ita.b",
+     "season": "next"
+    }
+   ],
+   "modes": [
+    "career",
+    "season"
+   ]
+  }
+ ]
+}

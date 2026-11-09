@@ -542,9 +542,10 @@ static int stage_index(StageInfo *si, int n, const char *id)
    preclusions), "group#N" (place N of the winner's group), {"place": "winner_group#N", "scroll": true} (that place,
    its group's play-off scrolled up); "unknown" the place when the winner is not known ("best_of:#N"). One club. */
 static void gap_obj(C *c, JNode *o, const char *path);
+static int cur_kind;                    /* (the competition being read: its kind) */
 /* v1.4: a place reference "stage#N" ("stage#N-M" with range) of an earlier stage of this competition -- the stage
-   resolved and N within its places, as entr_item does; or (league != NULL) of that league's stage. 1, or 0 after an
-   error. */
+   resolved and N within its places, as entr_item does; or (league != NULL) of that league's stage; in a playoff
+   competition also "<league>#N", N within the league's clubs. 1, or 0 after an error. */
 static int place_ref(C *c, JNode *v, const char *path, const char *what, StageInfo *all_st, int first_stage, int nall,
                      int range, JNode *league)
 {
@@ -566,6 +567,11 @@ static int place_ref(C *c, JNode *v, const char *path, const char *what, StageIn
     } else {
         ix = stage_index(all_st + first_stage, nall - first_stage, v->str);
         if (ix >= 0) lo = all_st[first_stage + ix].gmin ? all_st[first_stage + ix].gmin : all_st[first_stage + ix].teams;
+        else if (cur_kind == SWC_K_PLAYOFF && (ix = find_comp(c, v->str)) >= 0) {   /* (a playoff competition: "<league>#N") */
+            JNode *kd = json_get(c->comps[ix], "kind"), *cnt = json_get(json_get(c->comps[ix], "participants"), "count");
+            if (!kd || kd->type != J_STR || strcmp(kd->str, "league")) ix = -1;
+            lo = cnt && cnt->type == J_NUM ? (int)cnt->num : 0;
+        }
     }
     *hash = '#';
     if (ix < 0) {
@@ -622,6 +628,7 @@ static int cup_place_item(C *c, JNode *it, const char *sp, int *src, int *per, S
             ok = 0;
         }
     }
+    if ((v = opt(c, cp, "playout_gap", J_NUM, sp))) { long g = 0; if (!int_in(c, v, "playout_gap", sp, 0, 99, &g)) ok = 0; }
     if ((v = opt(c, cp, "unknown", J_STR, sp)) && (strncmp(v->str, "best_of:#", 9) || strtol(v->str + 9, NULL, 10) < 1)) {
         ERR(v, sp, "cup_place.unknown: \"best_of:#N\" (the best placed N-th of the groups)");
         ok = 0;
@@ -646,6 +653,7 @@ static int ko_ref(C *c, JNode *it, const char *rp, int ri, const long *rties, St
         ERR(it, rp, "{\"best_of\" / \"rest_of\": \"winners:R\"}: R an earlier round (from 1)");
         return 0;
     }
+    if (it->type == J_STR && !strcmp(it->str, "cup_place")) { need_minor(c, it, rp, 4, "\"cup_place\""); return 1; }
     if (it->type != J_STR) { ERR(it, rp, "a round's club: \"winner:R.T\", \"loser:R.T\", \"stage#N\" or {\"best_of\": \"winners:R\"}"); return 0; }
     if (!strncmp(it->str, "winner:", 7) || !strncmp(it->str, "loser:", 6)) {
         need_minor(c, it, rp, 4, "a round's \"winner:R.T\" / \"loser:R.T\"");
@@ -674,6 +682,19 @@ static int entr_item(C *c, JNode *it, const char *sp, StageInfo *all_st, int fir
     int a, b, ix, n = -1;
     long k = 0;
     if (it->type == J_OBJ && json_get(it, "cup_place")) return cup_place_item(c, it, sp, src, per, all_st, first_stage, nall);
+    if (it->type == J_STR && (hash = strchr(it->str, '#')) && cur_kind == SWC_K_PLAYOFF) {   /* v1.4: "<league>#N-M" */
+        *hash = 0;
+        ix = find_comp(c, it->str);
+        *hash = '#';
+        if (ix >= 0) {
+            JNode *kd = json_get(c->comps[ix], "kind");
+            need_minor(c, it, sp, 4, "a playoff competition's entrants \"<league>#N-M\"");
+            if (!kd || kd->type != J_STR || strcmp(kd->str, "league")) ERR(it, sp, "entrants \"%s\": not a league", it->str);
+            if (!positions(hash + 1, &a, &b) || a < 1 || b < a) { ERR(it, sp, "entrants \"%s\": write '<league>#N-M'", it->str); return -1; }
+            *src = -1; *per = 0; *pa = a; *pb = b;
+            return b - a + 1;
+        }
+    }
     if (it->type == J_OBJ) {
         ref = need(c, it, "best_of", J_STR, sp);
         cnt = need(c, it, "count", J_NUM, sp);
@@ -781,6 +802,7 @@ static void do_comp(C *c, int ci, StageInfo *all_st, int *nall)
     }
     kind = need(c, cp, "kind", J_STR, path);
     if ((k = enum_member(c, kind, "kind", path, KINDS, NE(KINDS))) > 0) rec.kind = (uint8_t)k;
+    cur_kind = k;
     country = need(c, cp, "country", J_STR, path);
     if (country) {
         if (!c->countries || !json_get(c->countries, country->str)) ERR(country, path, "country \"%s\" is not in 'countries'", country->str);
@@ -1032,6 +1054,36 @@ static void do_comp(C *c, int ci, StageInfo *all_st, int *nall)
                     pathf(rp, sizeof rp, "%s.rounds[%d]", sp, ri);
                     if (r->type != J_OBJ) { ERR(r, rp, "a round is an object"); continue; }
                     int_in(c, need(c, r, "ties", J_NUM, rp), "ties", rp, 1, 1024, &ties);
+                    {                                       /* v1.4: a round played in each of several leagues (a playoff
+                                                               competition: 'per' the leagues, 'ties' each one's), its
+                                                               clubs listed ("#N-M" of that league, "<league>#N",
+                                                               "winners:R": an earlier round's -- that league's under 'per') */
+                        JNode *pe = opt(c, r, "per", J_ARR, rp), *cl = opt(c, r, "clubs", J_ARR, rp), *q;
+                        int np = 0, ncl = 0;
+                        if (pe) {
+                            need_minor(c, pe, rp, 4, "a round's 'per'");
+                            if (rec.kind != SWC_K_PLAYOFF) ERR(pe, rp, "'per' goes on a playoff competition's round");
+                            for (q = pe->child; q; q = q->next, np++) {
+                                int kx = q->type == J_STR ? find_comp(c, q->str) : -1;
+                                JNode *kd = kx >= 0 ? json_get(c->comps[kx], "kind") : NULL;
+                                if (!kd || kd->type != J_STR || strcmp(kd->str, "league")) ERR(q, rp, "per: a league id of this file");
+                            }
+                        }
+                        if (cl) {
+                            need_minor(c, cl, rp, 4, "a round's 'clubs'");
+                            for (q = cl->child; q; q = q->next) {
+                                long rr2 = 0;
+                                char *e2;
+                                int a2, b2;
+                                const char *h2 = q->type == J_STR ? strchr(q->str, '#') : NULL;
+                                if (q->type == J_STR && !strncmp(q->str, "winners:", 8) && (rr2 = strtol(q->str + 8, &e2, 10)) >= 1 && rr2 <= ri && !*e2) { ncl += -1000; continue; }
+                                if (h2 && positions(h2 + 1, &a2, &b2) && a2 >= 1 && b2 >= a2 && (h2 != q->str || pe)) { ncl += b2 - a2 + 1; continue; }
+                                ERR(q, rp, "clubs: \"#N-M\" (with 'per'), \"<league>#N-M\" or \"winners:R\" (an earlier round)");
+                            }
+                            (void)ncl;
+                        }
+                        if (np > 1) ties *= np;             /* (the count checks: every league's ties) */
+                    }
                     int_in(c, need(c, r, "legs", J_NUM, rp), "legs", rp, 1, 2, &rl);
                     int_in(c, opt(c, r, "byes", J_NUM, rp), "byes", rp, 0, 1024, &byes);
                     h = enum_member(c, need(c, r, "home", J_STR, rp), "home", rp, HOMES, NE(HOMES));
@@ -1055,7 +1107,9 @@ static void do_comp(C *c, int ci, StageInfo *all_st, int *nall)
                             need_minor(c, se, rp, 4, "'seeds'");
                             if (pr != 1) ERR(se, rp, "'seeds' need \"pairing\": \"seeded\"");
                             if (se->n != ties) ERR(se, rp, "seeds: %d listed, 'ties' says %ld", se->n, ties);
-                            if (dr && dr->n != ties) ERR(dr, rp, "drawn: %d listed, 'ties' says %ld", dr->n, ties);
+                            int rest = 0;               /* (a 'rest_of' stands for the round's other winners) */
+                            for (q = dr ? dr->child : NULL; q; q = q->next) rest |= q->type == J_OBJ && json_get(q, "rest_of");
+                            if (dr && !rest && dr->n != ties) ERR(dr, rp, "drawn: %d listed, 'ties' says %ld", dr->n, ties);
                             for (q = se->child; q; q = q->next) ko_ref(c, q, rp, ri, rties, all_st, first_stage, *nall);
                             for (q = dr ? dr->child : NULL; q; q = q->next) ko_ref(c, q, rp, ri, rties, all_st, first_stage, *nall);
                             for (int k2 = 0; k2 < 2; k2++)  /* (one reference once in the round) */
