@@ -6,7 +6,8 @@
 make sim-italy                    # 10^5 seasons (~25 s) + the controls pts / order / move
 build/simdrv [SEASONS [SEED]]     # default 100000 1
 SIMDRV_MODEL=h0,a0,c,rho          # goal model, default 1.40,1.08,70,0.12
-SIMDRV_BREAK=pts|order|move       # controls: each must FAIL
+SIMDRV_BREAK=pts|order|move|cout  # controls: each must FAIL
+SIMDRV_CGAP=g                     # Serie C play-outs' gap (default 8, the 4.2 pack's)
 ```
 
 ## Model
@@ -36,12 +37,14 @@ SIMDRV_BREAK=pts|order|move       # controls: each must FAIL
 2. **The library:**
    - `sr_italy`: B's play-off (3rd..8th, held unless 3rd > 4th + 14) and play-out (16th v 17th, held unless 16th > 17th + 4). Their ties are played by the model through `sr_force.win`: level on aggregate, the better placed goes through; extra time and penalties only when level on points.
    - Then `sr_knockouts` and `sr_final_moves`.
-   - Serie C's play-outs are spec knockouts (4.2 spec). No spec is given here, so only C's 20th goes down. italyfull is the chain test.
+   - Serie C's play-outs (phase 3): the 4.2 pack's `cX_playout`, given to `sr_knockouts` as `lg.spec` (gplay compile_spec bytes, one play-off per group): 16th v 19th and 17th v 18th, two legs, the better placed hosts the return, level on aggregate -> the better placed stays, gap 8 (8+ points apart: not played, the lower placed down), the losers out to the D sink. The 20th goes down by the count.
 3. **Invariants:**
    - In A, only 18th–20th go down.
    - B sends up 1st, 2nd and one play-off winner from 3rd..8th.
    - A down = B up = 3, and B down = C up.
    - Every division has 20 clubs after the moves, plus the per-table invariants (matches, points, goals, wins/losses, the two rankers equal, points non-increasing).
+   - Serie C, per group: exactly 3 down (the 20th + one loser per play-out tie), nobody above 16th down, a tie not held sends its lower placed club down; `sr_knockouts` makes the 6 play-out moves.
+   - The run stops after the first season with a broken invariant (its tables may be unplayable).
 
 ## Numbers (10^5 seasons, seed 1)
 
@@ -75,3 +78,15 @@ SIMDRV_BREAK=pts|order|move       # controls: each must FAIL
 **Serie C group A's composition drifts:** strong clubs come down from B and new clubs come up from D, so the group gets compressed. Its tie counts are therefore higher than in a group with fixed strengths. A fixed group of 20, before phase 2, gave 1.95 pairs per season, 0.021% past goals for and 0.010% to the draw.
 
 **The draw in Serie C:** the list reaches draw lots in about 3 pairs per 10^5 seasons per group, i.e. about 0.0001 per season over Serie C's 3 groups. That is the size of the declared gap: the Serie C text has no draw.
+
+## Serie C play-outs (phase 3, 10^5 seasons, seed 1, gap 8)
+
+| | 16th v 19th held | 17th v 18th held | down: 16th | 17th | 18th | 19th | 20th |
+|---|---|---|---|---|---|---|---|
+| Group A (match level) | 14.0% | 71.3% | 4.8% | 26.2% | 73.8% | 95.2% | 100% |
+| Groups B, C (light tables, spread 40) | 77% | 99.0% | 31% | 42% | 58% | 69% | 100% |
+
+- Serie C sends 9 down and 4 up per season; the A / B / C counts hold every season.
+- **The two models disagree a lot.** Group A's bottom is stretched by the D sink's new clubs (strength 170..250 against C's 180..280, fixed for life), so 16th v 19th is rarely within 8 points. The light groups are compressed. Real Serie C seasons sit between the two; neither is a calibrated forecast.
+- **Gap 8 vs 9** (group A): the two clubs are exactly 8 points apart in 3.5% (16v19) / 3.9% (17v18) of seasons - the cases where "8 or more" and "more than 8" differ. With `SIMDRV_CGAP=9` the play-outs are held 17.4% / 75.7%.
+- **Coupling found:** `sr_dplay.c cup_out` (the Coppa Italia Serie C winner in a play-out place has no play-off place) hard-codes the play-out gap as 8 (`< 8`), apart from the spec's `gap`. With gap 8 they agree. With `SIMDRV_CGAP=9`, season 22936 broke the B down = C up invariant: the cup winner, 17th and exactly 8 points clear of the 18th, kept its play-off place (cup_out: not held), won the play-off and lost the play-out (spec: held) - up and down at once. If the play-out gap ever changes in the data, cup_out must read it.

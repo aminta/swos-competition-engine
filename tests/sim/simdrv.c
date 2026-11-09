@@ -22,7 +22,8 @@
  * sends up new clubs. Invariants: A's 18th..20th down and no other A club moves, the play-off losers 2nd / 18th, B up 3
  * (1st, 2nd, a play-off winner from 3rd..8th), B down = C up, 20 clubs per division after the moves.
  * Usage: simdrv [SEASONS [SEED]] (default 100000 1). SIMDRV_BREAK=pts (a point lost) / order (two places swapped) /
- * move (an extra Serie A club down) must FAIL. */
+ * move (an extra Serie A club down) / cout (Serie C group A's 20th kept) must FAIL; SIMDRV_CGAP=g the C play-outs' gap
+ * (default 8, the 4.2 pack's). */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -73,6 +74,14 @@ static int cdiv[NSLOT];                     /* slot -> division 0 A, 1 B, 2..4 C
 static uint16_t cstr[NSLOT];                /* slot -> strength */
 static uint16_t cid[NSLOT];                 /* slot -> the club's identity (a new one when a slot is refilled) */
 static uint16_t next_id;
+/* phase 3: Serie C's play-outs, the 4.2 pack's (world5tm-s1rank ita 'cX_playout'): per group 16th v 19th and 17th v 18th,
+ * two legs, the better placed hosts the return, level on aggregate -> the better placed stays, gap 8 (8+ points apart:
+ * not played, the lower placed down), the losers to Serie D (here the reserve: the D sink) - gplay.py compile_spec's
+ * bytes, one play-off per group (sr_knockouts) */
+enum { CSP = 6 + 4 * 4 + 6 + 4 };
+static uint8_t CSPEC[NC * CSP + 1], c_gap = 8;
+static int in_ko;                           /* force_win inside sr_knockouts: a C play-out tie */
+static long long c_held[NC][2], c_downp[NC][N], c_held_a9[2], c_eight[2], c_lvl_pts[2];
 static sr_state S;
 static int pts_of[NSLOT];                   /* this season's points (the B final's ET / pens rule) */
 static long long po_title_played, po_rel_played, b_po_held, b_out_held, c_up, c_down,
@@ -102,6 +111,7 @@ static uint16_t force_win(void *ctx, uint16_t home, uint16_t away, int32_t legs)
     if (legs == 2) { play(a, h, &x, &y); ga += x, gh += y; }
     play(h, a, &x, &y); gh += x, ga += y;
     if (gh != ga) return gh > ga ? home : away;
+    if (in_ko) return home;                  /* (C play-outs: level on aggregate, the better placed - the return's host) */
     if (pts_of[h] == pts_of[a]) { play(h, a, &x, &y); if (x != y) return x > y ? home : away; return (uint16_t)pens(h, a); }
     return home;
 }
@@ -283,15 +293,19 @@ static void season_end(uint32_t seed, long sn)
     memset(&lg, 0, sizeof lg);
     lg.divisions = ND; lg.promoted = PROM; lg.relegated = REL;
     lg.italy = 1; lg.serie_b = 1; lg.group_first = 2; lg.groups = NC;
+    lg.spec = CSPEC; lg.spec_len = sizeof CSPEC;
     const sr_levels lv = { 3, LVF };
     sr_season se;
     memset(&se, 0, sizeof se);
     se.levels = &lv; se.force = &FORCE;
     se.cup_winner = S.t.t[2 + seed % NC][(seed >> 4) % N].team;
     CHECK(sr_italy(&S, &lg, &se) >= 0, "season %ld: sr_italy refused", sn);
-    sr_knockouts(&S, &lg, &se);
+    in_ko = 1;
+    CHECK(sr_knockouts(&S, &lg, &se) == 2 * NC, "season %ld: sr_knockouts: not the 6 play-out moves", sn);
+    in_ko = 0;
     sr_final_moves(&S, &lg, &lv, 0);
     if (brk && !strcmp(brk, "move") && sn == 1) S.want[0][5] = 1;
+    if (brk && !strcmp(brk, "cout") && sn == 1) S.want[2][19] = 0;   /* (a control: Serie C group A's 20th kept up) */
     /* the moves: invariants, then applied */
     int up[3] = { 0 }, down[3] = { 0 };
     for (int d = 0; d < ND; d++)
@@ -313,6 +327,24 @@ static void season_end(uint32_t seed, long sn)
     b_po_held += sr_playoff_held(S.t.t[1][2].pts, S.t.t[1][3].pts) != 0;   /* (dplay.c's rules: 3rd > 4th + 14 up direct; */
     b_out_held += sr_out_held(S.t.t[1][15].pts, S.t.t[1][16].pts) != 0;    /*  16th > 17th + 4: 17th down direct) */
     c_up += up[2], c_down += down[2];
+    for (int g = 0; g < NC; g++) {               /* phase 3: each group's play-outs (rows by place, before the moves) */
+        const sr_row *t = S.t.t[2 + g];
+        int dn = 0;
+        for (int k = 0; k < N; k++) if (S.want[2 + g][k] > 0) { dn++; c_downp[g][k]++; }
+        CHECK(dn == 3, "season %ld: Serie C group %d sends %d down (the 20th + 2 play-out losers)", sn, g, dn);
+        CHECK(S.want[2 + g][19] > 0, "season %ld: Serie C group %d's 20th not down", sn, g);
+        static const int pa[2] = { 15, 16 }, pb[2] = { 18, 17 };
+        for (int i = 0; i < 2; i++) {
+            const int d = t[pa[i]].pts - t[pb[i]].pts;
+            const int held = d < c_gap;
+            c_held[g][i] += held;
+            if (!g) { c_held_a9[i] += d < 9; c_eight[i] += d == 8; c_lvl_pts[i] += d == 0; }
+            CHECK((S.want[2 + g][pa[i]] > 0) + (S.want[2 + g][pb[i]] > 0) == 1, "season %ld: group %d tie %d: not one loser", sn, g, i);
+            if (!held) CHECK(S.want[2 + g][pb[i]] > 0, "season %ld: group %d tie %d not held (%d points) but the %dth stays",
+                             sn, g, i, d, pb[i] + 1);
+        }
+        for (int k = 0; k < 15; k++) CHECK(S.want[2 + g][k] <= 0, "season %ld: group %d place %d down", sn, g, k + 1);
+    }
     /* apply: A <-> B, B <-> C (the C holes filled by B's relegated, in group order), C's relegated -> D sink */
     int hole[NC * N], nh = 0, bdown[N], nbd = 0;
     for (int d = 0; d < ND; d++)
@@ -347,7 +379,22 @@ int main(int argc, char **argv)
         cid[i] = (uint16_t)i;
     }
     next_id = NSLOT;
-    for (long s = 0; s < ns && fails < 10; s++) {
+    if (getenv("SIMDRV_CGAP")) c_gap = (uint8_t)atoi(getenv("SIMDRV_CGAP"));
+    for (int g = 0; g < NC; g++) {               /* the C play-outs' spec (gplay.c's form: header, entrants, round) */
+        uint8_t *q = CSPEC + g * CSP;
+        static const uint8_t pl[4] = { 16, 19, 17, 18 };
+        q[0] = 4; q[1] = 4; q[2] = 1; q[3] = 0; q[4] = 0xFE; q[5] = 0;   /* playout, 4 entrants, 1 round, loser: reserve */
+        for (int i = 0; i < 4; i++) q[6 + 4 * i] = 0, q[7 + 4 * i] = (uint8_t)(2 + g), q[8 + 4 * i] = pl[i], q[9 + 4 * i] = 0;
+        uint8_t *r = q + 22;
+        r[0] = 2; r[1] = 2; r[2] = 1; r[3] = 0; r[4] = 0; r[5] = c_gap;   /* 2 ties, 2 legs, host better, level better */
+        r[6] = 0; r[7] = 1; r[8] = 2; r[9] = 3;
+    }
+    CSPEC[NC * CSP] = 0;
+    {
+        sr_check_error ce;
+        CHECK(sr_spec_check(CSPEC, sizeof CSPEC, ND, &ce) >= 0, "the C play-out spec refused by sr_spec_check");
+    }
+    for (long s = 0; s < ns && !fails; s++) {       /* (the first season with a broken invariant ends the run: its tables may be unplayable) */
         const uint32_t seed = rnd32();
         league(0, seed);
         league(1, seed ^ 0x1234567u);
@@ -368,9 +415,18 @@ int main(int argc, char **argv)
     printf("season end (sr_italy + sr_knockouts + sr_final_moves): Serie B play-off held %.1f%% of seasons, play-out held %.1f%%;"
            " the play-off winner's place:", 100.0 * b_po_held / seasons_run, 100.0 * b_out_held / seasons_run);
     for (int k = 2; k < 8; k++) printf(" %d. %.1f%%", k + 1, 100.0 * b_up_po_place[k] / seasons_run);
-    printf("\n  Serie C: %.2f up, %.2f down per season (no spec: its play-outs are the 4.2 spec's knockouts, not run here -- the"
-           " 20th only); seasons with a wrong A/B/C count: %lld\n",
-           (double)c_up / seasons_run, (double)c_down / seasons_run, moves_bad);
+    printf("\n  Serie C: %.2f up, %.2f down per season (the 20th + the play-out losers, gap %d); seasons with a wrong A/B/C"
+           " count: %lld\n", (double)c_up / seasons_run, (double)c_down / seasons_run, c_gap, moves_bad);
+    for (int g = 0; g < NC; g++) {
+        printf("  Serie C group %c%s: play-out 16th v 19th held %.1f%%, 17th v 18th held %.1f%%; down from 16th..20th:",
+               'A' + g, g ? " (light)" : " (match level)", 100.0 * c_held[g][0] / seasons_run, 100.0 * c_held[g][1] / seasons_run);
+        for (int k = 15; k < N; k++) printf(" %d. %.1f%%", k + 1, 100.0 * c_downp[g][k] / seasons_run);
+        printf("\n");
+    }
+    printf("  group A: exactly 8 points apart (held only with gap 9): 16v19 %.2f%%, 17v18 %.2f%%; level on points %.2f%% / %.2f%%"
+           " (with gap 9 held %.1f%% / %.1f%%)\n", 100.0 * c_eight[0] / seasons_run, 100.0 * c_eight[1] / seasons_run,
+           100.0 * c_lvl_pts[0] / seasons_run, 100.0 * c_lvl_pts[1] / seasons_run,
+           100.0 * c_held_a9[0] / seasons_run, 100.0 * c_held_a9[1] / seasons_run);
     for (int d = 0; d < NL; d++) {
         long long np = 0, past_gf = 0;
         for (int q = 0; q < NTB; q++) np += decided[d][q], past_gf += q > 4 ? decided[d][q] : 0;
