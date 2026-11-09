@@ -120,6 +120,8 @@ sim: $(OUT)/masssim $(OUT)/italysim $(OUT)/italyfull
 	@for b in drop bteam updown regdrop regdup regdiv; do if ITALYFULL_BREAK=$$b $(OUT)/italyfull 2 3 >/dev/null; then echo "italyfull control $$b NOT caught"; exit 1; fi; done
 	@echo "italyfull controls: a club dropped, a B team in its first team's division, one too many up, a swap dropped, a slot twice, a wrong division byte -> caught"
 
+sim-italy: | $(OUT) ; $(CC) $(CFLAGS) -Irules -o $(OUT)/simdrv tests/sim/simdrv.c rules/sr_stage.c -lm && $(OUT)/simdrv 100000 && for b in pts order; do if SIMDRV_BREAK=$$b $(OUT)/simdrv 3 >/dev/null; then echo "simdrv control $$b NOT caught"; exit 1; fi; done
+
 test: $(OUT)/test_format $(OUT)/swcc $(OUT)/swc_i486.o $(RULES_I486) $(OUT)/spec_check $(OUT)/team_order $(OUT)/groups_guard $(OUT)/nonleague $(OUT)/ecclp $(OUT)/stage $(OUT)/bteams42 $(OUT)/cupplace $(OUT)/reg $(OUT)/s3shape $(OUT)/league_rank
 	$(OUT)/swcc compile packs/sample/world.json -o $(OUT)/sample.swc >/dev/null
 	$(OUT)/test_format $(OUT)/sample.swc
