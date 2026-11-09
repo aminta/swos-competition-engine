@@ -3,6 +3,9 @@
  * League, the Southern League Premier Central and South, the Isthmian Premier; Davide 07/11 B).
  * No matches are played: each division's table comes from the clubs' strengths and the season's
  * seed, then its champion and its play-off winner (2nd-7th, the National League's shape) go up.
+ * The 2026-27 step-3 play-offs are that shape (the NPL, SPL Central / South and Isthmian Premier tables on
+ * en.wikipedia, "2026-27 ...": "six teams play for one spot", 2nd-3rd into the semi-finals, 4th-7th the
+ * quarter-finals); tests/rules/step3real.c runs the chain on the 2026-27 clubs.
  *
  * Every draw is from a hash of the seed, the division and the clubs' idents (or the tie), never a
  * running generator: the same clubs give the same table whatever the order they come in, and a club
