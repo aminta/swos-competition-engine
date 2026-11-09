@@ -195,15 +195,15 @@ static const sr_srow *rf_row;
 /* club c's head-to-head points (what 0) / goal difference (1) over the matches among the clubs in s[0..k) */
 static int rf_h2h(int c, const int *s, int k, int what)
 {
-    int in[24] = { 0 }, pts = 0, gd = 0;
+    int in[24] = { 0 }, pts = 0, gd = 0, gf = 0;
     for (int i = 0; i < k; i++) in[s[i]] = 1;
     for (int i = 0; i < rf_nm; i++) {
         const sr_match *x = &rf_m[i];
         if (!x->played || !in[x->home] || !in[x->away] || (x->home != c && x->away != c)) continue;
         const int f = x->home == c ? x->hg : x->ag, a = x->home == c ? x->ag : x->hg;
-        pts += f > a ? 3 : f == a; gd += f - a;
+        pts += f > a ? 3 : f == a; gd += f - a; gf += f;
     }
-    return what ? gd : pts;
+    return what == 2 ? gf : what ? gd : pts;
 }
 
 static long rf_key(uint8_t t, int c, const int *s, int k)
@@ -213,6 +213,8 @@ static long rf_key(uint8_t t, int c, const int *s, int k)
     switch (t) {
     case SR_TB_POINTS: return r->pts;
     case SR_TB_AVULSA: return (long)rf_h2h(c, s, k, 0) * 4096 + rf_h2h(c, s, k, 1);   /* pts, then GD: lexicographic */
+    case SR_TB_H2H_TABLE_ONCE:                                  /* EFL 9.2: one mini-table, pts, GD, GF */
+        return ((long)rf_h2h(c, s, k, 0) * 4096 + rf_h2h(c, s, k, 1) + 2048) * 4096 + rf_h2h(c, s, k, 2);
     case SR_TB_H2H_GOAL_DIFFERENCE: return rf_h2h(c, s, k, 1);
     case SR_TB_GOAL_DIFFERENCE: return (long)r->gf - r->ga;
     case SR_TB_GOALS_FOR: return r->gf;
@@ -250,15 +252,17 @@ static void figc_random(int nt)
         SC[] = { SR_TB_POINTS, SR_TB_AVULSA, SR_TB_H2H_GOAL_DIFFERENCE, SR_TB_GOAL_DIFFERENCE, SR_TB_GOALS_FOR,
                  SR_TB_GOALS_AGAINST, SR_TB_WINS, SR_TB_LOSSES_FEWER, SR_TB_AWAY_WINS, SR_TB_HOME_LOSSES_FEWER,
                  SR_TB_NAME, 0 },
+        EF[] = { SR_TB_POINTS, SR_TB_GOAL_DIFFERENCE, SR_TB_GOALS_FOR, SR_TB_H2H_TABLE_ONCE, SR_TB_NAME, 0 },
+        E1[] = { SR_TB_POINTS, SR_TB_H2H_TABLE_ONCE, SR_TB_NAME, 0 }, EA[] = { SR_TB_POINTS, SR_TB_AVULSA, SR_TB_NAME, 0 },
         OLD[] = { SR_TB_POINTS, SR_TB_H2H_POINTS, SR_TB_H2H_GOAL_DIFFERENCE, SR_TB_GOAL_DIFFERENCE, SR_TB_GOALS_FOR,
                   SR_TB_NAME, 0 };
-    static const uint8_t *const L[2] = { SB, SC };
+    static const uint8_t *const L[3] = { SB, SC, EF };
     static sr_match m[24 * 23];
     static uint8_t pairs[24 * 24];
-    int bad = 0, differ = 0;
+    int bad = 0, differ = 0, gfdiff = 0;
     for (int t = 0; t < nt; t++) {
         const int n = 3 + (int)rnd(22), nm = season(n, 3, m, pairs);
-        const uint8_t *lst = L[t & 1];
+        const uint8_t *lst = L[t % 3];
         sr_srow tab[24], row[24];
         uint8_t ord[24], o2[24];
         int ref[24];
@@ -271,14 +275,26 @@ static void figc_random(int nt)
         for (int k = 0; k < n; k++) bad += tab[k].club != ref[k] || ord[k] != ref[k];
         sr_league_rank(n, row, pairs, NULL, 3, 1, 0, OLD, 1, o2);         /* the control: per-block head to head */
         if (lst == SB) for (int k = 0; k < n; k++) if (o2[k] != ord[k]) { differ++; break; }
+        if (lst == EF) {                                        /* the control: h2h goals for counts (right after
+                                                                   points: EFL's own order rarely gets there) */
+            uint8_t o3[24];
+            sr_league_rank(n, row, pairs, NULL, 3, 1, 0, E1, 1, o2);
+            sr_league_rank(n, row, pairs, NULL, 3, 1, 0, EA, 1, o3);
+            for (int k = 0; k < n; k++) if (o2[k] != o3[k]) { gfdiff++; break; }
+            int r1[24];
+            for (int k = 0; k < n; k++) r1[k] = k;
+            rf_rank(r1, n, E1);
+            for (int k = 0; k < n; k++) bad += o2[k] != r1[k];
+        }
     }
     CHECK(!bad, "FIGC lists: %d places unlike the brute-force reference", bad);
     CHECK(differ, "FIGC avulsa: never differs from per-block head to head (the control proves nothing)");
+    CHECK(gfdiff, "h2h table once: never differs from the avulsa (its goals-for key untested)");
     if (!bad && differ)
         printf("PASS: FIGC lists (Serie B avulsa; Serie C's 10 criteria: avulsa, h2h GD of the still level, ..., fewer "
-               "losses, away wins, fewer home losses) = a brute-force reference from the C.U. texts on %d random seasons, "
-               "sr_rr_table and sr_league_rank; the avulsa orders %d seasons unlike per-block head to head (control)\n",
-               nt, differ);
+               "losses, away wins, fewer home losses; EFL 9.2 h2h table once) = a brute-force reference from the C.U. texts on %d random seasons, "
+               "sr_rr_table and sr_league_rank; the avulsa orders %d seasons unlike per-block head to head, the EFL table %d unlike "
+               "the avulsa (controls)\n", nt, differ, gfdiff);
 }
 
 static void refused(void)
