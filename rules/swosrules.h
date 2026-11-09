@@ -403,7 +403,7 @@ int32_t sr_pg_realloc(const sr_pg_league *pg, int32_t l, const uint8_t *rank, co
  * divisions are simulated from strength and the season's seed (no matches played), then each sends
  * up its champion and its play-off winner (2nd-7th, the National League's shape). */
 
-#define SR_LP_DIVS  4               /* a pool's divisions */
+#define SR_LP_DIVS  32              /* a pool's divisions (England's step 3: 4; Italy's Eccellenza: 28 groups) */
 #define SR_LP_CLUBS 24              /* a pool division's clubs */
 
 /* strength: hundredths of the club's built first-16 mean (step 3 2.50 .. 0.00; a club down from N / S
@@ -445,6 +445,61 @@ int32_t sr_lp_rank_strength(uint16_t own, const uint16_t *above, int32_t na, con
 int32_t sr_lp_newcomer_strength(uint16_t own, const uint16_t *pool, int32_t np);
 
 int32_t sr_lp_season(uint32_t seed, int32_t nd, const sr_lp_club *const *c, const int32_t *n, int32_t *up);
+
+/* ---- A pool with a national play-off (Italy's Eccellenza 2026-27, 4.2 light; MC brief 42-ecclp) ----
+ * Each division sends up its champion and one club to a national play-off through its regional play-off; the
+ * national play-off's winners go up; then `extra` places by the declared cup rule (the Mod's italy42.md 5d). */
+
+/* A division's regional play-off (the pool file's divisions[i].playoff): who of its table goes to the national
+ * play-off. kind SR_LP_RPO_DIRECT: the place `first` (1 = the 2nd); SR_LP_RPO_FOUR: places first .. first + 3,
+ * first v first + 3 and first + 1 v first + 2, then the final; SR_LP_RPO_LADDER: first + 1 v first + 2, then the
+ * winner v first. One match each, the better placed at home (final_neutral: the final on neutral ground). A tie
+ * whose clubs are gap_skip points or more apart (the first round; gap_final: the final or the ladder's second step;
+ * 0: always played) is not played: the better placed goes through. direct_gap: the place `first` this many points or
+ * more ahead of the next goes through with no play-off (0: never). draw_better: a draw after extra time sends the
+ * better placed through (else penalties, near a coin toss). */
+enum { SR_LP_RPO_DIRECT, SR_LP_RPO_FOUR, SR_LP_RPO_LADDER };
+typedef struct { uint8_t kind, first, gap_skip, gap_final, direct_gap, draw_better, final_neutral; } sr_lp_rpo;
+
+/* The regional play-off's winner: its place in the table (0-based). -1 a shape out of the table. */
+int32_t sr_lp_regional(uint32_t seed, int32_t d, const sr_row *table, int32_t n, const sr_lp_club *c,
+                       const sr_lp_rpo *r);
+
+/* The national play-off. e[0 .. ne): the entrants, urn[i] entrant i's urn (0 .. nu - 1). Round 1: each urn drawn in
+ * pairs (legs1 legs). Round 2: its winners paired by pair[0 .. np) ({u, v}: one of urn u v one of urn v; u == v:
+ * two of urn u), each pair kind used as long as it can be, in order, drawn (legs2 legs). Ties level on aggregate:
+ * extra time, then penalties near a coin toss (no away goals). up[0 .. return): the winners' entrant indices.
+ * -1 an urn of odd size, a winner left without a pair, a shape out of range. */
+int32_t sr_lp_national(uint32_t seed, const sr_lp_club *e, int32_t ne, const uint8_t *urn, int32_t nu,
+                       const uint8_t (*pair)[2], int32_t np, int32_t legs1, int32_t legs2, int32_t *up);
+
+/* The cup's place (5d): of the clubs not up (isup[d][i] == 0), the strongest; ties: the better place in its table,
+ * then the lower ident. override (SR_LP_NONE: none): that ident takes the place instead when it is in the pool and
+ * not up. 0 and *od / *oi the club's division and index in c[od] (*ov 1: by the override); -1 no club left. */
+#define SR_LP_NONE 0xFFFFu
+int32_t sr_lp_extra(int32_t nd, const sr_lp_club *const *c, const int32_t *n, const uint8_t *const *place,
+                    const uint8_t *const *isup, uint16_t override, int32_t *od, int32_t *oi, int32_t *ov);
+
+/* A season's shape: per division its regional play-off and urn; the national play-off's pairs and legs; the cup
+ * rule's places (`extra`) and override. */
+typedef struct {
+    const sr_lp_rpo *rpo;
+    const uint8_t *urn;
+    int32_t nu;
+    const uint8_t (*pair)[2];
+    int32_t np, legs1, legs2, extra;
+    uint16_t override;
+} sr_lp_shape;
+
+/* How a club went up. */
+enum { SR_LP_UP_CHAMPION = 1, SR_LP_UP_NATIONAL, SR_LP_UP_CUP_RULE, SR_LP_UP_CUP_OVERRIDE };
+typedef struct { int16_t div, idx; uint8_t how; } sr_lp_up;
+
+/* The whole season: nd divisions' light tables (as sr_lp_season), each champion up, the regional play-offs, the
+ * national play-off, the cup rule. up[0 .. return): divisions' champions in division order, then the national
+ * play-off's winners, then the cup's places. -1 a division or a shape out of range. */
+int32_t sr_lp_season_np(uint32_t seed, int32_t nd, const sr_lp_club *const *c, const int32_t *n,
+                        const sr_lp_shape *s, sr_lp_up *up);
 
 /* ---- sr_stage.c: the generic stages a spec's competitions are made of (swc/1.2: round_robin, groups,
  * knockout / playoff rounds, single_match), as the competition editor writes them. Nothing in either

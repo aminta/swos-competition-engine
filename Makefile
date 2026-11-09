@@ -63,17 +63,29 @@ $(OUT)/nonleague: tests/rules/nonleague.c $(RULES) rules/swosrules.h | $(OUT)
 	$(CC) -std=c99 -O1 -g -Wall -Wextra -Wno-missing-field-initializers $(SANITIZE) -Irules -o $@ \
 	    tests/rules/nonleague.c rules/sr_pool.c rules/sr_groups.c
 
+# Italy's Eccellenza: the light pool with regional + national play-offs and the cup rule (invariants + controls)
+$(OUT)/ecclp: tests/rules/ecclp.c tests/sim/ecclp_italy.h $(RULES) rules/swosrules.h | $(OUT)
+	$(CC) -std=c99 -O1 -g -Wall -Wextra -Wno-missing-field-initializers $(SANITIZE) -Irules -o $@ \
+	    tests/rules/ecclp.c rules/sr_pool.c rules/sr_groups.c
+
 GAME_SPREAD = -DSR_LP_SPREAD=40 -Dsr_lp_table=sr_lp_table_game -Dsr_lp_playoff=sr_lp_playoff_game \
               -Dsr_lp_season=sr_lp_season_game -Dsr_lp_rank_strength=sr_lp_rank_strength_game \
-              -Dsr_lp_newcomer_strength=sr_lp_newcomer_strength_game
+              -Dsr_lp_newcomer_strength=sr_lp_newcomer_strength_game -Dsr_lp_regional=sr_lp_regional_game \
+              -Dsr_lp_national=sr_lp_national_game -Dsr_lp_extra=sr_lp_extra_game -Dsr_lp_season_np=sr_lp_season_np_game
 $(OUT)/masssim: tests/sim/masssim.c $(RULES) rules/swosrules.h | $(OUT)
 	$(CC) $(CFLAGS) $(GAME_SPREAD) -Irules -c -o $(OUT)/sr_pool_game.o rules/sr_pool.c
 	$(CC) $(CFLAGS) $(SIM_FLAGS) -Irules -o $@ tests/sim/masssim.c rules/sr_pool.c rules/sr_groups.c $(OUT)/sr_pool_game.o
 
-sim: $(OUT)/masssim
-	$(OUT)/masssim 1000 100 8
+$(OUT)/italysim: tests/sim/italysim.c tests/sim/ecclp_italy.h $(RULES) rules/swosrules.h $(OUT)/masssim | $(OUT)
+	$(CC) $(CFLAGS) $(SIM_FLAGS) -Irules -o $@ tests/sim/italysim.c rules/sr_pool.c rules/sr_groups.c $(OUT)/sr_pool_game.o
 
-test: $(OUT)/test_format $(OUT)/swcc $(OUT)/swc_i486.o $(RULES_I486) $(OUT)/spec_check $(OUT)/team_order $(OUT)/groups_guard $(OUT)/nonleague $(OUT)/stage
+sim: $(OUT)/masssim $(OUT)/italysim
+	$(OUT)/masssim 1000 100 8
+	$(OUT)/italysim 1000 100
+	@for b in drop twice 35; do if ITALYSIM_BREAK=$$b $(OUT)/italysim 2 3 >/dev/null; then echo "italysim control $$b NOT caught"; exit 1; fi; done
+	@echo "italysim controls: a club dropped, a club up twice, 35 up -> caught"
+
+test: $(OUT)/test_format $(OUT)/swcc $(OUT)/swc_i486.o $(RULES_I486) $(OUT)/spec_check $(OUT)/team_order $(OUT)/groups_guard $(OUT)/nonleague $(OUT)/ecclp $(OUT)/stage
 	$(OUT)/swcc compile packs/sample/world.json -o $(OUT)/sample.swc >/dev/null
 	$(OUT)/test_format $(OUT)/sample.swc
 	sh tests/run_specs.sh $(OUT)/swcc
@@ -88,6 +100,7 @@ test: $(OUT)/test_format $(OUT)/swcc $(OUT)/swc_i486.o $(RULES_I486) $(OUT)/spec
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/team_order
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/groups_guard
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/nonleague 500
+	ASAN_OPTIONS=detect_leaks=0 $(OUT)/ecclp 500
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/stage 500
 	@if grep -n '(const Swc[A-Za-z]* \*)\|(const uint16_t \*)\|(const uint32_t \*)' format/*.c; then echo "the reader reads the spec buffer through a cast (big-endian rule: BE accessors only)"; exit 1; fi
 	@echo "reader: no casts over the spec buffer (BE accessors only)"

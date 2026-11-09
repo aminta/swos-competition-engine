@@ -90,6 +90,8 @@ static void light_tables(int seasons)
            (double)place_top / (5.0 * seasons) + 1, (double)place_bottom / (5.0 * seasons) + 1);
 }
 
+enum { EN_DIVS = 4 };                           /* England's step 3 (SR_LP_DIVS is the room, 32) */
+
 static void playoffs(int seasons)
 {
     enum { N = 22 };
@@ -102,12 +104,12 @@ static void playoffs(int seasons)
         sr_lp_table((uint32_t)s, 1, c, N, t);
         const int w = sr_lp_playoff((uint32_t)s, 1, t, N, c);
         if (w < 1 || w > 6) ok = 0; else won[w]++;
-        const sr_lp_club *cc[SR_LP_DIVS];
-        sr_lp_club d[SR_LP_DIVS][N];
-        int32_t n[SR_LP_DIVS], up[2 * SR_LP_DIVS];
-        for (int k = 0; k < SR_LP_DIVS; k++) { make_div(d[k], N, 5000u + (unsigned)(s * 4 + k)); for (int i = 0; i < N; i++) d[k][i].ident = (uint16_t)(k * 100 + i); cc[k] = d[k]; n[k] = N; }
-        if (sr_lp_season((uint32_t)s, SR_LP_DIVS, cc, n, up) != 0) { up_ok = 0; continue; }
-        for (int k = 0; k < SR_LP_DIVS; k++) {
+        const sr_lp_club *cc[EN_DIVS];
+        sr_lp_club d[EN_DIVS][N];
+        int32_t n[EN_DIVS], up[2 * EN_DIVS];
+        for (int k = 0; k < EN_DIVS; k++) { make_div(d[k], N, 5000u + (unsigned)(s * 4 + k)); for (int i = 0; i < N; i++) d[k][i].ident = (uint16_t)(k * 100 + i); cc[k] = d[k]; n[k] = N; }
+        if (sr_lp_season((uint32_t)s, EN_DIVS, cc, n, up) != 0) { up_ok = 0; continue; }
+        for (int k = 0; k < EN_DIVS; k++) {
             sr_lp_table((uint32_t)s, k, d[k], N, t);
             if (up[2 * k] != t[0].team || up[2 * k + 1] == up[2 * k] || up[2 * k + 1] < 0 || up[2 * k + 1] >= N) up_ok = 0;
             int pl = -1;
