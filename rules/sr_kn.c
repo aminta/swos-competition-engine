@@ -310,3 +310,98 @@ uint32_t sr_kn_work_size(void)
 {
     return (uint32_t)sizeof(sr_kn_work);
 }
+
+/* ---- the 'KN' block (42-s2ko): next season's cup numbers, built at the season end, read at each cup's set-up ----
+ * stamp, nparts, then per part: id, n, the payload -- the Coppa Italia / Supercoppa n idents (dw, little-endian, in
+ * number order), the Coppa D n bits (byte i / 8, bit i % 8) over this season's Serie D clubs in sr_kn_dorder's order,
+ * 1 = in the preliminary. */
+static int32_t kns_payload(uint8_t id, int32_t n)
+{
+    return id == SR_KNS_D ? (n + 7) / 8 : 2 * n;
+}
+
+int32_t sr_kn_dorder(const sr_kn_list *groups, int32_t ng, uint16_t *order, int32_t max)
+{
+    int32_t n = 0;
+    if (!groups || ng < 0 || !order) return -1;
+    for (int32_t g = 0; g < ng; g++)
+        for (int32_t i = 0; i < groups[g].n; i++) {
+            if (n >= max) return -1;
+            order[n++] = groups[g].club[i];
+        }
+    return n;
+}
+
+int32_t sr_kns_build(uint8_t stamp, const uint16_t *ci, int32_t nci, const uint16_t *sc, int32_t nsc,
+                     const uint16_t *dorder, int32_t nd, const uint16_t *dpre, int32_t npre, uint8_t *out, int32_t max)
+{
+    int32_t len = 2, parts = 0;
+    if (!out || max < 2 || nci < 0 || nci > 255 || nsc < 0 || nsc > 255 || nd < 0 || nd > 255 || npre < 0
+        || npre > nd || (nci && !ci) || (nsc && !sc) || (nd && !dorder) || (npre && !dpre)) return -1;
+    for (int32_t p = 0; p < 3; p++) {
+        const uint8_t id = (uint8_t)(SR_KNS_CI + p);
+        const int32_t n = p == 0 ? nci : p == 1 ? nsc : nd;
+        if (!n) continue;
+        const int32_t need = 2 + kns_payload(id, n);
+        if (len + need > max) return -1;
+        out[len] = id; out[len + 1] = (uint8_t)n;
+        uint8_t *d = out + len + 2;
+        if (id == SR_KNS_D) {
+            for (int32_t i = 0; i < (n + 7) / 8; i++) d[i] = 0;
+            int32_t found = 0;
+            for (int32_t i = 0; i < n; i++)
+                for (int32_t k = 0; k < npre; k++)
+                    if (dpre[k] == dorder[i]) { d[i / 8] |= (uint8_t)(1u << (i % 8)); found++; break; }
+            if (found != npre) return -1;                       /* (a preliminary club not in this season's D) */
+        } else {
+            const uint16_t *v = p == 0 ? ci : sc;
+            for (int32_t i = 0; i < n; i++) { d[2 * i] = (uint8_t)v[i]; d[2 * i + 1] = (uint8_t)(v[i] >> 8); }
+        }
+        len += need;
+        parts++;
+    }
+    out[0] = stamp; out[1] = (uint8_t)parts;
+    return len;
+}
+
+/* the part id's payload and n, or -1: no block, another season's, malformed, no such part */
+static int32_t kns_find(const uint8_t *blk, int32_t len, uint8_t stamp, uint8_t id, const uint8_t **data)
+{
+    if (!blk || len < 2 || blk[0] != stamp || blk[1] == 0) return -1;
+    int32_t at = 2;
+    for (int32_t p = 0; p < blk[1]; p++) {
+        if (at + 2 > len) return -1;
+        const uint8_t pid = blk[at], n = blk[at + 1];
+        if (pid < SR_KNS_CI || pid > SR_KNS_D) return -1;
+        const int32_t pl = kns_payload(pid, n);
+        if (at + 2 + pl > len) return -1;
+        if (pid == id) { *data = blk + at + 2; return n; }
+        at += 2 + pl;
+    }
+    return -1;
+}
+
+int32_t sr_kns_idents(const uint8_t *blk, int32_t len, uint8_t stamp, uint8_t id, uint16_t *out, int32_t max)
+{
+    const uint8_t *d;
+    if (id != SR_KNS_CI && id != SR_KNS_SC) return -1;
+    const int32_t n = kns_find(blk, len, stamp, id, &d);
+    if (n <= 0 || n > max || !out) return -1;
+    for (int32_t i = 0; i < n; i++) out[i] = (uint16_t)(d[2 * i] | d[2 * i + 1] << 8);
+    return n;
+}
+
+int32_t sr_kns_dpre(const uint8_t *blk, int32_t len, uint8_t stamp, const uint16_t *dorder, int32_t nd,
+                    uint16_t *pre, uint16_t *rest, int32_t *npre)
+{
+    const uint8_t *d;
+    const int32_t n = kns_find(blk, len, stamp, SR_KNS_D, &d);
+    if (n <= 0 || n != nd || !dorder || !pre || !rest || !npre) return -1;   /* (n: another D than this season's) */
+    int32_t a = 0, b = 0;
+    for (int32_t i = 0; i < n; i++) {
+        if (d[i / 8] >> (i % 8) & 1) pre[a++] = dorder[i];
+        else rest[b++] = dorder[i];
+    }
+    *npre = a;
+    return n;
+}

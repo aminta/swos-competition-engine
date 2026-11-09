@@ -795,4 +795,30 @@ int32_t sr_kn_cup(const sr_kn_round *rd, int32_t nr, const sr_kn_pair *pairs, co
 int32_t sr_kn_zones(const sr_kn_geo *geo, const uint16_t *clubs, int32_t n, const sr_kn_geo *centre, int32_t nz,
                     int32_t cap, sr_kn_work *w, uint8_t *zone);
 
+/* The 'KN' block (42-s2ko, the Mod's item 'KN', world_only): next season's cup numbers built at the season end (the
+ * facts still in memory), read at each cup's set-up. stamp = seasonPlaying + 1 (as uesum / lrank): a zeroed block (an
+ * old save) or another season's reads as missing, and the cup is built from its spec's 'unknown' fallbacks. Layout:
+ * stamp, nparts, per part id, n, payload: SR_KNS_CI / SR_KNS_SC n idents (dw, in number order), SR_KNS_D n bits
+ * over this season's Serie D clubs in sr_kn_dorder's order (1: in the preliminary). The idents are the caller's
+ * (s7reg); the bit set's clubs any codes, compared as they are. Coppa C: no part (built at set-up). */
+#define SR_KNS_CI  1
+#define SR_KNS_SC  2
+#define SR_KNS_D   3
+#define SR_KNS_MAX (2 + 2 + 2 * 255 + 2 + 2 * 255 + 2 + 32)
+/* The Serie D clubs' one order, for the bit set where it is built and at the Coppa D set-up: the groups as given
+ * (the league file's, group A first), each in row order. n; -1 more than max. */
+int32_t sr_kn_dorder(const sr_kn_list *groups, int32_t ng, uint16_t *order, int32_t max);
+/* The block into out[0 .. max): ci / sc the numbers' idents (n 0: no part), dorder[0 .. nd) this season's D clubs,
+ * dpre[0 .. npre) the preliminary's (the first numbers out of sr_kn_number). Its length; -1 a count over 255, out
+ * too small, a preliminary club not in dorder. */
+int32_t sr_kns_build(uint8_t stamp, const uint16_t *ci, int32_t nci, const uint16_t *sc, int32_t nsc,
+                     const uint16_t *dorder, int32_t nd, const uint16_t *dpre, int32_t npre, uint8_t *out, int32_t max);
+/* A part's idents into out (SR_KNS_CI / SR_KNS_SC): n; -1 missing (the fallbacks). */
+int32_t sr_kns_idents(const uint8_t *blk, int32_t len, uint8_t stamp, uint8_t id, uint16_t *out, int32_t max);
+/* The Coppa D part over dorder[0 .. nd): the preliminary's clubs into pre (*npre of them), the others into rest, both
+ * in dorder's order (a round's order does not matter: the geographic blocks sort it). nd; -1 missing or a different
+ * number of D clubs (the fallback: the preliminary from the bottom of the tables). */
+int32_t sr_kns_dpre(const uint8_t *blk, int32_t len, uint8_t stamp, const uint16_t *dorder, int32_t nd,
+                    uint16_t *pre, uint16_t *rest, int32_t *npre);
+
 #endif

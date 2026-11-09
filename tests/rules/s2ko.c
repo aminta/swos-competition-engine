@@ -11,6 +11,8 @@
  *   the Coppa C winner a runner-up / promoted / a group winner) and every ref's 'unknown' fallback (MC Q5).
  * - 10^5 random seasons of random lists, records and eligibility: the numbers' invariants; random brackets: the
  *   hosts' rules, one tie per club and round, one winner.
+ * - The 'KN' block (next season's numbers saved at the season end): built, read back, the Coppa D preliminary as a
+ *   bit set over sr_kn_dorder's order giving the same draw; missing / another season's / old saves refused.
  * Inputs: $(OUT)/s2ko_gen.h (tests/rules/s2ko.py).
  */
 #include <stdio.h>
@@ -659,6 +661,115 @@ static void coppa_d_random(int seasons)
            !bad && km < 4000 ? "PASS" : "FAIL", seasons, km, dec, bad);
 }
 
+/* ---- the 'KN' block: next season's numbers saved at the season end, read at the set-up ---- */
+static int ties_same(const sr_kn_tie *a, const sr_kn_tie *b, int n)
+{
+    for (int t = 0; t < n; t++) if (a[t].home != b[t].home || a[t].away != b[t].away) return 0;
+    return 1;
+}
+static void kn_block(int seasons)
+{
+    static sr_kn_geo geo[SR_KN_CLUBS];
+    static uint16_t tab[9][18], nw[9][5], now[9][18], num[SR_KN_NUMBERS], ord[SR_KN_NUMBERS], ord2[SR_KN_NUMBERS];
+    static uint16_t ci[64], sc[4], pre[SR_KN_NUMBERS], rest[SR_KN_NUMBERS];
+    static sr_kn_rec rec[SR_KN_CLUBS];
+    static uint8_t el[SR_KN_CLUBS], blk[SR_KNS_MAX], zero[SR_KNS_MAX];
+    static sr_kn_tie o1[128], o2[128];
+    sr_kn_list lists[18], groups[9], rgroups[9];
+    sr_kn_group g[2];
+    sr_kn_entry join[162];
+    const sr_kn_round rd[2] = { { 34, 0, 1, SR_KN_DRAW, SR_KN_PAIR_GEO, 2, 0, 68 }, { 64, 34, 1, SR_KN_DRAW, SR_KN_PAIR_GEO, 4, 68, 94 } };
+    int bad = 0, size = 0, miss = 0, ctl = 0;
+    memset(&g, 0, sizeof g);
+    g[0].take = 68; g[0].order = SR_KN_LIST; g[0].else_order = SR_KN_PLACE_DESC; g[0].nfrom = 9; g[0].nelse = 9;
+    g[1].take = 94; g[1].order = SR_KN_LIST; g[1].else_order = SR_KN_LIST; g[1].nfrom = 9; g[1].nelse = 9;
+    for (int i = 0; i < 9; i++) { g[0].from[i] = (uint8_t)i; g[0].els[i] = (uint8_t)(9 + i); g[1].from[i] = (uint8_t)(9 + i); g[1].els[i] = (uint8_t)i; }
+    work.geo = geo;
+    for (int s = 0; s < seasons; s++) {
+        uint32_t rng = (uint32_t)s * 40503u + 3;
+        int b = 0, n;
+        const uint8_t stamp = (uint8_t)(s % 255 + 1);  /* (seasonPlaying + 1) */
+        memset(el, 0, sizeof el); memset(rec, 0, sizeof rec);
+        for (int i = 0; i < 207; i++) {
+            const sr_kn_geo *x = &s2c_geo[s2d_num[rnd(162)]];
+            geo[i].lat = (int16_t)(x->lat + (int)rnd(41) - 20); geo[i].lon = (int16_t)(x->lon + (int)rnd(41) - 20);
+        }
+        for (int i = 0; i < 162; i++) tab[i / 18][i % 18] = (uint16_t)i;
+        for (int i = 161; i > 0; i--) { const int j = (int)rnd((uint32_t)i + 1); const uint16_t x = tab[i / 18][i % 18]; tab[i / 18][i % 18] = tab[j / 18][j % 18]; tab[j / 18][j % 18] = x; }
+        for (int L = 0; L < 9; L++) {
+            for (int p = 0; p < 18; p++) { rec[tab[L][p]].place = (uint8_t)(p + 1); rec[tab[L][p]].pld = 34; el[tab[L][p]] = p > 0 && p < 14; }
+            for (int q = 0; q < 5; q++) { nw[L][q] = (uint16_t)(162 + L * 5 + q); el[nw[L][q]] = 1; }
+            lists[L].club = nw[L]; lists[L].n = 5; lists[L].unknown = SR_KN_NONE;
+            lists[9 + L].club = tab[L]; lists[9 + L].n = 18; lists[9 + L].unknown = SR_KN_NONE;
+        }
+        /* this season's groups (after the moves): the stayers and the new, shuffled across the nine */
+        int m = 0;
+        static uint16_t all[162];
+        for (int L = 0; L < 9; L++) for (int p = 1; p < 14; p++) all[m++] = tab[L][p];
+        for (int L = 0; L < 9; L++) for (int q = 0; q < 5; q++) all[m++] = nw[L][q];
+        for (int i = m - 1; i > 0; i--) { const int j = (int)rnd((uint32_t)i + 1); const uint16_t x = all[i]; all[i] = all[j]; all[j] = x; }
+        for (int L = 0; L < 9; L++) {
+            for (int p = 0; p < 18; p++) now[L][p] = all[L * 18 + p];
+            groups[L].club = now[L]; groups[L].n = 18; groups[L].unknown = SR_KN_NONE;
+            rgroups[8 - L] = groups[L];
+        }
+        n = sr_kn_number(g, 2, lists, rec, el, &rng, &work, num, SR_KN_NUMBERS);
+        const int nd = sr_kn_dorder(groups, 9, ord, SR_KN_NUMBERS);
+        for (int i = 0; i < 44; i++) ci[i] = (uint16_t)(0x0700 + rnd(0x900));
+        sc[0] = ci[rnd(44)]; sc[1] = ci[rnd(44)];
+        const int len = sr_kns_build(stamp, ci, 44, sc, 2, ord, nd, num, 68, blk, SR_KNS_MAX);
+        size += len != 121;
+        if (n != 162 || nd != 162 || len < 0) { bad++; continue; }
+        /* read back: the idents, the preliminary as a set */
+        uint16_t got[64];
+        int32_t npre = 0;
+        b += sr_kns_idents(blk, len, stamp, SR_KNS_CI, got, 64) != 44 || memcmp(got, ci, sizeof ci[0] * 44);
+        b += sr_kns_idents(blk, len, stamp, SR_KNS_SC, got, 64) != 2 || memcmp(got, sc, sizeof sc[0] * 2);
+        b += sr_kns_dpre(blk, len, stamp, ord, nd, pre, rest, &npre) != 162 || npre != 68;
+        for (int i = 0; i < 162 && !b; i++) {
+            int in = 0;
+            for (int k = 0; k < 68; k++) in |= pre[k] == num[i];
+            b += in != (i < 68);
+        }
+        /* the same draw from the saved order as from the numbers' (the geographic blocks sort a round) */
+        for (int i = 0; i < 162; i++) { join[i].club = num[i]; join[i].zone = 0; }
+        uint32_t r1 = rng, r2 = rng;
+        rs = 99;
+        b += sr_kn_cup(rd, 2, NULL, NULL, 0, join, NULL, &r1, play_rand, NULL, &work, o1) < 0;
+        for (int i = 0; i < 68; i++) join[i].club = pre[i];
+        for (int i = 0; i < 94; i++) join[68 + i].club = rest[i];
+        rs = 99;
+        b += sr_kn_cup(rd, 2, NULL, NULL, 0, join, NULL, &r2, play_rand, NULL, &work, o2) < 0;
+        b += !ties_same(o1, o2, 98);
+        /* missing: another season's stamp, a zeroed block (an old save), cut short, another D count */
+        miss += sr_kns_idents(blk, len, (uint8_t)(stamp + 1), SR_KNS_CI, got, 64) != -1;
+        miss += sr_kns_idents(zero, len, stamp, SR_KNS_CI, got, 64) != -1;
+        miss += sr_kns_dpre(zero, len, 0, ord, nd, pre, rest, &npre) != -1;
+        miss += sr_kns_dpre(blk, len - 1, stamp, ord, nd, pre, rest, &npre) != -1;
+        miss += sr_kns_dpre(blk, len, stamp, ord, nd - 1, pre, rest, &npre) != -1;
+        /* control: the set read over another order of the groups (not sr_kn_dorder's of the same groups) */
+        sr_kn_dorder(rgroups, 9, ord2, SR_KN_NUMBERS);
+        sr_kns_dpre(blk, len, stamp, ord2, nd, pre, rest, &npre);
+        int same = 1;
+        for (int k = 0; k < npre && same; k++) { int in = 0; for (int i = 0; i < 68; i++) in |= num[i] == pre[k]; same = in; }
+        ctl += !same;
+        if (b && bad++ < 3) printf("  KN season %d: %d bad\n", s, b);
+    }
+    /* the builder refuses a preliminary club outside this season's D, a block too small */
+    for (int i = 0; i < 162; i++) ord[i] = (uint16_t)i;
+    num[0] = 400;
+    miss += sr_kns_build(1, ci, 44, sc, 2, ord, 162, num, 68, blk, SR_KNS_MAX) != -1;
+    miss += sr_kns_build(1, ci, 44, sc, 2, ord, 162, ord, 68, blk, 120) != -1;
+    int ok = !bad && !size && !miss;
+    CHECK(ok, "KN block: %d bad, %d sizes, %d missing not refused", bad, size, miss);
+    printf("%s: the 'KN' block, %d random season ends: 121 B (Coppa Italia 44 idents, Supercoppa 2, Coppa D a 162-bit set), read back the same; the Coppa D preliminary = the numbers' first 68, the same geographic draw from the saved order; another season's stamp, a zeroed block (an old save), cut short, another D count -> missing (the fallbacks); a preliminary club not in D, a block too small -> refused\n",
+           ok ? "PASS" : "FAIL", seasons);
+    ok = ctl == seasons;
+    CHECK(ok, "KN control: %d of %d", ctl, seasons);
+    printf("%s: control: the bit set read over the groups in another order (not sr_kn_dorder's) gives a different preliminary -> caught in %d of %d\n",
+           ok ? "PASS" : "FAIL", ctl, seasons);
+}
+
 int main(int argc, char **argv)
 {
     real_season();
@@ -669,5 +780,6 @@ int main(int argc, char **argv)
     coppa_c_random(argc > 1 ? atoi(argv[1]) : 100000);
     coppa_d();
     coppa_d_random(argc > 1 ? atoi(argv[1]) : 100000);
+    kn_block(argc > 1 ? atoi(argv[1]) : 2000);
     return fails != 0;
 }
