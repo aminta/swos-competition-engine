@@ -492,7 +492,8 @@ static const char *const DECIS[] = { NULL, "aggregate", "away_goals", "extra_tim
                                      "better_placed_unless_level_on_points", "seed" };   /* (9, 10: swc/1.4, 42-s3shape) */
 static const char *const TAGS[] = { NULL, "champion", "promoted", "relegated", "playoff", "playout", "continental", "qualified" };
 static const char *const ZONES[] = { NULL, "CL", "EL", "CONF", "PROM", "P.OFF", "P.OUT", "RETR" };
-static const char *const HOMES[] = { "draw", "better_placed", "better_placed_second_leg", "neutral", "fixed" };
+static const char *const HOMES[] = { "draw", "better_placed", "better_placed_second_leg", "neutral", "fixed",
+                                      "lower_number", "lower_number_second_leg" };   /* (v1.4: 42-s2ko) */
 static const char *const PAIRS[] = { "draw", "seeded", "bracket", "fixed", "by_place", "urn", "urn_pairs" };
 static const char *const MODES[] = { "career", "season", "preset", "friendly" };
 
@@ -644,6 +645,169 @@ static int cup_place_item(C *c, JNode *it, const char *sp, int *src, int *per, S
     return ok ? 1 : -1;
 }
 
+/* v1.4 (42-s2ko): a knockout's bracket numbers (C.U. 253 "posizioni in tabellone"). cur_numbers = the stage's
+   numbers (0: none); a "#N" of a 'fixed' pair enters club number N at that round; num_used / win_used count the uses
+   (each number once, each earlier tie's winner once). */
+static int cur_numbers;
+static unsigned char num_used[1025], win_used[256][256];
+
+/* v1.4 (42-s2ko): a club of last season, for a knockout's 'numbers': "<league>#N-M" (its final table), "<league>:up"
+   / ":down" (the clubs that left it up / down, by place: the direct ones, then the play-offs'), "<competition>:winner"
+   / ":finalist" (its final's winner / loser), "<competition>/<stage>:winner" / ":finalist" (a play-off stage's final;
+   a play-out's winner stays up), "<competition>:round<R>" (the clubs that played round R of its first stage). 1, or 0
+   after an error. */
+static int prev_ref(C *c, JNode *v, const char *path)
+{
+    char id[128], *hash, *col, *sl;
+    int a, b, kx;
+    JNode *kd, *cnt;
+    if (v->type != J_STR || strlen(v->str) >= sizeof id) { ERR(v, path, "numbers: an item is a string (last season's club)"); return 0; }
+    strcpy(id, v->str);
+    hash = strchr(id, '#'); col = strchr(id, ':'); sl = strchr(id, '/');
+    if (hash) *hash = 0; else if (col) *col = 0; else { ERR(v, path, "numbers \"%s\": write '<league>#N-M', '<id>:up', '<id>:down', '<id>:winner', '<id>:finalist' or '<id>:round<R>'", v->str); return 0; }
+    if (sl && !hash) *sl = 0;
+    kx = find_comp(c, id);
+    if (kx < 0) { ERR(v, path, "numbers \"%s\": no competition \"%s\"", v->str, id); return 0; }
+    kd = json_get(c->comps[kx], "kind");
+    cnt = json_get(json_get(c->comps[kx], "participants"), "count");
+    if (hash || (col && (!strcmp(col + 1, "up") || !strcmp(col + 1, "down")))) {
+        if (!kd || kd->type != J_STR || strcmp(kd->str, "league")) { ERR(v, path, "numbers \"%s\": \"%s\" is not a league", v->str, id); return 0; }
+        if (sl && hash) { ERR(v, path, "numbers \"%s\": a league's table is '<league>#N-M'", v->str); return 0; }
+        if (hash && (!positions(hash + 1, &a, &b) || a < 1 || b < a || (cnt && cnt->type == J_NUM && b > (int)cnt->num))) {
+            ERR(v, path, "numbers \"%s\": places within the league (%d clubs)", v->str, cnt && cnt->type == J_NUM ? (int)cnt->num : 0);
+            return 0;
+        }
+        return 1;
+    }
+    if (sl) {                                   /* (a stage of that competition: a playoff stage) */
+        JNode *q;
+        int found = 0;
+        for (q = json_get(c->comps[kx], "stages") ? json_get(c->comps[kx], "stages")->child : NULL; q; q = q->next) {
+            JNode *sid = json_get(q, "id"), *ty = json_get(q, "type");
+            if (sid && sid->type == J_STR && !strcmp(sid->str, sl + 1))
+                found = ty && ty->type == J_STR && (!strcmp(ty->str, "playoff") || !strcmp(ty->str, "knockout")) ? 1 : -1;
+        }
+        if (found <= 0) { ERR(v, path, "numbers \"%s\": no playoff stage \"%s\" in \"%s\"", v->str, sl + 1, id); return 0; }
+    }
+    if (!strcmp(col + 1, "winner") || !strcmp(col + 1, "finalist")) return 1;
+    if (!strncmp(col + 1, "round", 5) && !sl) {
+        char *e;
+        long r = strtol(col + 6, &e, 10);
+        if (r >= 1 && !*e) return 1;
+    }
+    ERR(v, path, "numbers \"%s\": after ':' write up, down, winner, finalist or round<R>", v->str);
+    return 0;
+}
+
+/* v1.4 (42-s2ko, MC Q5 condition 2): a 'numbers' stage's "unknown" {ref: fallback} -- what each ref of last season
+   gives when the save does not know that fact (an old save, a career's first season end, a fact never seen): another
+   ref (with its own fallback, unless it is a table), a list of tables (merged) or "none" (nothing: the group's
+   'else' fills). A table
+   "<league>#N-M" is the season end's own and never unknown. Every other ref of the groups needs one; a key no ref
+   reaches, or a chain that loops, is refused. 1, or 0 after an error. */
+static int numbers_unknown(C *c, JNode *st, JNode *nu, const char *sp)
+{
+    JNode *un = opt(c, st, "unknown", J_OBJ, sp), *g, *q, *k;
+    const char *used[256];
+    int nused = 0, ok = 1;
+    char up[360];
+    pathf(up, sizeof up, "%s.unknown", sp);
+    for (g = nu->child; g; g = g->next) {
+        JNode *ls[2] = { json_get(g, "from"), json_get(g, "else") };
+        for (int i = 0; i < 2; i++)
+            for (q = ls[i] && ls[i]->type == J_ARR ? ls[i]->child : NULL; q; q = q->next) {
+                int seen = 0;
+                if (q->type != J_STR || strchr(q->str, '#')) continue;
+                for (int j = 0; j < nused; j++) seen |= !strcmp(used[j], q->str);
+                if (!seen && nused < 256) used[nused++] = q->str;
+                if (!seen && !(un && json_get(un, q->str))) {
+                    ERR(q, up, "\"%s\": no fallback -- write \"unknown\": {\"%s\": <a ref or \"none\">}", q->str, q->str);
+                    ok = 0;
+                }
+            }
+    }
+    if (!un) return ok;
+    for (k = un->child; k; k = k->next) {       /* (the fallbacks: refs of their own, reached; no loop) */
+        JNode *v = k;
+        int reached = 0, steps = 0;
+        if (k->type == J_ARR) {                 /* (tables, merged: "place_record" picks across them) */
+            if (!k->n) { ERR(k, up, "\"%s\": at least one table", k->key); ok = 0; }
+            for (q = k->child; q; q = q->next)
+                if (q->type != J_STR || !strchr(q->str, '#')) { ERR(q, up, "\"%s\": a list of tables \"<league>#N-M\"", k->key); ok = 0; }
+                else ok &= prev_ref(c, q, up);
+        } else if (k->type != J_STR) { ERR(k, up, "\"%s\": a ref, a list of tables or \"none\"", k->key); ok = 0; continue; }
+        else if (strcmp(k->str, "none") && !prev_ref(c, k, up)) { ok = 0; continue; }
+        for (int j = 0; j < nused; j++) reached |= !strcmp(used[j], k->key);
+        for (q = un->child; q && !reached; q = q->next) reached |= q->type == J_STR && !strcmp(q->str, k->key);
+        if (!reached) { ERR(k, up, "\"%s\": no item of the numbers is that ref", k->key); ok = 0; continue; }
+        while (v && v->type == J_STR && strcmp(v->str, "none") && !strchr(v->str, '#') && steps++ < 64) {
+            JNode *nx = json_get(un, v->str);
+            if (!nx) { ERR(v, up, "\"%s\": the fallback \"%s\" needs a fallback of its own", k->key, v->str); ok = 0; break; }
+            v = nx;
+        }
+        if (steps >= 64) { ERR(k, up, "\"%s\": the fallbacks loop", k->key); ok = 0; }
+    }
+    return ok;
+}
+
+/* v1.4 (42-s2ko): a knockout stage's 'numbers' -- groups {take, from [prev_ref], order "list" | "record", else
+   [prev_ref], else_order "list" | "place_record"} numbering last season's clubs 1, 2, ... in order (a club numbered
+   once: an earlier group's club is skipped; only clubs of this season's 'source' leagues), and 'first_season'
+   {numbers [club ids], swap_home ["R.T"]} (the world's first season, its real numbers and field swaps). Returns
+   the numbers, 0 after an error. */
+static int numbers_of(C *c, JNode *st, const char *sp, JNode *parts)
+{
+    JNode *nu = opt(c, st, "numbers", J_ARR, sp), *fs = opt(c, st, "first_season", J_OBJ, sp), *g, *q;
+    int n = 0, gi = 0, ok = 1;
+    char gp[360];
+    if (!nu) { if (fs) ERR(fs, sp, "'first_season' goes with 'numbers'"); return 0; }
+    need_minor(c, nu, sp, 4, "a knockout's 'numbers'");
+    if (!parts || !json_get(parts, "from") || json_get(parts, "from")->type != J_STR || strcmp(json_get(parts, "from")->str, "numbers"))
+        ERR(nu, sp, "'numbers' needs the competition's participants \"from\": \"numbers\"");
+    for (g = nu->child; g; g = g->next, gi++) {
+        JNode *fr, *el, *o1, *o2;
+        long k = 0;
+        pathf(gp, sizeof gp, "%s.numbers[%d]", sp, gi);
+        if (g->type != J_OBJ) { ERR(g, gp, "numbers: a group is {\"take\": k, \"from\": [...]}"); ok = 0; continue; }
+        if (int_in(c, need(c, g, "take", J_NUM, gp), "take", gp, 1, 255, &k)) n += (int)k; else ok = 0;
+        fr = need(c, g, "from", J_ARR, gp);
+        el = opt(c, g, "else", J_ARR, gp);
+        o1 = opt(c, g, "order", J_STR, gp);
+        o2 = opt(c, g, "else_order", J_STR, gp);
+        if (fr && !fr->n) ERR(fr, gp, "from: at least one item");
+        for (q = fr ? fr->child : NULL; q; q = q->next) ok &= prev_ref(c, q, gp);
+        for (q = el ? el->child : NULL; q; q = q->next) ok &= prev_ref(c, q, gp);
+        if (o1 && strcmp(o1->str, "list") && strcmp(o1->str, "record"))
+            ERR(o1, gp, "order: \"list\" (as listed) or \"record\" (points per match, wins, goals for, then a draw)");
+        if (o2 && strcmp(o2->str, "list") && strcmp(o2->str, "place_record"))
+            ERR(o2, gp, "else_order: \"list\" or \"place_record\" (place, then points per match)");
+        if (o2 && !el) ERR(o2, gp, "'else_order' goes with 'else'");
+        unknown_keys(c, g, gp);
+    }
+    ok &= numbers_unknown(c, st, nu, sp);
+    if (n > 1024) { ERR(nu, sp, "numbers: %d, at most 1024", n); return 0; }
+    if (fs) {
+        JNode *fn = need(c, fs, "numbers", J_ARR, sp), *sw = opt(c, fs, "swap_home", J_ARR, sp), *o;
+        int i = 0;
+        pathf(gp, sizeof gp, "%s.first_season", sp);
+        if (fn && fn->n != n) ERR(fn, gp, "numbers: %d clubs listed, the groups take %d", fn->n, n);
+        for (q = fn ? fn->child : NULL; q; q = q->next, i++) {
+            if (q->type != J_STR || find_club(c, q->str) < 0) { ERR(q, gp, "numbers[%d]: a club id of 'clubs'", i); continue; }
+            for (o = fn->child; o != q; o = o->next)
+                if (o->type == J_STR && !strcmp(o->str, q->str)) ERR(q, gp, "numbers: club \"%s\" numbered twice", q->str);
+        }
+        for (q = sw ? sw->child : NULL; q; q = q->next) {
+            char *e;
+            long r = q->type == J_STR ? strtol(q->str, &e, 10) : 0, t = 0;
+            if (r >= 1 && *e == '.') t = strtol(e + 1, &e, 10);
+            if (r < 1 || t < 1 || *e) ERR(q, gp, "swap_home: \"R.T\" (round R, tie T, from 1)");
+        }
+        unknown_keys(c, fs, gp);
+    }
+    (void)ok;                                   /* (a bad item is reported; the numbers still bound the bracket) */
+    return n;
+}
+
 /* v1.4 (42-s3shape): a club of a play-off round named by an earlier round -- "winner:R.T" / "loser:R.T" (round R,
    tie T, from 1), {"best_of": "winners:R"} / {"rest_of": "winners:R"} (the best placed of round R's winners, the
    others) -- or a place "stage#N". rties: the ties of the rounds so far. 1, or 0 after an error. */
@@ -669,6 +833,14 @@ static int ko_ref(C *c, JNode *it, const char *rp, int ri, const long *rties, St
             ERR(it, rp, "\"%s\": round R earlier than this one, tie T of it (from 1)", it->str);
             return 0;
         }
+        if (cur_numbers && r <= 256 && t <= 256 && it->str[0] == 'w' && win_used[r - 1][t - 1]++)
+            ERR(it, rp, "\"%s\": that tie's winner plays twice", it->str);
+        return 1;
+    }
+    if (it->str[0] == '#' && cur_numbers) {    /* v1.4 (42-s2ko): bracket number N enters here */
+        r = strtol(it->str + 1, &e, 10);
+        if (*e || r < 1 || r > cur_numbers) { ERR(it, rp, "\"%s\": a bracket number 1-%d", it->str, cur_numbers); return 0; }
+        if (num_used[r]++) ERR(it, rp, "\"%s\": bracket number %ld enters twice", it->str, r);
         return 1;
     }
     if (strchr(it->str, '#')) return place_ref(c, it, rp, "a round's club", all_st, first_stage, nall, 0, NULL);
@@ -868,14 +1040,18 @@ static void do_comp(C *c, int ci, StageInfo *all_st, int *nall)
             }
             if (teams && sum != teams) ERR(quota, p2, "the quotas add up to %d clubs, 'count' says %d", sum, teams);
         } else if (!list == !from) ERR(parts, p2, "give either 'clubs' (a fixed list) or 'from': \"link\"");
-        if (from && strcmp(from->str, "link")) ERR(from, p2, "'from' must be \"link\" (entrants come from other competitions' outcomes)");
+        if (from && !strcmp(from->str, "numbers")) need_minor(c, from, p2, 4, "\"from\": \"numbers\" (a knockout's bracket numbers)");
+        else if (from && strcmp(from->str, "link")) ERR(from, p2, "'from' must be \"link\" (entrants come from other competitions' outcomes)");
         {
             JNode *src = opt(c, parts, "source", J_ARR, p2), *q;
             if (src && !from) ERR(src, p2, "'source' goes with \"from\": \"link\"");
             for (q = src ? src->child : NULL; q; q = q->next) {
                 int k2 = q->type == J_STR ? find_comp(c, q->str) : -1;
                 if (k2 < 0) ERR(q, p2, "source: no competition \"%s\"", q->type == J_STR ? q->str : "?");
-                else { uint16_t pr2[2] = { (uint16_t)ci, (uint16_t)k2 }; bput(&c->srce, pr2, 4); }
+                else if (!strcmp(from->str, "numbers")) {   /* (v1.4: the leagues whose clubs may be numbered) */
+                    JNode *kd = json_get(c->comps[k2], "kind");
+                    if (!kd || kd->type != J_STR || strcmp(kd->str, "league")) ERR(q, p2, "source: \"%s\" is not a league", q->str);
+                } else { uint16_t pr2[2] = { (uint16_t)ci, (uint16_t)k2 }; bput(&c->srce, pr2, 4); }
             }
         }
         if (list) {
@@ -1016,6 +1192,11 @@ static void do_comp(C *c, int ci, StageInfo *all_st, int *nall)
                 int ri = 0, left = s.teams, joined = 0, jbad = 0, jn[256] = { 0 };
                 s.first_round = (uint16_t)(c->roun.n / sizeof(SwcRound));
                 rounds = need(c, st, "rounds", J_ARR, sp);
+                memset(num_used, 0, sizeof num_used);
+                memset(win_used, 0, sizeof win_used);
+                cur_numbers = numbers_of(c, st, sp, parts);
+                if (cur_numbers && s.teams && cur_numbers != s.teams)
+                    ERR(json_get(st, "numbers"), sp, "numbers: the groups take %d clubs, the competition has %d", cur_numbers, s.teams);
                 {                                       /* v1.4 (42-s3shape): the first entrant straight through when that
                                                            far ahead; a level of groups ranked place, then the record */
                     JNode *di = opt(c, st, "direct_if", J_OBJ, sp), *rk = opt(c, st, "rank", J_STR, sp);
@@ -1187,7 +1368,11 @@ static void do_comp(C *c, int ci, StageInfo *all_st, int *nall)
                     if (ri < 256 && left) left += jn[ri];
                     if (ri == 0 && *nall == first_stage && qbyes >= 0 && byes != qbyes)
                         ERR(r, rp, "the first round has %ld byes, the quotas give %d", byes, qbyes);
-                    if (left && !jbad && ties * 2 + byes != left) {
+                    if ((h == 5 || h == 6) && !cur_numbers) ERR(json_get(r, "home"), rp, "home \"%s\" needs the stage's 'numbers'", HOMES[h]);
+                    if (h == 5 || h == 6) need_minor(c, json_get(r, "home"), rp, 4, "home \"lower_number\"");
+                    if (h == 6 && rl != 2) ERR(json_get(r, "home"), rp, "home \"lower_number_second_leg\" needs 'legs': 2");
+                    if (cur_numbers && pr != 3) ERR(json_get(r, "pairing"), rp, "a stage with 'numbers' plays its bracket: \"pairing\": \"fixed\"");
+                    if (left && !jbad && !cur_numbers && ties * 2 + byes != left) {
                         if (ri < 256 && jn[ri])
                             ERR(r, rp, "%ld ties + %ld byes take %ld clubs, %d reach this round (%d of them joining)", ties, byes, ties * 2 + byes, left, jn[ri]);
                         else
@@ -1207,6 +1392,23 @@ static void do_comp(C *c, int ci, StageInfo *all_st, int *nall)
                 if (rounds && !rounds->n) ERR(rounds, sp, "rounds: at least one");
                 if (rounds && left != 1 && s.teams && !jbad && t == SWC_ST_KNOCKOUT)    /* (a play-off may qualify several) */
                     ERR(rounds, sp, "the rounds end with %d clubs, not one winner", left);
+                if (cur_numbers && rounds) {             /* v1.4 (42-s2ko): every number enters once, every winner plays on */
+                    JNode *sw = json_get(json_get(st, "first_season"), "swap_home"), *q;
+                    for (int k2 = 1; k2 <= cur_numbers; k2++)
+                        if (!num_used[k2]) { ERR(rounds, sp, "bracket number %d never enters ('#%d' in no round)", k2, k2); break; }
+                    for (int r2 = 0; r2 + 1 < ri && r2 < 256; r2++)
+                        for (int t2 = 0; t2 < rties[r2] && t2 < 256; t2++)
+                            if (!win_used[r2][t2]) { ERR(rounds, sp, "the winner of tie %d.%d plays no later round", r2 + 1, t2 + 1); r2 = 256; break; }
+                    for (q = sw && sw->type == J_ARR ? sw->child : NULL; q; q = q->next) {
+                        char *e;
+                        long r3 = q->type == J_STR ? strtol(q->str, &e, 10) : 0, t3 = 0;
+                        if (r3 >= 1 && *e == '.') t3 = strtol(e + 1, &e, 10);
+                        if (r3 >= 1 && r3 <= ri && r3 <= 256 && (t3 < 1 || t3 > rties[r3 - 1]))
+                            ERR(q, sp, "first_season.swap_home \"%s\": round %ld has %ld ties", q->str, r3, rties[r3 - 1]);
+                        else if (r3 > ri) ERR(q, sp, "first_season.swap_home \"%s\": the stage has %d rounds", q->str, ri);
+                    }
+                }
+                cur_numbers = 0;
             }
             json_get(st, "long_table");
             json_get(st, "per_group");

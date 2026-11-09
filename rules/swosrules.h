@@ -715,4 +715,42 @@ uint32_t sr_reg_work_size(void);
 /* The invariants: every row holds one club, each club at most one row, words and rows agree. 0; -1. */
 int32_t sr_reg_check(const sr_registry *r);
 
+/* 42-s2ko: a knockout's bracket numbers and its fixed bracket (sr_kn.c; Lega Serie A C.U. 253 and its Allegato 1).
+ * The caller resolves each 'numbers' item (swc: "<league>#N-M", "<league>:up", "<cup>:winner" ...) into a list of
+ * last season's clubs in order; club codes are the caller's (< SR_KN_CLUBS), rec / eligible indexed by them. */
+#define SR_KN_CLUBS   512
+#define SR_KN_NUMBERS 256
+#define SR_KN_LIST         0           /* a group's order: as listed */
+#define SR_KN_RECORD       1           /* points per match, wins, goals for, then a draw */
+#define SR_KN_PLACE_RECORD 2           /* place, then points per match (else_order) */
+/* A list of last season's clubs; n < 0: its fact unknown (an old save, a first season end) -> the list 'unknown'
+ * stands for it (the spec's fallback; < 0 none: nothing, the group's 'else' fills). */
+#define SR_KN_NONE (-1)
+typedef struct { const uint16_t *club; int32_t n; int32_t unknown; } sr_kn_list;
+typedef struct { uint8_t take, order, else_order, nfrom, nelse, from[8], els[8]; } sr_kn_group;
+typedef struct { uint16_t pts, pld, won, gf; uint8_t place; } sr_kn_rec;        /* last season, per club */
+typedef struct { uint32_t key[SR_KN_CLUBS]; uint16_t cand[SR_KN_NUMBERS]; uint8_t taken[SR_KN_CLUBS]; } sr_kn_work;
+/* The numbers: out[0 .. n) the clubs numbered 1 .. n. n; -1 a group nobody is left to fill, or past max. */
+int32_t sr_kn_number(const sr_kn_group *g, int32_t ng, const sr_kn_list *lists, const sr_kn_rec *rec,
+                     const uint8_t *eligible, uint32_t *rng, sr_kn_work *w, uint16_t *out, int32_t max);
+uint32_t sr_kn_work_size(void);
+/* The bracket: a side is a number 1 .. 1024 (that club enters here) or SR_KN_WIN(r, t) (round r's tie t's winner,
+ * from 0). home: the swcc codes (0 draw, 3 neutral, 4 fixed, 5 lower_number, 6 lower_number_second_leg). swap[p]
+ * (NULL: none): the first season's field swaps. play(ctx, round, tie, t): 0 the home side through, 1 the away
+ * side, -1 stop. out[p] per pair. The last winner; -1 a bad side or a stop. */
+#define SR_KN_WIN(r, t) ((uint16_t)(0x8000u | (uint16_t)((r) << 9) | (uint16_t)(t)))
+#define SR_KN_DRAW      0
+#define SR_KN_NEUTRAL   3
+#define SR_KN_FIXED     4
+#define SR_KN_LOWER     5
+#define SR_KN_LOWER_2ND 6
+#define SR_KN_F_NEUTRAL 1
+#define SR_KN_F_2ND     2              /* two legs: the second leg at the away side's (the lower number's) */
+typedef struct { uint16_t a, b; } sr_kn_pair;
+typedef struct { uint16_t ties, first; uint8_t legs, home; } sr_kn_round;
+typedef struct { uint16_t home, away, nhome, naway, winner, nwin; uint8_t legs, flags; } sr_kn_tie;
+typedef int32_t (*sr_kn_play_fn)(void *ctx, int32_t round, int32_t tie, const sr_kn_tie *t);
+int32_t sr_kn_bracket(const sr_kn_round *rd, int32_t nr, const sr_kn_pair *pairs, const uint16_t *numbers,
+                      int32_t nn, const uint8_t *swap, uint32_t *rng, sr_kn_play_fn play, void *ctx, sr_kn_tie *out);
+
 #endif
