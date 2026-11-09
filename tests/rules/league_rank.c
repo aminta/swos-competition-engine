@@ -234,6 +234,10 @@ static long rf_key(uint8_t t, int c, const int *s, int k)
 static void rf_rank(int *s, int k, const uint8_t *t)
 {
     if (k < 2 || !*t) return;
+    if (*t == SR_TB_ONLY_IF_TWO) {                              /* (CBF: the next criterion only for two clubs) */
+        if (k != 2) { rf_rank(s, k, t[1] ? t + 2 : t + 1); return; }
+        t++;
+    }
     long kv[24];
     for (int i = 0; i < k; i++) kv[s[i]] = rf_key(*t, s[i], s, k);
     for (int i = 1; i < k; i++)                                 /* insertion sort, best first */
@@ -253,16 +257,19 @@ static void figc_random(int nt)
                  SR_TB_GOALS_AGAINST, SR_TB_WINS, SR_TB_LOSSES_FEWER, SR_TB_AWAY_WINS, SR_TB_HOME_LOSSES_FEWER,
                  SR_TB_NAME, 0 },
         EF[] = { SR_TB_POINTS, SR_TB_GOAL_DIFFERENCE, SR_TB_GOALS_FOR, SR_TB_H2H_TABLE_ONCE, SR_TB_NAME, 0 },
+        BR[] = { SR_TB_POINTS, SR_TB_WINS, SR_TB_ONLY_IF_TWO, SR_TB_H2H_POINTS, SR_TB_ONLY_IF_TWO,
+                 SR_TB_H2H_GOAL_DIFFERENCE, SR_TB_NAME, 0 },
+        BRN[] = { SR_TB_POINTS, SR_TB_WINS, SR_TB_H2H_POINTS, SR_TB_H2H_GOAL_DIFFERENCE, SR_TB_NAME, 0 },
         E1[] = { SR_TB_POINTS, SR_TB_H2H_TABLE_ONCE, SR_TB_NAME, 0 }, EA[] = { SR_TB_POINTS, SR_TB_AVULSA, SR_TB_NAME, 0 },
         OLD[] = { SR_TB_POINTS, SR_TB_H2H_POINTS, SR_TB_H2H_GOAL_DIFFERENCE, SR_TB_GOAL_DIFFERENCE, SR_TB_GOALS_FOR,
                   SR_TB_NAME, 0 };
-    static const uint8_t *const L[3] = { SB, SC, EF };
+    static const uint8_t *const L[4] = { SB, SC, EF, BR };
     static sr_match m[24 * 23];
     static uint8_t pairs[24 * 24];
-    int bad = 0, differ = 0, gfdiff = 0;
+    int bad = 0, differ = 0, gfdiff = 0, two = 0;
     for (int t = 0; t < nt; t++) {
         const int n = 3 + (int)rnd(22), nm = season(n, 3, m, pairs);
-        const uint8_t *lst = L[t % 3];
+        const uint8_t *lst = L[t % 4];
         sr_srow tab[24], row[24];
         uint8_t ord[24], o2[24];
         int ref[24];
@@ -275,6 +282,10 @@ static void figc_random(int nt)
         for (int k = 0; k < n; k++) bad += tab[k].club != ref[k] || ord[k] != ref[k];
         sr_league_rank(n, row, pairs, NULL, 3, 1, 0, OLD, 1, o2);         /* the control: per-block head to head */
         if (lst == SB) for (int k = 0; k < n; k++) if (o2[k] != ord[k]) { differ++; break; }
+        if (lst == BR) {                                        /* the control: the prefix counts */
+            sr_league_rank(n, row, pairs, NULL, 3, 1, 0, BRN, 1, o2);
+            for (int k = 0; k < n; k++) if (o2[k] != ord[k]) { two++; break; }
+        }
         if (lst == EF) {                                        /* the control: h2h goals for counts (right after
                                                                    points: EFL's own order rarely gets there) */
             uint8_t o3[24];
@@ -290,11 +301,12 @@ static void figc_random(int nt)
     CHECK(!bad, "FIGC lists: %d places unlike the brute-force reference", bad);
     CHECK(differ, "FIGC avulsa: never differs from per-block head to head (the control proves nothing)");
     CHECK(gfdiff, "h2h table once: never differs from the avulsa (its goals-for key untested)");
+    CHECK(two, "only_if_two_level: never differs from the plain list (the control proves nothing)");
     if (!bad && differ)
         printf("PASS: FIGC lists (Serie B avulsa; Serie C's 10 criteria: avulsa, h2h GD of the still level, ..., fewer "
-               "losses, away wins, fewer home losses; EFL 9.2 h2h table once) = a brute-force reference from the C.U. texts on %d random seasons, "
+               "losses, away wins, fewer home losses; EFL 9.2 h2h table once; CBF only_if_two_level) = a brute-force reference from the C.U. texts on %d random seasons, "
                "sr_rr_table and sr_league_rank; the avulsa orders %d seasons unlike per-block head to head, the EFL table %d unlike "
-               "the avulsa (controls)\n", nt, differ, gfdiff);
+               "the avulsa, the CBF list %d unlike its plain codes (controls)\n", nt, differ, gfdiff, two);
 }
 
 static void refused(void)
