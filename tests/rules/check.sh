@@ -67,7 +67,17 @@ if grep -q GP_CUPF "$MOD/tools/gplay.c"; then
         KO_CUPF=1 "$OUT/kours" "$T/specs/$v.spec" "$N" > "$OUT/s3_ours.txt"
         cmp -s "$OUT/s3_mod.txt" "$OUT/s3_ours.txt" || { echo "FAIL: $v (Serie B / C play-offs as data)"; diff "$OUT/s3_mod.txt" "$OUT/s3_ours.txt" | head -4; exit 1; }
     done
-    echo "PASS: Serie B / C play-offs as data (ita_s3, ita_s3r: the real cup rule), $N seasons each: every move and result the Mod's"
+    python3 -I - "$MOD/tools" "$T/specs" <<'PY' || { echo "FAIL: the Mod's compile_spec (ita_s3.json) is not ita_s3 / ita_s3r.spec"; exit 1; }
+import json, sys
+sys.path.insert(0, sys.argv[1])
+import gplay
+pos = json.load(open(sys.argv[2] + '/ita_s3.json'))
+for f, real in (('ita_s3', False), ('ita_s3r', True)):
+    pos[2]['entrants'][-1]['cup_place']['real'] = real
+    if bytes(gplay.compile_spec(pos, 14)) != open('%s/%s.spec' % (sys.argv[2], f), 'rb').read():
+        sys.exit(1)
+PY
+    echo "PASS: Serie B / C play-offs as data (ita_s3, ita_s3r: the real cup rule; the Mod's compile_spec of ita_s3.json the same bytes), $N seasons each: every move and result the Mod's"
 else
     echo "SKIP: Serie B / C play-offs as data (this Mod's gplay.c has no 4.2 s3shape codes)"
 fi

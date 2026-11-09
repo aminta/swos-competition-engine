@@ -48,8 +48,9 @@ static void build_spec(int real_rule)
     round_(1, 2, BETTER, LV_BETTER_PTS, 0, 5); b(0); b(1);
     /* Serie C's play-off: per group 2nd, 3rd, 4th, 5th-10th (9 entrants, group g at 9g), then the cup place (27) */
     b(1 | 0x40); b(28); b(10); b(1); b(2); b(0);
-    b(13); b(2); b(4); b(6); b(4); b(10); b(4); b(7); b(3); b(8); b(3); b(6); b(3); b(7);   /* (level; best first 6 4..9,
-                                                                                         7 3..7; seeded 6, 7) */
+    b(13); b(2); b(3); b(6); b(4); b(6); b(4); b(10); b(3); b(7); b(4); b(7); b(3); b(8);  /* (level; round 6 seeded, the
+                                                                                         best of 4..9 first; round 7 seeded,
+                                                                                         the best of 3..7 first) */
     for (int g = 0; g < 3; g++) for (int p = 2; p <= 10; p++) ent(0, 2 + g, p, 0);
     ent(9, 2, 3, 8 | (real_rule ? 0x80 : 0));
     for (int g = 0; g < 3; g++) {               /* group round 1: 5v10, 6v9, 7v8 (W 3g ..) */
