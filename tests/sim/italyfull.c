@@ -1,0 +1,381 @@
+/* The mass simulation of Italy's whole chain (42-italysim-full; MC, internal/handoff/mc-ecclp-answers-2.md):
+ *   Serie A, B (20 each)    light tables; their moves are the library's (dplay's Serie B play-off / play-out); they are
+ *                           not reported: B is closed in this item, a fixed count down (3 + the play-out's loser)
+ *   Serie C (3 x 20)        light tables; the champions + dplay's Serie C play-off up (4), the 20th + the play-outs'
+ *                           losers down (9: the spec's cX_playout, gap 8)
+ *   Serie D (9 x 18)        light tables; the champions up (9), the 17th, 18th + the play-outs' losers down (36: the
+ *                           spec's dX_playout, gap 8); the play-offs (placement) and the Poule Scudetto played
+ *   Eccellenza (28 groups)  sr_lp_season_cross as in italysim (tests/sim/ecclp_italy.h): 36 up
+ * The season end is the library's, whole: sr_italy, sr_knockouts over the 4.2 spec (tests/sim/italyfull_data.h,
+ * tests/sim/mkitalyfull.py: the pack's knockouts with every Serie D group at 18), sr_final_moves with the B-team rules
+ * (the Mod's SEC_TAB for 'ita': up to Serie B, play-offs allowed, out of the league from Serie D), then sr_pg_season
+ * places every move in its group by the clubs' real areas; the 36 down from D take the 36 promoted clubs' Eccellenza
+ * places (nearest by ground, as italysim), each promoted club the relegated one's slot and record (entering Serie D by
+ * its group's area).
+ * The light tables of A .. D use the game's spread (sr_pool_game.o, standing for its played matches); SPREAD=n sets the
+ * Eccellenza's, as italysim.
+ * Invariants (every summer): every club in exactly one place; every division its size; up = down at A/B, B/C, C/D and
+ * D/Eccellenza (36); no B team in its first team's level or above, nor above Serie B; strengths 0 .. 375; the library
+ * refusing nothing.
+ * Library gaps (counted, not failed; reported to MC 2026-11-09): sr_b_teams (= the Mod's sec_post) acts only when a
+ * first team comes into its B team's level -- a B team leaving Serie D frees a place the pool fills (extra), a B team
+ * and its first team relegated together into Serie D share it a season, a B team stays over a first team fallen to
+ * the Eccellenza, and two B teams of one division whose first teams both come in: the second's stay undoes the
+ * first's drop. dplay gives a Coppa Italia Serie C winner in the play-out places both: the cup winner is drawn from
+ * Serie C's top 10.
+ * Real (tests/sim/itwiki_rates.py, it.wikipedia 2014-15 .. 2025-26): play-out ties the 8-point gap skips, Serie C
+ * 31.6% (12 of 38), Serie D 22.1% (30 of 136); straight back up C/D 12.3% (9 of 73).
+ * Usage: [SPREAD=n] italyfull [CHAINS [SEASONS]] (default 1000 100). Exit 1 on any broken invariant.
+ * Controls: ITALYFULL_BREAK=drop (a club lost), bteam (a B team into its first team's division), updown (one club too
+ * many up from Serie D) must FAIL. */
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "swosrules.h"
+#include "ecclp_italy.h"
+#include "italyfull_data.h"
+
+int32_t sr_lp_table_game(uint32_t seed, int32_t d, const sr_lp_club *c, int32_t n, sr_row *out);
+
+enum { NF = ITF_NCLUB, NP = 465, NI = NF + NP, LEVELS = 4, FIRST_C = 2, FIRST_D = 5, DG = 9, DS = 18 };
+static const uint8_t LEVEL_FIRST[LEVELS] = { 0, 1, FIRST_C, FIRST_D };
+static int level_of(int d) { return d >= FIRST_D ? 3 : d >= FIRST_C ? 2 : d; }
+
+static uint16_t str_of[NI];
+static uint8_t area_c[NI], area_d[NI], lat_of[NI];
+static int first_of[NI];                    /* a B team's first team (ident), -1 */
+static int slot_ident[NF], slot_div[NF];
+static int pgrp[IT_GROUPS][SR_LP_CLUBS];
+static int down_cd[NI], down_de[NI];
+static uint8_t viol[NI];                    /* a B team in / above its first team's level last summer */        /* the summer a club went down C -> D, D -> Eccellenza */
+static uint8_t ecc_letter[IT_GROUPS] = { 0, 0, 0, 1, 1, 0, 2, 2, 2, 2, 3, 3, 4, 4, 4, 5, 6, 6, 5, 6, 6, 7, 5, 7, 7, 8,
+                                         8, 8 };   /* each Eccellenza group's Serie D group (test data, by region) */
+static uint8_t letter_c[DG];                /* the Serie C area most real clubs of each Serie D group have */
+
+static int brk;
+static int spread = SR_LP_SPREAD;
+static sr_state S;
+
+static uint32_t h32(uint32_t x) { x ^= x >> 16; x *= 0x7FEB352Du; x ^= x >> 15; x *= 0x846CA68Bu; return x ^ (x >> 16); }
+
+enum { W_LOST, W_SIZE, W_UPDOWN, W_BTEAM, W_STR, W_REFUSED, W_N };
+static const char *why_txt[W_N] = { "a club lost or doubled", "a division's size", "up != down at a boundary",
+                                    "a B team in or above its first team's level (or above Serie B)",
+                                    "a strength out of range", "the library refused a season" };
+typedef struct {
+    long summers, bad, why[W_N];
+    long bound[LEVELS][2];                  /* down from level l, up from level l + 1 (l = 3: D down, the pool's up) */
+    long cd_n, cd_back, de_n, de_back;      /* relegated C -> D / D -> Ecc, straight back up the next summer */
+    long rank_sum[2], rank_n[2], top4[2];   /* D's promoted, Eccellenza's promoted: strength rank in their group */
+    long po_c[2], po_d[2], gap_c, gap_d;                  /* play-out ties: played, skipped by the gap (C, D) */
+
+    long bt_ko, gap_same, gap_below, gap_two, gap_carry, surplus, surplus_n;                    /* B-team rule: moves it changed (want differs from places) */
+    long dec_sum[LEVELS + 1][10], dec_cnt[10];
+} stats;
+
+
+/* another B team in B team i's division at the season end */
+static int other_b_in(const int *bdiv, int i)
+{
+    for (int j = 0; j < NI; j++) if (j != i && first_of[j] >= 0 && bdiv[i] >= 0 && bdiv[j] == bdiv[i]) return 1;
+    return 0;
+}
+
+static void ident_areas_from_ecc(int id, int g)
+{
+    const int L = ecc_letter[g];
+    area_d[id] = (uint8_t)(0xF0 | L);
+    area_c[id] = letter_c[L];
+    lat_of[id] = (uint8_t)(L * 28 + (int)(h32((uint32_t)id) % 28u));
+}
+
+static void chain_init(uint32_t chain)
+{
+    static const uint16_t lo[LEVELS] = { 290, 240, 180, 110 }, span[LEVELS] = { 86, 81, 101, 141 };
+    for (int i = 0; i < NF; i++) {
+        const uint32_t h = h32(chain * 7919u + (uint32_t)i * 104729u);
+        const int l = level_of(ITF_CLUB[i].div);
+        slot_ident[i] = i; slot_div[i] = ITF_CLUB[i].div;
+        str_of[i] = (uint16_t)(lo[l] + (h >> 12) % span[l]);
+        area_c[i] = ITF_CLUB[i].area_c; area_d[i] = ITF_CLUB[i].area_d;
+        first_of[i] = ITF_CLUB[i].first == 0xFFFF ? -1 : ITF_CLUB[i].first;
+        lat_of[i] = (uint8_t)((area_d[i] & 15) * 28 + (int)(h % 28u));
+    }
+    int id = NF;
+    for (int g = 0; g < IT_GROUPS; g++)
+        for (int i = 0; i < IT_G[g].size; i++, id++) {
+            const uint32_t h = h32(chain * 7919u + (uint32_t)id * 104729u);
+            str_of[id] = (uint16_t)(20 + (h >> 12) % 201u); first_of[id] = -1; pgrp[g][i] = id;
+            ident_areas_from_ecc(id, g);
+        }
+    for (int i = 0; i < NI; i++) down_cd[i] = down_de[i] = -100, viol[i] = 0;
+}
+
+static void chain_run(uint32_t chain, int seasons, stats *st)
+{
+    chain_init(chain);
+    sr_reset(&S);
+    uint8_t second[8][2];
+    int ns = 0;
+    for (int i = 0; i < NF; i++) if (first_of[i] >= 0) { second[ns][0] = (uint8_t)i; second[ns][1] = (uint8_t)first_of[i]; ns++; }
+    sr_league lg;
+    memset(&lg, 0, sizeof lg);
+    lg.divisions = ITF_NDIV; lg.promoted = ITF_PROM; lg.relegated = ITF_REL;
+    lg.italy = 1; lg.serie_b = 1; lg.group_first = FIRST_C; lg.groups = 3;
+    lg.spec = ITF_SPEC; lg.spec_len = sizeof ITF_SPEC;
+    lg.seconds = (uint8_t)ns; lg.second = (const uint8_t (*)[2])second; lg.second_top = ITF_SECOND_TOP;
+    lg.second_flags = (uint8_t)(ITF_SECOND_PO | 2);
+    const sr_levels lv = { LEVELS, LEVEL_FIRST };
+    sr_pg_level pl[LEVELS];
+    memset(pl, 0, sizeof pl);
+    pl[0].first = 0; pl[0].groups = 1; pl[0].size[0] = ITF_SIZE[0];
+    pl[1].first = 1; pl[1].groups = 1; pl[1].size[0] = ITF_SIZE[1];
+    pl[2].first = FIRST_C; pl[2].groups = 3; for (int g = 0; g < 3; g++) pl[2].size[g] = ITF_SIZE[FIRST_C + g];
+    pl[3].first = FIRST_D; pl[3].groups = DG; for (int g = 0; g < DG; g++) pl[3].size[g] = ITF_SIZE[FIRST_D + g];
+    static sr_pg_club pc[NF];
+    const sr_pg_league pg = { LEVELS, pl, NF, pc };
+    sr_lp_shape sh;
+    sr_lp_rpo rpo[IT_GROUPS];
+    uint8_t urn[IT_GROUPS];
+    it_shape(&sh, rpo, urn, NULL, 0);
+    sh.spread = spread;
+
+    for (int s = 0; s < seasons; s++) {
+        const uint32_t seed = h32(chain * 1000003u + (uint32_t)s);
+        unsigned bad = 0;
+        static int tslot[ITF_NDIV][SR_CLUBS];
+        /* the tables */
+        for (int d = 0; d < ITF_NDIV; d++) {
+            sr_lp_club c[SR_LP_CLUBS];
+            sr_row t[SR_LP_CLUBS];
+            int sl[SR_LP_CLUBS], n = 0;
+            for (int i = 0; i < NF; i++)
+                if (slot_div[i] == d) {
+                    if (n == SR_LP_CLUBS) { bad |= 1u << W_SIZE; break; }
+                    sl[n] = i; c[n].ident = (uint16_t)slot_ident[i]; c[n].strength = str_of[slot_ident[i]]; n++;
+                }
+            if (n != ITF_SIZE[d]) bad |= 1u << W_SIZE;
+            sr_lp_table_game(seed, 100 + d, c, n, t);
+            S.t.n[d] = (uint8_t)n;
+            for (int k = 0; k < n; k++) {
+                sr_row *r = &S.t.t[d][k];
+                *r = t[k];
+                r->glob = c[t[k].team].ident; r->team = (uint16_t)(r->glob + 1);
+                tslot[d][k] = sl[t[k].team];
+            }
+        }
+        S.t.nd = ITF_NDIV;
+        if (bad) { st->summers++; st->bad++; for (int k = 0; k < W_N; k++) if (bad & (1u << k)) st->why[k]++; continue; }
+        /* the play-outs: ties played or skipped by the gap (8: the spec's), from the tables */
+        for (int d = FIRST_C; d < ITF_NDIV; d++) {
+            const sr_row *t = S.t.t[d];
+            const int c = d < FIRST_D, a = c ? 15 : 12;     /* (16th v 19th, 17th v 18th; 13th v 16th, 14th v 15th) */
+            for (int x = 0; x < 2; x++) {
+                const int gap = t[a + x].pts - t[a + 3 - x].pts, skip = gap >= 8;
+                if (c) st->po_c[skip]++, st->gap_c += gap; else st->po_d[skip]++, st->gap_d += gap;
+            }
+        }
+        /* the season end */
+        sr_season se;
+        memset(&se, 0, sizeof se);
+        se.b_in_ko = 1; se.base = 0; se.levels = &lv;
+        {
+            const int g = FIRST_C + (int)(seed % 3u), k = (int)((seed >> 4) % 10u);
+            se.cup_winner = S.t.t[g][k].team;   /* (the Coppa Italia Serie C: a club of Serie C's top 10 -- dplay gives a
+                                                   winner in the play-out places both, reported) */
+        }
+        if (sr_italy(&S, &lg, &se) < 0) bad |= 1u << W_REFUSED;
+        sr_knockouts(&S, &lg, &se);
+        sr_final_moves(&S, &lg, &lv, 0);
+        if (brk == 3 && s == 1) S.want[FIRST_D][1] = -1;
+        int down[LEVELS] = { 0 }, up[LEVELS] = { 0 };
+        for (int d = 0; d < ITF_NDIV; d++)
+            for (int k = 0; k < S.t.n[d]; k++) {
+                const int w = S.want[d][k], l = level_of(d);
+                if (w > 0) down[l]++;
+                if (w < 0) up[l]++;
+                const int byplace = (k < ITF_PROM[d] && d > 0) ? -1 : k >= S.t.n[d] - ITF_REL[d] ? 1 : 0;
+                if (w != byplace && first_of[S.t.t[d][k].glob] >= 0) st->bt_ko++;
+            }
+        for (int l = 0; l + 1 < LEVELS; l++) {
+            st->bound[l][0] += down[l]; st->bound[l][1] += up[l + 1];
+            if (down[l] != up[l + 1]) bad |= 1u << W_UPDOWN;
+        }
+        if (down[3] < IT_UP) bad |= 1u << W_UPDOWN;
+        if (down[3] > IT_UP) st->surplus += down[3] - IT_UP, st->surplus_n++;
+        st->bound[3][0] += down[3];
+        sh.extra = 1 + (down[3] > IT_UP ? down[3] - IT_UP : 0);   /* (the pool fills what a B team leaving frees) */
+        /* the Eccellenza */
+        sr_lp_club pcl[IT_GROUPS][SR_LP_CLUBS];
+        const sr_lp_club *pp[IT_GROUPS];
+        int32_t pn[IT_GROUPS];
+        sr_lp_up pu[48];
+        for (int g = 0; g < IT_GROUPS; g++) {
+            for (int i = 0; i < IT_G[g].size; i++) pcl[g][i].ident = (uint16_t)pgrp[g][i], pcl[g][i].strength = str_of[pgrp[g][i]];
+            pp[g] = pcl[g]; pn[g] = IT_G[g].size;
+        }
+        const int nup = sr_lp_season_cross(seed, IT_GROUPS, pp, pn, &sh, pu);
+        if (nup != down[3]) bad |= 1u << (nup < 0 ? W_REFUSED : W_UPDOWN);
+        st->bound[3][1] += nup > 0 ? nup : 0;
+        if (bad & ((1u << W_UPDOWN) | (1u << W_REFUSED))) {
+            st->summers++; st->bad++; for (int k = 0; k < W_N; k++) if (bad & (1u << k)) st->why[k]++;
+            continue;
+        }
+        /* the stats: promoted clubs' rank, straight back up */
+        for (int g = 0; g < DG; g++) {
+            const int d = FIRST_D + g;
+            for (int k = 0; k < S.t.n[d]; k++) {
+                if (S.want[d][k] >= 0) continue;
+                const int id = S.t.t[d][k].glob;
+                int r = 0;
+                for (int j = 0; j < S.t.n[d]; j++) r += str_of[S.t.t[d][j].glob] > str_of[id];
+                st->rank_sum[0] += r; st->rank_n[0]++; st->top4[0] += r < 4;
+                if (down_cd[id] == s - 1) st->cd_back++;
+            }
+        }
+        int upid[48], vg[48], vi[48];
+        for (int k = 0; k < nup; k++) {
+            upid[k] = pgrp[pu[k].div][pu[k].idx]; vg[k] = pu[k].div; vi[k] = pu[k].idx;
+            int r = 0;
+            for (int i = 0; i < pn[pu[k].div]; i++) r += pcl[pu[k].div][i].strength > str_of[upid[k]];
+            st->rank_sum[1] += r; st->rank_n[1]++; st->top4[1] += r < 4;
+            if (down_de[upid[k]] == s - 1) st->de_back++;
+        }
+        static int bdiv[NI];                    /* each B team's division at the season end, -1 out of the league */
+        for (int i = 0; i < NI; i++) bdiv[i] = -1;
+        for (int d = 0; d < ITF_NDIV; d++) for (int k = 0; k < S.t.n[d]; k++) bdiv[S.t.t[d][k].glob] = d;
+        /* the summer: the game's moves, the pool's swap, then the groups */
+        static int8_t old_off[NF], new_off[NF];
+        static uint8_t entering[NF];
+        int rel[48], nrel = 0;
+        for (int d = 0; d < ITF_NDIV; d++)
+            for (int k = 0; k < S.t.n[d]; k++) {
+                const int i = tslot[d][k];
+                old_off[i] = (int8_t)d; new_off[i] = (int8_t)(d + S.want[d][k]); entering[i] = 0;
+                if (d >= FIRST_D && S.want[d][k] > 0 && nrel < 48) rel[nrel++] = i;
+                if (d >= FIRST_C && d < FIRST_D && S.want[d][k] > 0) { down_cd[slot_ident[i]] = s; st->cd_n++; }
+            }
+        {   /* the 36 down into the promoted clubs' Eccellenza places, nearest by ground (both sorted north to south) */
+            int dn[48], ord[48];
+            uint16_t plist[NP];
+            int np = 0;
+            for (int k = 0; k < nup; k++) dn[k] = rel[k], ord[k] = k;
+            for (int a = 1; a < nup; a++)         /* (slots by their club's ground; places by the promoted club's) */
+                for (int b = a; b > 0 && lat_of[slot_ident[dn[b]]] < lat_of[slot_ident[dn[b - 1]]]; b--) { int x = dn[b]; dn[b] = dn[b - 1]; dn[b - 1] = x; }
+            for (int a = 1; a < nup; a++)
+                for (int b = a; b > 0 && lat_of[upid[ord[b]]] < lat_of[upid[ord[b - 1]]]; b--) { int x = ord[b]; ord[b] = ord[b - 1]; ord[b - 1] = x; }
+            for (int g = 0; g < IT_GROUPS; g++) for (int i = 0; i < IT_G[g].size; i++) plist[np++] = str_of[pgrp[g][i]];
+            for (int k = 0; k < nup; k++) {
+                const int slot = dn[k], u = upid[ord[k]], g = vg[ord[k]], down_id = slot_ident[slot];
+                const uint16_t rec = str_of[down_id];
+                str_of[down_id] = (uint16_t)sr_lp_newcomer_strength(rec, plist, np);      /* (iii) */
+                str_of[u] = rec;
+                pgrp[g][vi[ord[k]]] = down_id;
+                slot_ident[slot] = u; entering[slot] = 1;
+                down_de[down_id] = s; st->de_n++;
+                (void)g;
+            }
+        }
+        for (int i = 0; i < NF; i++) {
+            const int id = slot_ident[i];
+            pc[i].base = 0; pc[i].area[0] = area_c[id]; pc[i].area[1] = area_d[id]; pc[i].area[2] = pc[i].area[3] = 0xFF;
+        }
+        if (sr_pg_season(&pg, old_off, new_off, entering) != 0) bad |= 1u << W_REFUSED;
+        for (int i = 0; i < NF; i++) slot_div[i] = new_off[i];
+        if (brk == 1 && s == 1) pgrp[3][2] = pgrp[3][1];
+        if (brk == 2 && s == 1)                     /* (a B team swapped into its first team's division) */
+            for (int i = 0; i < NF; i++) {
+                const int f = first_of[slot_ident[i]];
+                if (f < 0) continue;
+                for (int j = 0; j < NF; j++)
+                    if (slot_ident[j] == f) {
+                        for (int k = 0; k < NF; k++)
+                            if (slot_div[k] == slot_div[j] && k != j) { const int x = slot_div[i]; slot_div[i] = slot_div[k]; slot_div[k] = x; break; }
+                        break;
+                    }
+                break;
+            }
+        /* the invariants */
+        {
+            static unsigned char seen[NI];
+            int size[ITF_NDIV] = { 0 }, lev_of_id[NI];
+            memset(seen, 0, sizeof seen);
+            for (int i = 0; i < NI; i++) lev_of_id[i] = LEVELS;    /* (the pool: below the chain) */
+            for (int i = 0; i < NF; i++) {
+                seen[slot_ident[i]]++;
+                if (slot_div[i] < 0 || slot_div[i] >= ITF_NDIV) { bad |= 1u << W_SIZE; continue; }
+                size[slot_div[i]]++; lev_of_id[slot_ident[i]] = level_of(slot_div[i]);
+            }
+            for (int g = 0; g < IT_GROUPS; g++) for (int i = 0; i < IT_G[g].size; i++) seen[pgrp[g][i]]++;
+            for (int i = 0; i < NI; i++) { if (seen[i] != 1) bad |= 1u << W_LOST; if (str_of[i] > 375) bad |= 1u << W_STR; }
+            for (int d = 0; d < ITF_NDIV; d++) if (size[d] != ITF_SIZE[d]) bad |= 1u << W_SIZE;
+            for (int i = 0; i < NI; i++) {
+                if (first_of[i] < 0) continue;
+                const int lb = lev_of_id[i], lf = lev_of_id[first_of[i]], was = viol[i];
+                viol[i] = lb < LEVELS && (lb <= lf || lb < ITF_SECOND_TOP);
+                if (!viol[i]) continue;
+                if (was) st->gap_carry++;           /* (the library acts only when the first team comes into its level) */
+                else if (lb == LEVELS - 1 && lf == LEVELS - 1) st->gap_same++;     /* (library gaps: reported, see the head) */
+                else if (lf == LEVELS || bdiv[first_of[i]] < 0) st->gap_below++;   /* (its first team in the pool now or at the season end) */
+                else if (lb == lf && other_b_in(bdiv, i))
+                    st->gap_two++;
+                else bad |= 1u << W_BTEAM;
+            }
+            const int dz = s * 10 / seasons;
+            long sum[LEVELS + 1] = { 0 };
+            for (int i = 0; i < NF; i++) sum[level_of(slot_div[i])] += str_of[slot_ident[i]];
+            for (int g = 0; g < IT_GROUPS; g++) for (int i = 0; i < IT_G[g].size; i++) sum[LEVELS] += str_of[pgrp[g][i]];
+            st->dec_sum[0][dz] += sum[0] / 20; st->dec_sum[1][dz] += sum[1] / 20; st->dec_sum[2][dz] += sum[2] / 60;
+            st->dec_sum[3][dz] += sum[3] / (DG * DS); st->dec_sum[4][dz] += sum[4] / NP; st->dec_cnt[dz]++;
+        }
+        st->summers++;
+        if (bad) { st->bad++; for (int k = 0; k < W_N; k++) if (bad & (1u << k)) st->why[k]++; }
+    }
+}
+
+int main(int argc, char **argv)
+{
+    const int chains = argc > 1 ? atoi(argv[1]) : 1000, seasons = argc > 2 ? atoi(argv[2]) : 100;
+    static stats st;
+    const char *b = getenv("ITALYFULL_BREAK"), *spv = getenv("SPREAD");
+    if (spv) spread = atoi(spv);
+    brk = !b ? 0 : !strcmp(b, "drop") ? 1 : !strcmp(b, "bteam") ? 2 : !strcmp(b, "updown") ? 3 : 0;
+    {   /* each Serie D group's most common Serie C area among the real clubs */
+        int cnt[DG][256];
+        memset(cnt, 0, sizeof cnt);
+        for (int i = 0; i < NF; i++) if ((ITF_CLUB[i].area_d & 15) < DG) cnt[ITF_CLUB[i].area_d & 15][ITF_CLUB[i].area_c]++;
+        for (int L = 0; L < DG; L++) { int m = 0; for (int a = 0; a < 256; a++) if (cnt[L][a] > cnt[L][m]) m = a; letter_c[L] = (uint8_t)m; }
+    }
+    for (int c = 0; c < chains; c++) chain_run((uint32_t)c, seasons, &st);
+    printf("italyfull: %d chains x %d seasons = %ld summers (A 20, B 20, C 3 x 20, D 9 x 18 <-> Eccellenza 28 groups; "
+           "%d + %d clubs; Eccellenza spread %d)\n", chains, seasons, st.summers, NF, NP, spread);
+    printf("  invariants: %ld summers broken\n", st.bad);
+    for (int k = 0; k < W_N; k++) if (st.why[k]) printf("    %s: %ld\n", why_txt[k], st.why[k]);
+    static const char *bn[LEVELS] = { "A/B", "B/C", "C/D", "D/Ecc" };
+    printf("  per summer, down / up at each boundary:");
+    for (int l = 0; l < LEVELS; l++) printf(" %s %.2f/%.2f", bn[l], (double)st.bound[l][0] / st.summers, (double)st.bound[l][1] / st.summers);
+    printf("\n  straight back up: C/D %.1f%% of %ld, D/Ecc %.1f%% of %ld\n", 100.0 * st.cd_back / (st.cd_n ? st.cd_n : 1),
+           st.cd_n, 100.0 * st.de_back / (st.de_n ? st.de_n : 1), st.de_n);
+    printf("  promoted clubs' strength rank in their group (0 = strongest): D -> C %.2f (top 4 %.1f%%), Ecc -> D %.2f "
+           "(top 4 %.1f%%)\n", (double)st.rank_sum[0] / st.rank_n[0], 100.0 * st.top4[0] / st.rank_n[0],
+           (double)st.rank_sum[1] / st.rank_n[1], 100.0 * st.top4[1] / st.rank_n[1]);
+    printf("  play-out ties skipped by the gap (8+ points): Serie C %.1f%% of %ld, Serie D %.1f%% of %ld\n",
+           100.0 * st.po_c[1] / (st.po_c[0] + st.po_c[1]), st.po_c[0] + st.po_c[1],
+           100.0 * st.po_d[1] / (st.po_d[0] + st.po_d[1]), st.po_d[0] + st.po_d[1]);
+    printf("  a play-out tie's mean gap in points: Serie C %.2f, Serie D %.2f\n", (double)st.gap_c / (st.po_c[0] + st.po_c[1]),
+           (double)st.gap_d / (st.po_d[0] + st.po_d[1]));
+    printf("  B teams: moves the B-team rules changed %ld; a B team leaving Serie D (its first team come down): %ld "
+           "summers, the pool's extra places filled them (%ld)\n", st.bt_ko, st.surplus_n, st.surplus);
+    printf("  library gaps (reported, not failed): a B team and its first team both in Serie D %ld summers, a B team "
+           "over its first team in the Eccellenza %ld,\n    two B teams in one division whose first teams both come in (the "
+           "second's stay undoes the first's drop) %ld,\n    still over its first team from the summer before %ld\n",
+           st.gap_same, st.gap_below, st.gap_two, st.gap_carry);
+    printf("  drift (mean strength by tenth of the chain) A / B / C / D / Ecc:\n   ");
+    for (int z = 0; z < 10; z++) {
+        const long n = st.dec_cnt[z] ? st.dec_cnt[z] : 1;
+        printf(" %ld/%ld/%ld/%ld/%ld", st.dec_sum[0][z] / n, st.dec_sum[1][z] / n, st.dec_sum[2][z] / n, st.dec_sum[3][z] / n,
+               st.dec_sum[4][z] / n);
+    }
+    printf("\n%s italyfull\n", st.bad ? "FAIL" : "PASS");
+    return st.bad ? 1 : 0;
+}

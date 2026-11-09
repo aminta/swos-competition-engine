@@ -82,11 +82,20 @@ $(OUT)/masssim: tests/sim/masssim.c $(RULES) rules/swosrules.h | $(OUT)
 $(OUT)/italysim: tests/sim/italysim.c tests/sim/ecclp_italy.h $(RULES) rules/swosrules.h $(OUT)/masssim | $(OUT)
 	$(CC) $(CFLAGS) $(SIM_FLAGS) -Irules -o $@ tests/sim/italysim.c rules/sr_pool.c rules/sr_groups.c $(OUT)/sr_pool_game.o
 
-sim: $(OUT)/masssim $(OUT)/italysim
+# Italy's whole chain: A, B, C 3 x 20, D 9 x 18 (the library's season end over the 4.2 spec) <-> the Eccellenza pool
+$(OUT)/italyfull: tests/sim/italyfull.c tests/sim/italyfull_data.h tests/sim/ecclp_italy.h $(RULES) rules/swosrules.h \
+                  $(OUT)/masssim | $(OUT)
+	$(CC) $(CFLAGS) $(SIM_FLAGS) -Irules -o $@ tests/sim/italyfull.c rules/sr_dplay.c rules/sr_gplay.c rules/sr_post.c \
+	    rules/sr_check.c rules/sr_pool.c rules/sr_groups.c $(OUT)/sr_pool_game.o
+
+sim: $(OUT)/masssim $(OUT)/italysim $(OUT)/italyfull
 	$(OUT)/masssim 1000 100 8
 	$(OUT)/italysim 1000 100
 	@for b in drop twice 35; do if ITALYSIM_BREAK=$$b $(OUT)/italysim 2 3 >/dev/null; then echo "italysim control $$b NOT caught"; exit 1; fi; done
 	@echo "italysim controls: a club dropped, a club up twice, 35 up -> caught"
+	$(OUT)/italyfull 1000 100
+	@for b in drop bteam updown; do if ITALYFULL_BREAK=$$b $(OUT)/italyfull 2 3 >/dev/null; then echo "italyfull control $$b NOT caught"; exit 1; fi; done
+	@echo "italyfull controls: a club dropped, a B team in its first team's division, one too many up -> caught"
 
 test: $(OUT)/test_format $(OUT)/swcc $(OUT)/swc_i486.o $(RULES_I486) $(OUT)/spec_check $(OUT)/team_order $(OUT)/groups_guard $(OUT)/nonleague $(OUT)/ecclp $(OUT)/stage
 	$(OUT)/swcc compile packs/sample/world.json -o $(OUT)/sample.swc >/dev/null
