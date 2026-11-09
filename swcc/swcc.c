@@ -542,25 +542,67 @@ static int stage_index(StageInfo *si, int n, const char *id)
    preclusions), "group#N" (place N of the winner's group), {"place": "winner_group#N", "scroll": true} (that place,
    its group's play-off scrolled up); "unknown" the place when the winner is not known ("best_of:#N"). One club. */
 static void gap_obj(C *c, JNode *o, const char *path);
-static int cup_place_item(C *c, JNode *it, const char *sp, int *src, int *per)
+/* v1.4: a place reference "stage#N" ("stage#N-M" with range) of an earlier stage of this competition -- the stage
+   resolved and N within its places, as entr_item does; or (league != NULL) of that league's stage. 1, or 0 after an
+   error. */
+static int place_ref(C *c, JNode *v, const char *path, const char *what, StageInfo *all_st, int first_stage, int nall,
+                     int range, JNode *league)
+{
+    char *hash = strchr(v->str, '#');
+    int a, b, lo = 0, ix;
+    if (!hash || !positions(hash + 1, &a, &b) || (!range && a != b)) {
+        ERR(v, path, "%s \"%s\": write '%s'", what, v->str, range ? "stage#N-M" : "stage#N");
+        return 0;
+    }
+    *hash = 0;
+    if (league) {                               /* (another league's stage: its table's size, its clubs) */
+        JNode *sts = json_get(league, "stages"), *q, *cnt = json_get(json_get(league, "participants"), "count");
+        ix = -1;
+        for (q = sts && sts->type == J_ARR ? sts->child : NULL; q; q = q->next) {
+            JNode *id = json_get(q, "id");
+            if (id && id->type == J_STR && !strcmp(id->str, v->str)) ix = 0;
+        }
+        lo = cnt && cnt->type == J_NUM ? (int)cnt->num : 0;
+    } else {
+        ix = stage_index(all_st + first_stage, nall - first_stage, v->str);
+        if (ix >= 0) lo = all_st[first_stage + ix].gmin ? all_st[first_stage + ix].gmin : all_st[first_stage + ix].teams;
+    }
+    *hash = '#';
+    if (ix < 0) {
+        *hash = 0;
+        ERR(v, path, "%s \"%s#%s\": no earlier stage \"%s\"%s", what, v->str, hash + 1, v->str, league ? " in that league" : " in this competition");
+        *hash = '#';
+        return 0;
+    }
+    if (lo && (pos_res(a, lo) < 1 || pos_res(b, lo) > lo || pos_res(b, lo) < pos_res(a, lo))) {
+        ERR(v, path, "%s \"%s\": positions outside the stage (%d clubs per table)", what, v->str, lo);
+        return 0;
+    }
+    return 1;
+}
+
+static int cup_place_item(C *c, JNode *it, const char *sp, int *src, int *per, StageInfo *all_st, int first_stage, int nall)
 {
     JNode *cp = opt(c, it, "cup_place", J_OBJ, sp), *v, *x;
-    int a, b, ok = 1;
+    int ok = 1;
     unknown_keys(c, it, sp);
     if (!cp) return -1;
     need_minor(c, cp, sp, 4, "'cup_place'");
     if ((v = need(c, cp, "cup", J_STR, sp)) && find_comp(c, v->str) < 0) { ERR(v, sp, "cup_place: no competition \"%s\"", v->str); ok = 0; }
-    if ((v = opt(c, cp, "groups", J_ARR, sp)))
-        for (x = v->child; x; x = x->next)
+    JNode *grp = opt(c, cp, "groups", J_ARR, sp);
+    if (grp)
+        for (x = grp->child; x; x = x->next)
             if (x->type != J_STR || find_comp(c, x->str) < 0) { ERR(x, sp, "cup_place.groups: a league id of this file"); ok = 0; }
     for (int k = 0; k < 2; k++) {
         const char *key = k ? "takes_if_safe" : "takes";
-        char *hash;
+        char what[40];
         if (!(v = k ? opt(c, cp, key, J_STR, sp) : need(c, cp, key, J_STR, sp))) { ok &= k; continue; }
-        if (!(hash = strchr(v->str, '#')) || !positions(hash + 1, &a, &b) || a < 1 || b < a) {
-            ERR(v, sp, "cup_place.%s \"%s\": write 'stage#N-M'", key, v->str);
-            ok = 0;
-        }
+        snprintf(what, sizeof what, "cup_place.%s", key);
+        if (!grp) ok &= place_ref(c, v, sp, what, all_st, first_stage, nall, 1, NULL);
+        else                                    /* (the groups' stage: in each of them) */
+            for (x = grp->child; x; x = x->next)
+                if (x->type == J_STR && find_comp(c, x->str) >= 0)
+                    ok &= place_ref(c, v, sp, what, all_st, first_stage, nall, 1, c->comps[find_comp(c, x->str)]);
     }
     if ((v = need(c, cp, "instead", J_ARR, sp))) {
         if (!v->n) { ERR(v, sp, "cup_place.instead: at least one entry"); ok = 0; }
@@ -572,7 +614,7 @@ static int cup_place_item(C *c, JNode *it, const char *sp, int *src, int *per)
             if (x->type == J_OBJ) {
                 JNode *pl = need(c, x, "place", J_STR, sp), *sc = opt(c, x, "scroll", J_BOOL, sp);
                 unknown_keys(c, x, sp);
-                (void)sc;
+                if (sc && !sc->b) { ERR(sc, sp, "cup_place.instead: \"scroll\" is true or absent"); ok = 0; continue; }
                 if (pl && !strncmp(pl->str, "winner_group#", 13) && (n = strtol(pl->str + 13, NULL, 10)) >= 1 && n <= 64)
                     continue;
             }
@@ -592,7 +634,7 @@ static int cup_place_item(C *c, JNode *it, const char *sp, int *src, int *per)
 /* v1.4 (42-s3shape): a club of a play-off round named by an earlier round -- "winner:R.T" / "loser:R.T" (round R,
    tie T, from 1), {"best_of": "winners:R"} / {"rest_of": "winners:R"} (the best placed of round R's winners, the
    others) -- or a place "stage#N". rties: the ties of the rounds so far. 1, or 0 after an error. */
-static int ko_ref(C *c, JNode *it, const char *rp, int ri, const long *rties)
+static int ko_ref(C *c, JNode *it, const char *rp, int ri, const long *rties, StageInfo *all_st, int first_stage, int nall)
 {
     long r = 0, t = 0;
     char *e;
@@ -615,11 +657,7 @@ static int ko_ref(C *c, JNode *it, const char *rp, int ri, const long *rties)
         }
         return 1;
     }
-    {
-        const char *h = strchr(it->str, '#');
-        int a, b;
-        if (h && positions(h + 1, &a, &b) && a == b) return 1;
-    }
+    if (strchr(it->str, '#')) return place_ref(c, it, rp, "a round's club", all_st, first_stage, nall, 0, NULL);
     ERR(it, rp, "\"%s\": \"winner:R.T\", \"loser:R.T\" or one place \"stage#N\"", it->str);
     return 0;
 }
@@ -635,7 +673,7 @@ static int entr_item(C *c, JNode *it, const char *sp, StageInfo *all_st, int fir
     char *hash;
     int a, b, ix, n = -1;
     long k = 0;
-    if (it->type == J_OBJ && json_get(it, "cup_place")) return cup_place_item(c, it, sp, src, per);
+    if (it->type == J_OBJ && json_get(it, "cup_place")) return cup_place_item(c, it, sp, src, per, all_st, first_stage, nall);
     if (it->type == J_OBJ) {
         ref = need(c, it, "best_of", J_STR, sp);
         cnt = need(c, it, "count", J_NUM, sp);
@@ -873,15 +911,17 @@ static void do_comp(C *c, int ci, StageInfo *all_st, int *nall)
             if (entrants && entrants->type == J_ARR) need_minor(c, entrants, sp, 2, "'entrants' as a list");
             if (entrants) {                     /* v1.2: a list of places ["table#3", "table#6"] and best_of items */
                 JNode *pg = opt(c, st, "per_group", J_BOOL, sp), *it;
-                int total = 0, pgn = 0, gsrc = -1, same = 1, best = 0, ok = 1, nr = 0, i2;
+                int total = 0, pgn = 0, gsrc = -1, same = 1, best = 0, ok = 1, nr = 0, i2, ncup = 0;
                 struct { int src, a, b; } rg[64];
                 for (it = entrants->type == J_STR ? entrants : entrants->child; it; it = entrants->type == J_STR ? NULL : it->next) {
                     int src = -1, per = 0, a = 0, b = 0, n = entr_item(c, it, sp, all_st, first_stage, *nall, &src, &per, &a, &b);
                     if (n < 0) { ok = 0; continue; }
                     if (per) { total += n * all_st[src].groups; pgn += n; } else { total += n; best = 1; }
+                    if (it->type == J_OBJ && json_get(it, "cup_place") && ncup++)
+                        ERR(it, sp, "cup_place: one per stage");
                     if (gsrc < 0) gsrc = src; else if (src != gsrc) same = 0;
                     for (i2 = 0; i2 < nr; i2++)
-                        if (rg[i2].src == src && a <= rg[i2].b && rg[i2].a <= b)
+                        if (rg[i2].src == src && src >= 0 && a <= rg[i2].b && rg[i2].a <= b)
                             ERR(it, sp, "entrants: place %d of stage \"%s\" is taken twice", a > rg[i2].a ? a : rg[i2].a, all_st[src].id);
                     if (nr < 64) { rg[nr].src = src; rg[nr].a = a; rg[nr].b = b; nr++; }
                 }
@@ -1005,7 +1045,10 @@ static void do_comp(C *c, int ci, StageInfo *all_st, int *nall)
                     if (dec && dec->type == J_ARR && !nd) ERR(dec, rp, "decider: at least one entry");
                     for (JNode *d = dec && dec->type == J_ARR ? dec->child : NULL; d; d = d->next)
                         if (d->type == J_STR && (!strcmp(d->str, DECIS[9]) || !strcmp(d->str, DECIS[10])))
+                        {
                             need_minor(c, d, rp, 4, d->str[0] == 's' ? "the decider \"seed\"" : "the decider \"better_placed_unless_level_on_points\"");
+                            if (d->str[0] == 's' && pr != 1) ERR(d, rp, "the decider \"seed\" goes in a seeded round (\"pairing\": \"seeded\")");
+                        }
                     {                                       /* v1.4: a seeded round's seeds, the clubs drawn against them */
                         JNode *se = opt(c, r, "seeds", J_ARR, rp), *dr = opt(c, r, "drawn", J_ARR, rp), *q;
                         if (se) {
@@ -1013,8 +1056,20 @@ static void do_comp(C *c, int ci, StageInfo *all_st, int *nall)
                             if (pr != 1) ERR(se, rp, "'seeds' need \"pairing\": \"seeded\"");
                             if (se->n != ties) ERR(se, rp, "seeds: %d listed, 'ties' says %ld", se->n, ties);
                             if (dr && dr->n != ties) ERR(dr, rp, "drawn: %d listed, 'ties' says %ld", dr->n, ties);
-                            for (q = se->child; q; q = q->next) ko_ref(c, q, rp, ri, rties);
-                            for (q = dr ? dr->child : NULL; q; q = q->next) ko_ref(c, q, rp, ri, rties);
+                            for (q = se->child; q; q = q->next) ko_ref(c, q, rp, ri, rties, all_st, first_stage, *nall);
+                            for (q = dr ? dr->child : NULL; q; q = q->next) ko_ref(c, q, rp, ri, rties, all_st, first_stage, *nall);
+                            for (int k2 = 0; k2 < 2; k2++)  /* (one reference once in the round) */
+                                for (q = (k2 ? dr : se) ? (k2 ? dr : se)->child : NULL; q; q = q->next)
+                                    for (int k3 = k2; k3 < 2; k3++)
+                                        for (JNode *q2 = k3 == k2 ? q->next : (dr ? dr->child : NULL); q2; q2 = q2->next) {
+                                            const char *x1 = q->type == J_STR ? q->str : NULL, *x2 = q2->type == J_STR ? q2->str : NULL;
+                                            JNode *b1 = q->type == J_OBJ ? json_get(q, "best_of") : NULL, *b2 = q2->type == J_OBJ ? json_get(q2, "best_of") : NULL;
+                                            JNode *r1 = q->type == J_OBJ ? json_get(q, "rest_of") : NULL, *r2 = q2->type == J_OBJ ? json_get(q2, "rest_of") : NULL;
+                                            if ((x1 && x2 && !strcmp(x1, x2)) ||
+                                                (b1 && b2 && b1->type == J_STR && b2->type == J_STR && !strcmp(b1->str, b2->str)) ||
+                                                (r1 && r2 && r1->type == J_STR && r2->type == J_STR && !strcmp(r1->str, r2->str)))
+                                                ERR(q2, rp, "seeds / drawn: a club listed twice in one round");
+                                        }
                         } else if (dr) ERR(dr, rp, "'drawn' goes with 'seeds'");
                     }
                     if (pr == 3) {                          /* pairing "fixed": the draw as really made */
@@ -1033,7 +1088,7 @@ static void do_comp(C *c, int ci, StageInfo *all_st, int *nall)
                                                            ties' winners ("table#3", "winner:1.2"): a bracket of the shape */
                                 for (int k2 = 0; k2 < 2; k2++) {
                                     JNode *q = k2 ? a1 : h1;
-                                    if (strncmp(q->str, "club:", 5)) ko_ref(c, q, rp, ri, rties);
+                                    if (strncmp(q->str, "club:", 5)) ko_ref(c, q, rp, ri, rties, all_st, first_stage, *nall);
                                     else ERR(q, rp, "fixed[%d]: clubs and places are not mixed in one pair", fi);
                                 }
                                 if (!strcmp(h1->str, a1->str)) ERR(a1, rp, "fixed[%d]: a club cannot play itself", fi);

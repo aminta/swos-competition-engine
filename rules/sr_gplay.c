@@ -792,7 +792,6 @@ static void gp_season(sr_state *st, const sr_league *lg)
                     while (j > 0 && gp_better(st, x, mem[j - 1])) { mem[j] = mem[j - 1]; j--; }
                     mem[j] = x;
                 }
-                
                 for (int i = 0; i < pn / 2; i++) { tmp[2 * i] = mem[pn - 1 - i]; tmp[2 * i + 1] = mem[i]; }
                 for (int i = 0; i < pn; i++) mem[i] = tmp[i];
             }
@@ -907,7 +906,7 @@ const uint8_t *sr_spec_at(const sr_league *lg, int32_t pidx)
     const u8 *s = lg->spec;
     for (int32_t i = 0; i < pidx && *s; i++) {
         const u8 *r = ents_of(s) + 4 * s[1];
-        if (s[0] != K_PROM)
+        if ((s[0] & 0x3F) != K_PROM)
             for (int k = 0; k < s[2]; k++) r += 6 + 2 * r[0];
         s = r;
     }
@@ -988,6 +987,10 @@ int32_t sr_contest_entrants(sr_state *st, const sr_league *lg, const sr_season *
  * best-of-three not last). */
 static int gp_playable(const u8 *s)
 {
+    /* (42-s3shape, deliberate: an extended play-off -- kind | 0x40, so s[0] > 6 below -- is played at the season end
+       only. The cup place's scroll exists only there: sr_club_playoff and sr_contest_entrants read the places as they
+       are. Before a Serie C play-off becomes a career contest (the 4.2 glue), those two paths must apply the scroll,
+       or an 11th admitted by it is not found.) */
     int n = s[1], nr = s[2], nt = 0;
     const u8 *e = ents_of(s), *r = e + 4 * n;
     if ((s[0] < 1 || (s[0] > 6 && s[0] != K_STAGE) || s[0] == 2) || n > 24 || nr > 8 || nr < 1)
