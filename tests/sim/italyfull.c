@@ -21,8 +21,8 @@
  * F2-F4): order-free stays, the final guard, out of the league below the floor (each exit: one more up from the pool,
  * up.extra's rule), a pool's B team whose first team plays Serie D or lower barred from going up -- any B-team
  * violation fails. BFLOOR=0 runs the Mod 4.1's rules (= sec_post) and counts their gaps instead (reported to MC
- * 2026-11-09). dplay gives a Coppa Italia Serie C winner in the play-out places both (F1, MC's fix in the Mod): the cup
- * winner is drawn from Serie C's top 10.
+ * 2026-11-09). The Coppa Italia Serie C winner is drawn from all of Serie C:
+ * relegated or in a play-out it takes no place (F1, the Mod's dplay.c 353984f).
  * GAME_SPREAD=n: the light tables of A .. D with sr_lp_table_sp at spread n instead of the game's; valid up to ~80
  * (sr_pool.c below() overflows past ~88 at strength 375).
  * Real (tests/sim/itwiki_rates.py, it.wikipedia 2014-15 .. 2025-26): play-out ties the 8-point gap skips, Serie C
@@ -187,9 +187,9 @@ static void chain_run(uint32_t chain, int seasons, stats *st)
         memset(&se, 0, sizeof se);
         se.b_in_ko = 1; se.base = 0; se.levels = &lv;
         {
-            const int g = FIRST_C + (int)(seed % 3u), k = (int)((seed >> 4) % 10u);
-            se.cup_winner = S.t.t[g][k].team;   /* (the Coppa Italia Serie C: a club of Serie C's top 10 -- dplay gives a
-                                                   winner in the play-out places both, reported) */
+            const int g = FIRST_C + (int)(seed % 3u), k = (int)((seed >> 4) % 20u);
+            se.cup_winner = S.t.t[g][k].team;   /* (the Coppa Italia Serie C: any club of Serie C -- relegated or in a
+                                                   play-out it takes no place, F1) */
         }
         if (sr_italy(&S, &lg, &se) < 0) bad |= 1u << W_REFUSED;
         sr_knockouts(&S, &lg, &se);
