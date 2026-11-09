@@ -729,7 +729,10 @@ int32_t sr_reg_check(const sr_registry *r);
 typedef struct { const uint16_t *club; int32_t n; int32_t unknown; } sr_kn_list;
 typedef struct { uint8_t take, order, else_order, nfrom, nelse, from[8], els[8]; } sr_kn_group;
 typedef struct { uint16_t pts, pld, won, gf; uint8_t place; } sr_kn_rec;        /* last season, per club */
-typedef struct { uint32_t key[SR_KN_CLUBS]; uint16_t cand[SR_KN_NUMBERS]; uint8_t taken[SR_KN_CLUBS]; } sr_kn_work;
+typedef struct {
+    uint32_t key[SR_KN_CLUBS]; uint16_t cand[SR_KN_NUMBERS]; uint8_t taken[SR_KN_CLUBS];
+    uint16_t pool[SR_KN_NUMBERS], pnum[SR_KN_NUMBERS]; uint8_t pzone[SR_KN_NUMBERS], pjoin[SR_KN_NUMBERS];   /* (a drawn round) */
+} sr_kn_work;
 /* The numbers: out[0 .. n) the clubs numbered 1 .. n. n; -1 a group nobody is left to fill, or past max. */
 int32_t sr_kn_number(const sr_kn_group *g, int32_t ng, const sr_kn_list *lists, const sr_kn_rec *rec,
                      const uint8_t *eligible, uint32_t *rng, sr_kn_work *w, uint16_t *out, int32_t max);
@@ -744,13 +747,33 @@ uint32_t sr_kn_work_size(void);
 #define SR_KN_FIXED     4
 #define SR_KN_LOWER     5
 #define SR_KN_LOWER_2ND 6
+#define SR_KN_JOINER    7              /* (a drawn round) the club joining at this round hosts; the others drawn */
 #define SR_KN_F_NEUTRAL 1
 #define SR_KN_F_2ND     2              /* two legs: the second leg at the away side's (the lower number's) */
+/* A round's pairing: fixed (pairs[first .. first + ties)), or drawn from the previous round's winners and this
+ * round's joiners (join[jfirst .. jfirst + njoin)): open, or within each zone (a club keeps its zone). */
+#define SR_KN_PAIR_FIXED 0
+#define SR_KN_PAIR_DRAW  1
+#define SR_KN_PAIR_ZONE  2
+#define SR_KN_ZONES     16
 typedef struct { uint16_t a, b; } sr_kn_pair;
-typedef struct { uint16_t ties, first; uint8_t legs, home; } sr_kn_round;
-typedef struct { uint16_t home, away, nhome, naway, winner, nwin; uint8_t legs, flags; } sr_kn_tie;
+typedef struct { uint16_t ties, first; uint8_t legs, home, pairing, pad; uint16_t jfirst, njoin; } sr_kn_round;
+typedef struct { uint16_t club; uint8_t zone, pad; } sr_kn_entry;
+typedef struct { uint16_t home, away, nhome, naway, winner, nwin; uint8_t legs, flags, zone, pad; } sr_kn_tie;
 typedef int32_t (*sr_kn_play_fn)(void *ctx, int32_t round, int32_t tie, const sr_kn_tie *t);
 int32_t sr_kn_bracket(const sr_kn_round *rd, int32_t nr, const sr_kn_pair *pairs, const uint16_t *numbers,
                       int32_t nn, const uint8_t *swap, uint32_t *rng, sr_kn_play_fn play, void *ctx, sr_kn_tie *out);
+/* The same with drawn rounds (w: the caller's work area; join: the rounds' joiners). */
+int32_t sr_kn_cup(const sr_kn_round *rd, int32_t nr, const sr_kn_pair *pairs, const uint16_t *numbers, int32_t nn,
+                  const sr_kn_entry *join, const uint8_t *swap, uint32_t *rng, sr_kn_play_fn play, void *ctx,
+                  sr_kn_work *w, sr_kn_tie *out);
+/* Zones by proximity (42-s2ko M2, the Coppa Italia Serie C's geographic groups): clubs[0 .. n) into nz zones of cap
+ * clubs each, each club to its nearest centre with room, the club with the most to lose first (the regret: its
+ * second-nearest room's distance less its nearest's; equal: the earlier in the list). geo[club] and the centres in
+ * 1/100 degree (lat, lon); the distance flat, longitude by cos 42 degrees. zone[i] for clubs[i]. 0; -1 too many
+ * clubs (n > nz x cap), nz out of 1 .. SR_KN_ZONES. */
+typedef struct { int16_t lat, lon; } sr_kn_geo;
+int32_t sr_kn_zones(const sr_kn_geo *geo, const uint16_t *clubs, int32_t n, const sr_kn_geo *centre, int32_t nz,
+                    int32_t cap, sr_kn_work *w, uint8_t *zone);
 
 #endif

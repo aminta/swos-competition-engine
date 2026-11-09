@@ -95,6 +95,45 @@ for cid, tag in (('ita.coppa', 'ci'), ('ita.supercoppa', 'sc')):
             '#define S2_%s_NG %d' % (tag.upper(), len(gs)), '#define S2_%s_NR %d' % (tag.upper(), len(rd)),
             '#define S2_%s_NP %d' % (tag.upper(), len(pairs)),
             '#define S2_%s_N %d' % (tag.upper(), len(st['first_season']['numbers']))]
+# 42-s2ko M2: the Coppa Italia Serie C -- every club's town (1/100 degree), the zones' centres, round 1's clubs as
+# numbered (C.U. 1/CIT, its groups in order), the seeds (round 2's listed clubs), the first season's rounds as pairs of
+# numbers into s2c_num, then the drawn rounds; the real results (it.wikipedia: [round, home, away, winner])
+cc = comps['ita.coppa-c']['stages'][0]
+out.append('static const sr_kn_geo s2c_geo[] = { %s };' % ', '.join(
+    '{ %d, %d }' % (round(c['geo'][0] * 100), round(c['geo'][1] * 100)) if 'geo' in c else '{ 0, 0 }'
+    for c in (next((x for x in spec['clubs'] if x['id'] == 'club:ita.' + k), {}) for k in ids)))
+out.append('static const sr_kn_geo s2c_centre[] = { %s };' % ', '.join('{ %d, %d }' % (round(a * 100), round(b * 100)) for a, b in cc['zones']['centres']))
+cz = cc['first_season']['zones']
+r1 = [code[k[len('club:ita.'):]] for z in cz for k in z]
+out.append('static const uint16_t s2c_r1[] = { %s };' % ', '.join(map(str, r1)))
+out.append('static const uint8_t s2c_r1zone[] = { %s };' % ', '.join(str(i) for i, z in enumerate(cz) for _ in z))
+fr = cc['first_season']['rounds']
+seeds = [(code[x[len('club:ita.'):]], ti // (len(fr[1]) // len(cz))) for ti, p in enumerate(fr[1]) for x in p if x.startswith('club:')]
+out.append('static const uint16_t s2c_seed[] = { %s };' % ', '.join(str(c) for c, _ in seeds))
+out.append('static const uint8_t s2c_seedzone[] = { %s };' % ', '.join(str(z) for _, z in seeds))
+num = r1 + [c for c, _ in seeds]
+def cside(x):
+    if x.startswith('club:'):
+        return str(num.index(code[x[len('club:ita.'):]]) + 1)
+    r, t = x[len('winner:'):].split('.')
+    return 'SR_KN_WIN(%d, %d)' % (int(r) - 1, int(t) - 1)
+PR = {'fixed': 0, 'draw': 1, 'zone': 2}
+crd, cpr, at = [], [], 0
+for ri, r in enumerate(cc['rounds']):
+    fixed = ri < len(fr)
+    at += cc['rounds'][ri - 1]['ties'] if ri else 0
+    crd.append('{ %d, %d, %d, %d, %d, 0, 0, 0 }' % (r['ties'], at, r['legs'], 4 if fixed else HOMES.index(r['home']),
+                                                0 if fixed else PR[r['pairing']]))
+    if fixed: cpr += ['{ %s, %s }' % (cside(a), cside(b)) for a, b in fr[ri]]
+out += ['static const sr_kn_round s2c_rounds[] = { %s };' % ', '.join(crd),
+        'static const sr_kn_pair s2c_pairs[] = { %s };' % ', '.join(cpr),
+        'static const uint16_t s2c_num[] = { %s };' % ', '.join(map(str, num)),
+        '#define S2C_NR %d' % len(crd), '#define S2C_NNUM %d' % len(num), '#define S2C_NZ %d' % len(cz),
+        '#define S2C_NFIXED %d' % len(fr)]
+cres = fx['coppa_c_2627']
+out.append('static const uint16_t s2c_res[][4] = { %s };' % ', '.join('{ %d, %d, %d, %d }' % (
+    r, code[h], code[a], code[w]) for r, h, a, w in cres))
+out.append('#define S2C_NRES %d' % len(cres))
 out.append('#define S2_NLISTS %d' % len(lists))
 for i, (ref, l, u) in enumerate(lists):
     out.append('static const uint16_t s2_l%d[] = { %s };   /* %s */' % (i, ', '.join(map(str, l)) or '0', ref))

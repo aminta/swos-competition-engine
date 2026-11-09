@@ -27,7 +27,11 @@
    "host": {
     "file": 90,
     "ordinal": 0
-   }
+   },
+   "geo": [
+    45.695,
+    9.67
+   ]
   },
   {
    "id": "club:ita.bologna",
@@ -36,7 +40,11 @@
    "host": {
     "file": 90,
     "ordinal": 1
-   }
+   },
+   "geo": [
+    44.4939,
+    11.3428
+   ]
   },
   {
    "id": "club:ita.cagliari",
@@ -45,7 +53,11 @@
    "host": {
     "file": 90,
     "ordinal": 2
-   }
+   },
+   "geo": [
+    39.2167,
+    9.1167
+   ]
   },
   {
    "id": "club:ita.como",
@@ -54,7 +66,11 @@
    "host": {
     "file": 90,
     "ordinal": 3
-   }
+   },
+   "geo": [
+    45.8103,
+    9.0861
+   ]
   },
   {
    "id": "club:ita.fiorentina",
@@ -63,7 +79,11 @@
    "host": {
     "file": 90,
     "ordinal": 4
-   }
+   },
+   "geo": [
+    43.7714,
+    11.2542
+   ]
   },
   {
    "id": "club:ita.frosinone",
@@ -72,7 +92,11 @@
    "host": {
     "file": 90,
     "ordinal": 5
-   }
+   },
+   "geo": [
+    41.6333,
+    13.35
+   ]
   },
   {
    "id": "club:ita.genoa",
@@ -81,7 +105,11 @@
    "host": {
     "file": 90,
     "ordinal": 6
-   }
+   },
+   "geo": [
+    44.4072,
+    8.9339
+   ]
   },
   {
    "id": "club:ita.inter",
@@ -90,7 +118,11 @@
    "host": {
     "file": 90,
     "ordinal": 7
-   }
+   },
+   "geo": [
+    45.4669,
+    9.19
+   ]
   },
   {
    "id": "club:ita.juventus",
@@ -99,7 +131,11 @@
    "host": {
     "file": 90,
     "ordinal": 8
-   }
+   },
+   "geo": [
+    45.0792,
+    7.6761
+   ]
   },
   {
    "id": "club:ita.lazio",
@@ -108,7 +144,11 @@
    "host": {
     "file": 90,
     "ordinal": 9
-   }
+   },
+   "geo": [
+    41.8931,
+    12.4828
+   ]
   },
   {
    "id": "club:ita.lecce",
@@ -117,7 +157,11 @@
    "host": {
     "file": 90,
     "ordinal": 10
-   }
+   },
+   "geo": [
+    40.352,
+    18.1691
+   ]
   },
   {
    "id": "club:ita.milan",
@@ -126,7 +170,11 @@
    "host": {
     "file": 90,
     "ordinal": 11
-   }
+   },
+   "geo": [
+    45.4669,
+    9.19
+   ]
   },
   {
    "id": "club:ita.monza",
@@ -135,7 +183,11 @@
    "host": {
     "file": 90,
     "ordinal": 12
-   }
+   },
+   "geo": [
+    45.5836,
+    9.2736
+   ]
   },
   {
    "id": "club:ita.napoli",
@@ -144,7 +196,11 @@
    "host": {
     "file": 90,
     "ordinal": 13
-   }
+   },
+   "geo": [
+    40.8358,
+    14.2486
+   ]
   },
   {
    "id": "club:ita.parma",
@@ -153,7 +209,11 @@
    "host": {
     "file": 90,
     "ordinal": 14
-   }
+   },
+   "geo": [
+    44.8015,
+    10.328
+   ]
   },
   {
    "id": "club:ita.roma",
@@ -162,7 +222,11 @@
    "host": {
     "file": 90,
     "ordinal": 15
-   }
+   },
+   "geo": [
+    41.8931,
+    12.4828
+   ]
   },
   {
    "id": "club:ita.sassuolo",
@@ -171,7 +235,11 @@
    "host": {
     "file": 90,
     "ordinal": 16
-   }
+   },
+   "geo": [
+    44.5517,
+    10.7856
+   ]
   },
   {
    "id": "club:ita.torino",
@@ -180,7 +248,11 @@
    "host": {
     "file": 90,
     "ordinal": 17
-   }
+   },
+   "geo": [
+    45.0792,
+    7.6761
+   ]
   },
   {
    "id": "club:ita.udinese",
@@ -189,7 +261,11 @@
    "host": {
     "file": 90,
     "ordinal": 18
-   }
+   },
+   "geo": [
+    46.0667,
+    13.2333
+   ]
   },
   {
    "id": "club:ita.venezia",
@@ -198,7 +274,11 @@
    "host": {
     "file": 90,
     "ordinal": 19
-   }
+   },
+   "geo": [
+    45.4397,
+    12.3319
+   ]
   },
   {
    "id": "club:ita.arezzo",
@@ -207,7 +287,11 @@
    "host": {
     "file": 90,
     "ordinal": 20
-   }
+   },
+   "geo": [
+    43.4631,
+    11.8781
+   ]
   },
   {
    "id": "club:ita.ascoli",
@@ -216,7 +300,11 @@
    "host": {
     "file": 90,
     "ordinal": 21
-   }
+   },
+   "geo": [
+    42.8547,
+    13.5753
+   ]
   },
   {
    "id": "club:ita.avellino",
@@ -225,7 +313,11 @@
    "host": {
     "file": 90,
     "ordinal": 22
-   }
+   },
+   "geo": [
+    40.9153,
+    14.7897
+   ]
   },
   {
    "id": "club:ita.benevento",
@@ -234,7 +326,11 @@
    "host": {
     "file": 90,
     "ordinal": 23
-   }
+   },
+   "geo": [
+    41.1333,
+    14.7833
+   ]
   },
   {
    "id": "club:ita.carrarese",
@@ -243,7 +339,11 @@
    "host": {
     "file": 90,
     "ordinal": 24
-   }
+   },
+   "geo": [
+    44.0833,
+    10.1
+   ]
   },
   {
    "id": "club:ita.catanzaro",
@@ -252,7 +352,11 @@
    "host": {
     "file": 90,
     "ordinal": 25
-   }
+   },
+   "geo": [
+    38.91,
+    16.5875
+   ]
   },
   {
    "id": "club:ita.cesena",
@@ -261,7 +365,11 @@
    "host": {
     "file": 90,
     "ordinal": 26
-   }
+   },
+   "geo": [
+    44.1333,
+    12.2333
+   ]
   },
   {
    "id": "club:ita.cremonese",
@@ -270,7 +378,11 @@
    "host": {
     "file": 90,
     "ordinal": 27
-   }
+   },
+   "geo": [
+    45.1333,
+    10.0247
+   ]
   },
   {
    "id": "club:ita.empoli",
@@ -279,7 +391,11 @@
    "host": {
     "file": 90,
     "ordinal": 28
-   }
+   },
+   "geo": [
+    43.7167,
+    10.95
+   ]
   },
   {
    "id": "club:ita.juvestabia",
@@ -288,7 +404,11 @@
    "host": {
     "file": 90,
     "ordinal": 29
-   }
+   },
+   "geo": [
+    40.6947,
+    14.4803
+   ]
   },
   {
    "id": "club:ita.mantova",
@@ -297,7 +417,11 @@
    "host": {
     "file": 90,
     "ordinal": 30
-   }
+   },
+   "geo": [
+    45.1564,
+    10.7911
+   ]
   },
   {
    "id": "club:ita.modena",
@@ -306,7 +430,11 @@
    "host": {
     "file": 90,
     "ordinal": 31
-   }
+   },
+   "geo": [
+    44.6458,
+    10.9257
+   ]
   },
   {
    "id": "club:ita.padova",
@@ -315,7 +443,11 @@
    "host": {
     "file": 90,
     "ordinal": 32
-   }
+   },
+   "geo": [
+    45.4078,
+    11.8733
+   ]
   },
   {
    "id": "club:ita.palermo",
@@ -324,7 +456,11 @@
    "host": {
     "file": 90,
     "ordinal": 33
-   }
+   },
+   "geo": [
+    38.1157,
+    13.3613
+   ]
   },
   {
    "id": "club:ita.pisa",
@@ -333,7 +469,11 @@
    "host": {
     "file": 90,
     "ordinal": 34
-   }
+   },
+   "geo": [
+    43.7167,
+    10.4
+   ]
   },
   {
    "id": "club:ita.sampdoria",
@@ -342,7 +482,11 @@
    "host": {
     "file": 90,
     "ordinal": 35
-   }
+   },
+   "geo": [
+    44.4072,
+    8.9339
+   ]
   },
   {
    "id": "club:ita.sudtirol",
@@ -351,7 +495,11 @@
    "host": {
     "file": 90,
     "ordinal": 36
-   }
+   },
+   "geo": [
+    46.4981,
+    11.3548
+   ]
   },
   {
    "id": "club:ita.verona",
@@ -360,7 +508,11 @@
    "host": {
     "file": 90,
     "ordinal": 37
-   }
+   },
+   "geo": [
+    45.4386,
+    10.9928
+   ]
   },
   {
    "id": "club:ita.vicenza",
@@ -369,7 +521,11 @@
    "host": {
     "file": 90,
     "ordinal": 38
-   }
+   },
+   "geo": [
+    45.55,
+    11.55
+   ]
   },
   {
    "id": "club:ita.virtusentella",
@@ -378,7 +534,11 @@
    "host": {
     "file": 90,
     "ordinal": 39
-   }
+   },
+   "geo": [
+    44.3164,
+    9.3237
+   ]
   },
   {
    "id": "club:ita.albinoleffe",
@@ -387,7 +547,11 @@
    "host": {
     "file": 90,
     "ordinal": 40
-   }
+   },
+   "geo": [
+    45.7606,
+    9.7969
+   ]
   },
   {
    "id": "club:ita.alcione",
@@ -396,7 +560,11 @@
    "host": {
     "file": 90,
     "ordinal": 41
-   }
+   },
+   "geo": [
+    45.4669,
+    9.19
+   ]
   },
   {
    "id": "club:ita.arzignanovalchiampo",
@@ -405,7 +573,11 @@
    "host": {
     "file": 90,
     "ordinal": 42
-   }
+   },
+   "geo": [
+    45.5203,
+    11.3397
+   ]
   },
   {
    "id": "club:ita.carpi",
@@ -414,7 +586,11 @@
    "host": {
     "file": 90,
     "ordinal": 43
-   }
+   },
+   "geo": [
+    44.7833,
+    10.885
+   ]
   },
   {
    "id": "club:ita.cittadella",
@@ -423,7 +599,11 @@
    "host": {
     "file": 90,
     "ordinal": 44
-   }
+   },
+   "geo": [
+    45.6486,
+    11.7836
+   ]
   },
   {
    "id": "club:ita.desenzano",
@@ -432,7 +612,11 @@
    "host": {
     "file": 90,
     "ordinal": 45
-   }
+   },
+   "geo": [
+    45.4689,
+    10.535
+   ]
   },
   {
    "id": "club:ita.dolomitibellunesi",
@@ -441,7 +625,11 @@
    "host": {
     "file": 90,
     "ordinal": 46
-   }
+   },
+   "geo": [
+    46.1408,
+    12.2156
+   ]
   },
   {
    "id": "club:ita.folgorecaratese",
@@ -450,7 +638,11 @@
    "host": {
     "file": 90,
     "ordinal": 47
-   }
+   },
+   "geo": [
+    45.6833,
+    9.2333
+   ]
   },
   {
    "id": "club:ita.gianaerminio",
@@ -459,7 +651,11 @@
    "host": {
     "file": 90,
     "ordinal": 48
-   }
+   },
+   "geo": [
+    45.5333,
+    9.4
+   ]
   },
   {
    "id": "club:ita.juventusnextgen",
@@ -468,7 +664,11 @@
    "host": {
     "file": 90,
     "ordinal": 49
-   }
+   },
+   "geo": [
+    45.0792,
+    7.6761
+   ]
   },
   {
    "id": "club:ita.lecco",
@@ -477,7 +677,11 @@
    "host": {
     "file": 90,
     "ordinal": 50
-   }
+   },
+   "geo": [
+    45.8533,
+    9.3905
+   ]
   },
   {
    "id": "club:ita.lumezzane",
@@ -486,7 +690,11 @@
    "host": {
     "file": 90,
     "ordinal": 51
-   }
+   },
+   "geo": [
+    45.65,
+    10.2667
+   ]
   },
   {
    "id": "club:ita.novara",
@@ -495,7 +703,11 @@
    "host": {
     "file": 90,
     "ordinal": 52
-   }
+   },
+   "geo": [
+    45.45,
+    8.62
+   ]
   },
   {
    "id": "club:ita.ospitaletto",
@@ -504,7 +716,11 @@
    "host": {
     "file": 90,
     "ordinal": 53
-   }
+   },
+   "geo": [
+    45.5553,
+    10.0733
+   ]
   },
   {
    "id": "club:ita.pergolettese",
@@ -513,7 +729,11 @@
    "host": {
     "file": 90,
     "ordinal": 54
-   }
+   },
+   "geo": [
+    45.3667,
+    9.6833
+   ]
   },
   {
    "id": "club:ita.provercelli",
@@ -522,7 +742,11 @@
    "host": {
     "file": 90,
     "ordinal": 55
-   }
+   },
+   "geo": [
+    45.3261,
+    8.4234
+   ]
   },
   {
    "id": "club:ita.renate",
@@ -531,7 +755,11 @@
    "host": {
     "file": 90,
     "ordinal": 56
-   }
+   },
+   "geo": [
+    45.7225,
+    9.2783
+   ]
   },
   {
    "id": "club:ita.trento",
@@ -540,7 +768,11 @@
    "host": {
     "file": 90,
     "ordinal": 57
-   }
+   },
+   "geo": [
+    46.0667,
+    11.1167
+   ]
   },
   {
    "id": "club:ita.treviso",
@@ -549,7 +781,11 @@
    "host": {
     "file": 90,
     "ordinal": 58
-   }
+   },
+   "geo": [
+    45.6658,
+    12.2456
+   ]
   },
   {
    "id": "club:ita.unionbrescia",
@@ -558,7 +794,11 @@
    "host": {
     "file": 90,
     "ordinal": 59
-   }
+   },
+   "geo": [
+    45.5389,
+    10.2203
+   ]
   },
   {
    "id": "club:ita.atalantau23",
@@ -567,7 +807,11 @@
    "host": {
     "file": 90,
     "ordinal": 60
-   }
+   },
+   "geo": [
+    45.695,
+    9.67
+   ]
   },
   {
    "id": "club:ita.campobasso",
@@ -576,7 +820,11 @@
    "host": {
     "file": 90,
     "ordinal": 61
-   }
+   },
+   "geo": [
+    41.561,
+    14.6684
+   ]
   },
   {
    "id": "club:ita.forli",
@@ -585,7 +833,11 @@
    "host": {
     "file": 90,
     "ordinal": 62
-   }
+   },
+   "geo": [
+    44.2228,
+    12.0414
+   ]
   },
   {
    "id": "club:ita.grosseto",
@@ -594,7 +846,11 @@
    "host": {
     "file": 90,
     "ordinal": 63
-   }
+   },
+   "geo": [
+    42.7722,
+    11.1089
+   ]
   },
   {
    "id": "club:ita.gubbio",
@@ -603,7 +859,11 @@
    "host": {
     "file": 90,
     "ordinal": 64
-   }
+   },
+   "geo": [
+    43.353,
+    12.5793
+   ]
   },
   {
    "id": "club:ita.guidonia",
@@ -612,7 +872,11 @@
    "host": {
     "file": 90,
     "ordinal": 65
-   }
+   },
+   "geo": [
+    41.9968,
+    12.7261
+   ]
   },
   {
    "id": "club:ita.latina",
@@ -621,7 +885,11 @@
    "host": {
     "file": 90,
     "ordinal": 66
-   }
+   },
+   "geo": [
+    41.4672,
+    12.9036
+   ]
   },
   {
    "id": "club:ita.livorno",
@@ -630,7 +898,11 @@
    "host": {
     "file": 90,
     "ordinal": 67
-   }
+   },
+   "geo": [
+    43.55,
+    10.3167
+   ]
   },
   {
    "id": "club:ita.ostiamare",
@@ -639,7 +911,11 @@
    "host": {
     "file": 90,
     "ordinal": 68
-   }
+   },
+   "geo": [
+    41.8931,
+    12.4828
+   ]
   },
   {
    "id": "club:ita.perugia",
@@ -648,7 +924,11 @@
    "host": {
     "file": 90,
     "ordinal": 69
-   }
+   },
+   "geo": [
+    43.1119,
+    12.3885
+   ]
   },
   {
    "id": "club:ita.pescara",
@@ -657,7 +937,11 @@
    "host": {
     "file": 90,
     "ordinal": 70
-   }
+   },
+   "geo": [
+    42.4643,
+    14.2142
+   ]
   },
   {
    "id": "club:ita.pianese",
@@ -666,7 +950,11 @@
    "host": {
     "file": 90,
     "ordinal": 71
-   }
+   },
+   "geo": [
+    42.85,
+    11.6833
+   ]
   },
   {
    "id": "club:ita.pineto",
@@ -675,7 +963,11 @@
    "host": {
     "file": 90,
     "ordinal": 72
-   }
+   },
+   "geo": [
+    42.6167,
+    14.0667
+   ]
   },
   {
    "id": "club:ita.ravenna",
@@ -684,7 +976,11 @@
    "host": {
     "file": 90,
     "ordinal": 73
-   }
+   },
+   "geo": [
+    44.4161,
+    12.2017
+   ]
   },
   {
    "id": "club:ita.reggiana",
@@ -693,7 +989,11 @@
    "host": {
     "file": 90,
     "ordinal": 74
-   }
+   },
+   "geo": [
+    44.7,
+    10.6333
+   ]
   },
   {
    "id": "club:ita.sambenedettese",
@@ -702,7 +1002,11 @@
    "host": {
     "file": 90,
     "ordinal": 75
-   }
+   },
+   "geo": [
+    42.9438,
+    13.8833
+   ]
   },
   {
    "id": "club:ita.spezia",
@@ -711,7 +1015,11 @@
    "host": {
     "file": 90,
     "ordinal": 76
-   }
+   },
+   "geo": [
+    44.108,
+    9.8289
+   ]
   },
   {
    "id": "club:ita.torres",
@@ -720,7 +1028,11 @@
    "host": {
     "file": 90,
     "ordinal": 77
-   }
+   },
+   "geo": [
+    40.7267,
+    8.5592
+   ]
   },
   {
    "id": "club:ita.vado",
@@ -729,7 +1041,11 @@
    "host": {
     "file": 90,
     "ordinal": 78
-   }
+   },
+   "geo": [
+    44.2692,
+    8.4361
+   ]
   },
   {
    "id": "club:ita.vispesaro",
@@ -738,7 +1054,11 @@
    "host": {
     "file": 90,
     "ordinal": 79
-   }
+   },
+   "geo": [
+    43.9102,
+    12.9133
+   ]
   },
   {
    "id": "club:ita.altamura",
@@ -747,7 +1067,11 @@
    "host": {
     "file": 90,
     "ordinal": 80
-   }
+   },
+   "geo": [
+    40.8167,
+    16.55
+   ]
   },
   {
    "id": "club:ita.cerignola",
@@ -756,7 +1080,11 @@
    "host": {
     "file": 90,
     "ordinal": 81
-   }
+   },
+   "geo": [
+    41.2667,
+    15.9
+   ]
   },
   {
    "id": "club:ita.picerno",
@@ -765,7 +1093,11 @@
    "host": {
     "file": 90,
     "ordinal": 82
-   }
+   },
+   "geo": [
+    40.6333,
+    15.6333
+   ]
   },
   {
    "id": "club:ita.bari",
@@ -774,7 +1106,11 @@
    "host": {
     "file": 90,
     "ordinal": 83
-   }
+   },
+   "geo": [
+    41.1253,
+    16.8667
+   ]
   },
   {
    "id": "club:ita.barletta",
@@ -783,7 +1119,11 @@
    "host": {
     "file": 90,
     "ordinal": 84
-   }
+   },
+   "geo": [
+    41.3167,
+    16.2833
+   ]
   },
   {
    "id": "club:ita.casarano",
@@ -792,7 +1132,11 @@
    "host": {
     "file": 90,
     "ordinal": 85
-   }
+   },
+   "geo": [
+    40.0167,
+    18.1667
+   ]
   },
   {
    "id": "club:ita.casertana",
@@ -801,7 +1145,11 @@
    "host": {
     "file": 90,
     "ordinal": 86
-   }
+   },
+   "geo": [
+    41.0667,
+    14.3333
+   ]
   },
   {
    "id": "club:ita.catania",
@@ -810,7 +1158,11 @@
    "host": {
     "file": 90,
     "ordinal": 87
-   }
+   },
+   "geo": [
+    37.5027,
+    15.0873
+   ]
   },
   {
    "id": "club:ita.cavese",
@@ -819,7 +1171,11 @@
    "host": {
     "file": 90,
     "ordinal": 88
-   }
+   },
+   "geo": [
+    40.7008,
+    14.7056
+   ]
   },
   {
    "id": "club:ita.cosenza",
@@ -828,7 +1184,11 @@
    "host": {
     "file": 90,
     "ordinal": 89
-   }
+   },
+   "geo": [
+    39.3,
+    16.25
+   ]
   },
   {
    "id": "club:ita.crotone",
@@ -837,7 +1197,11 @@
    "host": {
     "file": 90,
     "ordinal": 90
-   }
+   },
+   "geo": [
+    39.0833,
+    17.1167
+   ]
   },
   {
    "id": "club:ita.foggia",
@@ -846,7 +1210,11 @@
    "host": {
     "file": 90,
     "ordinal": 91
-   }
+   },
+   "geo": [
+    41.4584,
+    15.5519
+   ]
   },
   {
    "id": "club:ita.giugliano",
@@ -855,7 +1223,11 @@
    "host": {
     "file": 90,
     "ordinal": 92
-   }
+   },
+   "geo": [
+    40.9283,
+    14.2011
+   ]
   },
   {
    "id": "club:ita.interu23",
@@ -864,7 +1236,11 @@
    "host": {
     "file": 90,
     "ordinal": 93
-   }
+   },
+   "geo": [
+    45.4669,
+    9.19
+   ]
   },
   {
    "id": "club:ita.monopoli",
@@ -873,7 +1249,11 @@
    "host": {
     "file": 90,
     "ordinal": 94
-   }
+   },
+   "geo": [
+    40.95,
+    17.3
+   ]
   },
   {
    "id": "club:ita.potenza",
@@ -882,7 +1262,11 @@
    "host": {
     "file": 90,
     "ordinal": 95
-   }
+   },
+   "geo": [
+    40.6333,
+    15.8
+   ]
   },
   {
    "id": "club:ita.salernitana",
@@ -891,7 +1275,11 @@
    "host": {
     "file": 90,
     "ordinal": 96
-   }
+   },
+   "geo": [
+    40.6806,
+    14.7594
+   ]
   },
   {
    "id": "club:ita.savoia",
@@ -900,7 +1288,11 @@
    "host": {
     "file": 90,
     "ordinal": 97
-   }
+   },
+   "geo": [
+    40.7569,
+    14.4444
+   ]
   },
   {
    "id": "club:ita.scafatese",
@@ -909,7 +1301,11 @@
    "host": {
     "file": 90,
     "ordinal": 98
-   }
+   },
+   "geo": [
+    40.7536,
+    14.5253
+   ]
   },
   {
    "id": "club:ita.sorrento",
@@ -918,7 +1314,11 @@
    "host": {
     "file": 90,
     "ordinal": 99
-   }
+   },
+   "geo": [
+    40.6278,
+    14.3736
+   ]
   }
  ],
  "competitions": [
@@ -1514,26 +1914,397 @@
      "COPPA ITALIA C"
     ]
    },
+   "_source": "Lega Pro C.U. n. 36/L of 29/07/2026 (the regulation): 56 clubs in 4 geographic groups of 14 (numbers 5-60 drawn, the lower number at home = a drawn host), the 4 Serie C clubs of the Coppa Italia as seeds in round 2 (one per group by proximity, at home), drawn within each group to the last 16, an open draw from the quarter-finals, semi-finals and final over two legs (points, goal difference = the aggregate; extra time, penalties), single matches straight to penalties. The groups by proximity (Davide 09/11, 42-s2ko Q1): each club's town (it.wikipedia 2026-27 season pages, Wikidata coordinates) to the nearest of the 2026-27 groups' centres with room; on the real 2026-27 clubs 53 of 56 land in their real group (Forli, Picerno, Grosseto do not), the 4 seeds all. Season 1: C.U. 1/CIT (groups, rounds 1-2, the last 16) with the hosts as played -- three field swaps under art. 5 (C.U. 11/CIT: Spezia-Vado, Trento-Desenzano; 20/CIT: Dolomiti Bellunesi-Desenzano) --, the quarter-finals as drawn (C.U. 22/CIT); results: it.wikipedia.",
    "participants": {
-    "count": 4,
-    "clubs": [
-     "club:ita.albinoleffe",
-     "club:ita.atalantau23",
-     "club:ita.altamura",
-     "club:ita.alcione"
+    "count": 60,
+    "from": "link",
+    "source": [
+     "ita.c-a",
+     "ita.c-b",
+     "ita.c-c"
     ]
    },
    "stages": [
     {
      "id": "ko",
      "type": "knockout",
+     "zones": {
+      "centres": [
+       [
+        45.71,
+        10.45
+       ],
+       [
+        44.38,
+        9.65
+       ],
+       [
+        41.86,
+        15.16
+       ],
+       [
+        40.97,
+        14.19
+       ]
+      ]
+     },
+     "first_season": {
+      "zones": [
+       [
+        "club:ita.lumezzane",
+        "club:ita.arzignanovalchiampo",
+        "club:ita.trento",
+        "club:ita.cittadella",
+        "club:ita.albinoleffe",
+        "club:ita.ospitaletto",
+        "club:ita.gianaerminio",
+        "club:ita.atalantau23",
+        "club:ita.lecco",
+        "club:ita.dolomitibellunesi",
+        "club:ita.folgorecaratese",
+        "club:ita.renate",
+        "club:ita.desenzano",
+        "club:ita.treviso"
+       ],
+       [
+        "club:ita.juventusnextgen",
+        "club:ita.alcione",
+        "club:ita.spezia",
+        "club:ita.carpi",
+        "club:ita.forli",
+        "club:ita.livorno",
+        "club:ita.vado",
+        "club:ita.novara",
+        "club:ita.interu23",
+        "club:ita.provercelli",
+        "club:ita.reggiana",
+        "club:ita.torres",
+        "club:ita.pergolettese",
+        "club:ita.pianese"
+       ],
+       [
+        "club:ita.picerno",
+        "club:ita.bari",
+        "club:ita.cerignola",
+        "club:ita.foggia",
+        "club:ita.barletta",
+        "club:ita.altamura",
+        "club:ita.perugia",
+        "club:ita.casarano",
+        "club:ita.vispesaro",
+        "club:ita.pineto",
+        "club:ita.pescara",
+        "club:ita.monopoli",
+        "club:ita.gubbio",
+        "club:ita.sambenedettese"
+       ],
+       [
+        "club:ita.casertana",
+        "club:ita.latina",
+        "club:ita.giugliano",
+        "club:ita.grosseto",
+        "club:ita.campobasso",
+        "club:ita.crotone",
+        "club:ita.salernitana",
+        "club:ita.ostiamare",
+        "club:ita.cosenza",
+        "club:ita.scafatese",
+        "club:ita.sorrento",
+        "club:ita.cavese",
+        "club:ita.savoia",
+        "club:ita.guidonia"
+       ]
+      ],
+      "rounds": [
+       [
+        [
+         "club:ita.cittadella",
+         "club:ita.atalantau23"
+        ],
+        [
+         "club:ita.trento",
+         "club:ita.ospitaletto"
+        ],
+        [
+         "club:ita.dolomitibellunesi",
+         "club:ita.treviso"
+        ],
+        [
+         "club:ita.arzignanovalchiampo",
+         "club:ita.albinoleffe"
+        ],
+        [
+         "club:ita.lecco",
+         "club:ita.desenzano"
+        ],
+        [
+         "club:ita.gianaerminio",
+         "club:ita.folgorecaratese"
+        ],
+        [
+         "club:ita.lumezzane",
+         "club:ita.renate"
+        ],
+        [
+         "club:ita.spezia",
+         "club:ita.torres"
+        ],
+        [
+         "club:ita.alcione",
+         "club:ita.novara"
+        ],
+        [
+         "club:ita.carpi",
+         "club:ita.pianese"
+        ],
+        [
+         "club:ita.vado",
+         "club:ita.interu23"
+        ],
+        [
+         "club:ita.livorno",
+         "club:ita.reggiana"
+        ],
+        [
+         "club:ita.juventusnextgen",
+         "club:ita.forli"
+        ],
+        [
+         "club:ita.provercelli",
+         "club:ita.pergolettese"
+        ],
+        [
+         "club:ita.bari",
+         "club:ita.casarano"
+        ],
+        [
+         "club:ita.cerignola",
+         "club:ita.monopoli"
+        ],
+        [
+         "club:ita.perugia",
+         "club:ita.vispesaro"
+        ],
+        [
+         "club:ita.pescara",
+         "club:ita.sambenedettese"
+        ],
+        [
+         "club:ita.picerno",
+         "club:ita.barletta"
+        ],
+        [
+         "club:ita.pineto",
+         "club:ita.gubbio"
+        ],
+        [
+         "club:ita.foggia",
+         "club:ita.altamura"
+        ],
+        [
+         "club:ita.crotone",
+         "club:ita.cosenza"
+        ],
+        [
+         "club:ita.giugliano",
+         "club:ita.sorrento"
+        ],
+        [
+         "club:ita.salernitana",
+         "club:ita.scafatese"
+        ],
+        [
+         "club:ita.latina",
+         "club:ita.ostiamare"
+        ],
+        [
+         "club:ita.casertana",
+         "club:ita.savoia"
+        ],
+        [
+         "club:ita.grosseto",
+         "club:ita.guidonia"
+        ],
+        [
+         "club:ita.campobasso",
+         "club:ita.cavese"
+        ]
+       ],
+       [
+        [
+         "winner:1.4",
+         "winner:1.3"
+        ],
+        [
+         "club:ita.unionbrescia",
+         "winner:1.6"
+        ],
+        [
+         "winner:1.2",
+         "winner:1.5"
+        ],
+        [
+         "winner:1.1",
+         "winner:1.7"
+        ],
+        [
+         "winner:1.10",
+         "winner:1.14"
+        ],
+        [
+         "winner:1.8",
+         "winner:1.11"
+        ],
+        [
+         "winner:1.9",
+         "winner:1.12"
+        ],
+        [
+         "club:ita.ravenna",
+         "winner:1.13"
+        ],
+        [
+         "winner:1.20",
+         "winner:1.17"
+        ],
+        [
+         "winner:1.21",
+         "winner:1.18"
+        ],
+        [
+         "club:ita.potenza",
+         "winner:1.16"
+        ],
+        [
+         "winner:1.15",
+         "winner:1.19"
+        ],
+        [
+         "club:ita.catania",
+         "winner:1.26"
+        ],
+        [
+         "winner:1.27",
+         "winner:1.25"
+        ],
+        [
+         "winner:1.23",
+         "winner:1.22"
+        ],
+        [
+         "winner:1.28",
+         "winner:1.24"
+        ]
+       ],
+       [
+        [
+         "winner:2.1",
+         "winner:2.3"
+        ],
+        [
+         "winner:2.2",
+         "winner:2.4"
+        ],
+        [
+         "winner:2.6",
+         "winner:2.7"
+        ],
+        [
+         "winner:2.5",
+         "winner:2.8"
+        ],
+        [
+         "winner:2.11",
+         "winner:2.12"
+        ],
+        [
+         "winner:2.10",
+         "winner:2.9"
+        ],
+        [
+         "winner:2.16",
+         "winner:2.14"
+        ],
+        [
+         "winner:2.13",
+         "winner:2.15"
+        ]
+       ],
+       [
+        [
+         "winner:3.7",
+         "winner:3.3"
+        ],
+        [
+         "winner:3.5",
+         "winner:3.8"
+        ],
+        [
+         "winner:3.6",
+         "winner:3.1"
+        ],
+        [
+         "winner:3.4",
+         "winner:3.2"
+        ]
+       ]
+      ]
+     },
      "rounds": [
       {
-       "ties": 2,
+       "ties": 28,
+       "legs": 1,
+       "home": "draw",
+       "pairing": "zone",
+       "decider": [
+        "penalties"
+       ]
+      },
+      {
+       "ties": 16,
+       "legs": 1,
+       "home": "joiner",
+       "pairing": "zone",
+       "decider": [
+        "penalties"
+       ],
+       "joins": [
+        {
+         "entrants_of": "ita.coppa",
+         "in": [
+          "ita.c-a",
+          "ita.c-b",
+          "ita.c-c"
+         ],
+         "clubs": 4
+        }
+       ]
+      },
+      {
+       "ties": 8,
+       "legs": 1,
+       "home": "draw",
+       "pairing": "zone",
+       "decider": [
+        "penalties"
+       ]
+      },
+      {
+       "ties": 4,
        "legs": 1,
        "home": "draw",
        "pairing": "draw",
        "decider": [
+        "penalties"
+       ]
+      },
+      {
+       "ties": 2,
+       "legs": 2,
+       "home": "draw",
+       "pairing": "draw",
+       "decider": [
+        "aggregate",
         "extra_time",
         "penalties"
        ]

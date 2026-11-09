@@ -358,6 +358,7 @@ static void random_seasons(int seasons)
             int m = 1;
             while (m * 2 <= n) m *= 2;
             sr_kn_round rd[8];
+            memset(rd, 0, sizeof rd);
             sr_kn_pair pr[64];
             int nr = 0, np = 0, pre = n - m;            /* (a preliminary round brings n down to m) */
             if (pre) { rd[nr].ties = (uint16_t)pre; rd[nr].first = 0; rd[nr].legs = 1; rd[nr].home = SR_KN_LOWER; nr++;
@@ -384,11 +385,118 @@ static void random_seasons(int seasons)
            !bad_n && !bad_b ? "PASS" : "FAIL", seasons, full, shorts, bad_n + bad_b);
 }
 
+/* ---- 42-s2ko M2: the Coppa Italia Serie C ---- */
+static int32_t play_c(void *vc, int32_t r, int32_t t, const sr_kn_tie *o)
+{
+    RealCtx *c = vc;
+    (void)t;
+    for (int i = 0; i < S2C_NRES; i++) {
+        const uint16_t *x = s2c_res[i];
+        if (x[0] != r + 1 || !((x[1] == o->home && x[2] == o->away) || (x[1] == o->away && x[2] == o->home))) continue;
+        c->checked++;
+        if (x[1] != o->home) c->mism++;
+        c->real++;
+        return x[3] == o->away;
+    }
+    c->rng = c->rng * 1103515245u + 12345u;
+    return (c->rng >> 16) & 1;
+}
+
+static void coppa_c(void)
+{
+    uint8_t zone[64], sz[8];
+    sr_kn_tie out[64];
+    uint32_t rng = 5;
+    int same = 0, bad = 0;
+    char miss[200] = "";
+    /* the zones by proximity on the real 2026-27 clubs, against the real groups (C.U. 1/CIT) */
+    int rc = sr_kn_zones(s2c_geo, s2c_r1, 56, s2c_centre, S2C_NZ, 14, &work, zone);
+    memset(sz, 0, sizeof sz);
+    for (int i = 0; i < 56; i++) {
+        sz[zone[i]]++;
+        if (zone[i] == s2c_r1zone[i]) same++;
+        else { strcat(miss, " "); strcat(miss, s2_name[s2c_r1[i]]); }
+    }
+    for (int z = 0; z < S2C_NZ; z++) bad += sz[z] != 14;
+    int ok = rc == 0 && !bad && same == 53 && !strcmp(miss, " forli picerno grosseto");
+    CHECK(ok, "Coppa C zones: %d of 56 in their real group, misplaced:%s", same, miss);
+    printf("%s: Coppa Italia Serie C 2026-27: the groups by proximity -- %d of 56 clubs in their real group (C.U. 1/CIT; not:%s), 4 x 14\n",
+           ok ? "PASS" : "FAIL", same, miss);
+    rc = sr_kn_zones(s2c_geo, s2c_seed, 4, s2c_centre, S2C_NZ, 1, &work, zone);
+    ok = rc == 0;
+    for (int i = 0; i < 4; i++) ok &= zone[i] == s2c_seedzone[i];
+    CHECK(ok, "Coppa C seeds' groups");
+    printf("%s: Coppa Italia Serie C 2026-27: the 4 seeds (the Coppa Italia's Serie C clubs) each to its real group by proximity\n", ok ? "PASS" : "FAIL");
+
+    /* season 1: the real draw (rounds 1-3 and the quarter-finals) with the hosts as played, then drawn semi-finals and
+       final over two legs */
+    RealCtx c = { 0, 0, 0, 9 };
+    int w = sr_kn_cup(s2c_rounds, S2C_NR, s2c_pairs, s2c_num, S2C_NNUM, NULL, NULL, &rng, play_c, &c, &work, out);
+    int bb = bracket_ok(s2c_rounds, S2C_NR, out, 60);
+    for (int t = 0; t < 3; t++) bb += out[56 + t].legs != 2;
+    ok = w >= 0 && c.checked == S2C_NRES && !c.mism && !bb;
+    CHECK(ok, "Coppa C 2026-27: %d of %d real ties found, %d hosts wrong, rules %d", c.checked, S2C_NRES, c.mism, bb);
+    printf("%s: Coppa Italia Serie C 2026-27: all %d real ties played so far (rounds 1-2, last 16) and their hosts as played (three field swaps, art. 5); the quarter-finals as drawn, then drawn two-leg semi-finals and final, one winner\n",
+           ok ? "PASS" : "FAIL", c.checked);
+}
+
+/* later seasons at random: 60 clubs anywhere in Italy, 4 seeds -- zones of 14 (and 1 seed each), rounds 1, 2 and the
+   last 16 within a zone, the seeds at home against non-seeds, then open draws; every club once a round, one winner */
+static void coppa_c_random(int seasons)
+{
+    static sr_kn_geo geo[SR_KN_CLUBS];
+    sr_kn_round rd[6] = {
+        { 28, 0, 1, SR_KN_DRAW, SR_KN_PAIR_ZONE, 0, 0, 56 }, { 16, 28, 1, SR_KN_JOINER, SR_KN_PAIR_ZONE, 0, 56, 4 },
+        { 8, 44, 1, SR_KN_DRAW, SR_KN_PAIR_ZONE, 0, 0, 0 }, { 4, 52, 1, SR_KN_DRAW, SR_KN_PAIR_DRAW, 0, 0, 0 },
+        { 2, 56, 2, SR_KN_DRAW, SR_KN_PAIR_DRAW, 0, 0, 0 }, { 1, 58, 2, SR_KN_DRAW, SR_KN_PAIR_DRAW, 0, 0, 0 } };
+    sr_kn_entry join[60];
+    sr_kn_tie out[64];
+    uint16_t cl[60];
+    uint8_t zone[60], isseed[SR_KN_CLUBS];
+    int bad = 0, fails0 = 0;
+    for (int s = 0; s < seasons; s++) {
+        uint32_t rng = (uint32_t)s * 2246822519u + 1;
+        int b = 0;
+        for (int i = 0; i < 60; i++) {
+            cl[i] = (uint16_t)(i * 7 + (s % 7));
+            geo[cl[i]].lat = (int16_t)(3660 + rnd(1100)); geo[cl[i]].lon = (int16_t)(700 + rnd(1150));
+            isseed[cl[i]] = i >= 56;
+        }
+        if (sr_kn_zones(geo, cl, 56, s2c_centre, 4, 14, &work, zone) || sr_kn_zones(geo, cl + 56, 4, s2c_centre, 4, 1, &work, zone + 56)) { bad++; continue; }
+        int sz[4] = { 0 }, ss[4] = { 0 };
+        for (int i = 0; i < 56; i++) sz[zone[i]]++;
+        for (int i = 56; i < 60; i++) ss[zone[i]]++;
+        for (int z = 0; z < 4; z++) b += sz[z] != 14 || ss[z] != 1;
+        for (int i = 0; i < 60; i++) { join[i].club = cl[i]; join[i].zone = zone[i]; }
+        int w = sr_kn_cup(rd, 6, NULL, NULL, 0, join, NULL, &rng, play_rand, NULL, &work, out);
+        b += w < 0 || bracket_ok(rd, 6, out, 60);
+        for (int r = 0; r < 3; r++)                 /* (a zone round: both sides of one zone) */
+            for (int t = 0; t < rd[r].ties; t++) {
+                const sr_kn_tie *o = &out[rd[r].first + t];
+                int zh = -1, za = -1;
+                for (int i = 0; i < 60; i++) { if (cl[i] == o->home) zh = zone[i]; if (cl[i] == o->away) za = zone[i]; }
+                b += zh != za;
+                if (r == 1) b += isseed[o->away] || (isseed[o->home] && isseed[o->away]);
+            }
+        int seeds_home = 0;
+        for (int t = 0; t < 16; t++) seeds_home += isseed[out[28 + t].home];
+        b += seeds_home != 4;
+        for (int t = 0; t < 3; t++) b += out[56 + t].legs != 2;
+        if (b && fails0++ < 3) printf("  random Coppa C season %d: %d bad\n", s, b);
+        bad += b != 0;
+    }
+    CHECK(!bad, "Coppa C random: %d bad", bad);
+    printf("%s: Coppa Italia Serie C, %d random seasons: zones of 14 and one seed each by proximity, rounds 1-2 and the last 16 within a zone, every seed at home v a non-seed, open draws after, two-leg semi-finals and final, one winner (%d bad)\n",
+           !bad ? "PASS" : "FAIL", seasons, bad);
+}
+
 int main(int argc, char **argv)
 {
     real_season();
     forced();
     forced_all();
     random_seasons(argc > 1 ? atoi(argv[1]) : 100000);
+    coppa_c();
+    coppa_c_random(argc > 1 ? atoi(argv[1]) : 100000);
     return fails != 0;
 }
