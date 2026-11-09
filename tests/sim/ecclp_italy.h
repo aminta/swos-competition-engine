@@ -1,9 +1,14 @@
 /* Eccellenza 2026-27's 28 groups as the library's shape (42-ecclp): size, national play-off urn, regional play-off.
  * Source: the Mod's internal/natcomp2627/eccellenza2627.json (it.wiki group pages, fetched 2026-11-08), the rules as
  * written there. Gaps: "pari o superiore a N" = N, "superiore a N" / "più di N" = N + 1.
- * Not stated on the group page (taken as the common shape, no gap): Veneto, Sardegna, Campania (its page points to a
- * general regulation), Molise, Calabria, the first round of Lazio. The pack's pool file is the real source; this
- * table is test data. Urns: the LND's draw (10 North, 10 Centre with Emilia-Romagna, 8 South). */
+ * Not stated on the group page, taken from the regional committee's comunicato ufficiale (fetched 2026-11-09):
+ *   Campania  CU n.38 of 16/10/2026, attachment "Play off e play out ECCELLENZA 2026-2027";
+ *   Lazio     CU n.26 of 31/08/2026 (both rounds, gap "superiore a 8" = 9);
+ *   Sardegna  CU n.35 of 9/10/2026, attachment "Meccanismo promozioni, retrocessioni ... 2026/2027".
+ * Not yet published by the committee (Veneto CU 1-41, Molise CU 1-65, Calabria): the standard LND scheme (2v5, 3v4
+ * at the better placed's ground, then the final; after extra time the better placed), a PROPOSAL for Davide, no
+ * gap. The pack's pool file is the real source; this table is test data. Urns: the LND's draw (10 North, 10 Centre
+ * with Emilia-Romagna, 8 South). */
 #ifndef ECCLP_ITALY_H
 #define ECCLP_ITALY_H
 #include "swosrules.h"
@@ -20,8 +25,8 @@ static const it_group IT_G[IT_GROUPS] = {
     { "Lombardia/B",              16, 0, FOUR(10, 0, 0, 1, 0) },
     { "Lombardia/C",              16, 0, FOUR(10, 0, 0, 1, 0) },
     { "Liguria",                  16, 0, FOUR(7, 0, 7, 0, 0) },
-    { "Veneto/A",                 16, 0, FOUR(0, 0, 0, 0, 0) },
-    { "Veneto/B",                 16, 0, FOUR(0, 0, 0, 0, 0) },
+    { "Veneto/A",                 16, 0, FOUR(0, 0, 0, 1, 0) },    /* proposal */
+    { "Veneto/B",                 16, 0, FOUR(0, 0, 0, 1, 0) },
     { "Friuli-Venezia Giulia",    18, 0, { SR_LP_RPO_DIRECT, 1, 0, 0, 0, 0, 0 } },
     { "Trentino-Alto Adige",      16, 0, { SR_LP_RPO_DIRECT, 1, 0, 0, 0, 0, 0 } },
     { "Emilia-Romagna/A",         18, 1, FOUR(0, 0, 0, 1, 0) },
@@ -30,16 +35,16 @@ static const it_group IT_G[IT_GROUPS] = {
     { "Toscana/B",                16, 1, FOUR(10, 0, 10, 0, 1) },
     { "Umbria",                   16, 1, FOUR(10, 10, 0, 1, 0) },
     { "Marche",                   16, 1, FOUR(11, 11, 0, 0, 0) },
-    { "Lazio/A",                  18, 1, { SR_LP_RPO_LADDER, 1, 0, 0, 9, 0, 0 } },   /* 3v4, the winner v the 2nd */
-    { "Lazio/B",                  18, 1, { SR_LP_RPO_LADDER, 1, 0, 0, 9, 0, 0 } },
+    { "Lazio/A",                  18, 1, { SR_LP_RPO_LADDER, 1, 9, 9, 9, 1, 0 } },   /* 3v4, the winner v the 2nd */
+    { "Lazio/B",                  18, 1, { SR_LP_RPO_LADDER, 1, 9, 9, 9, 1, 0 } },
     { "Abruzzo",                  18, 1, FOUR(8, 8, 0, 1, 0) },
-    { "Sardegna",                 16, 1, FOUR(0, 0, 0, 0, 0) },
-    { "Campania/A",               18, 2, FOUR(0, 0, 0, 0, 0) },
-    { "Campania/B",               18, 2, FOUR(0, 0, 0, 0, 0) },
-    { "Molise",                   15, 2, FOUR(0, 0, 0, 0, 0) },
+    { "Sardegna",                 16, 1, FOUR(10, 0, 10, 1, 0) },
+    { "Campania/A",               18, 2, FOUR(10, 0, 10, 1, 0) },
+    { "Campania/B",               18, 2, FOUR(10, 0, 10, 1, 0) },
+    { "Molise",                   15, 2, FOUR(0, 0, 0, 1, 0) },    /* proposal */
     { "Puglia",                   18, 2, FOUR(7, 0, 8, 0, 0) },
     { "Basilicata",               16, 2, FOUR(10, 10, 0, 0, 0) },
-    { "Calabria",                 16, 2, FOUR(0, 0, 0, 0, 0) },
+    { "Calabria",                 16, 2, FOUR(0, 0, 0, 1, 0) },    /* proposal */
     { "Sicilia/A",                16, 2, FOUR(10, 10, 10, 0, 0) },
     { "Sicilia/B",                16, 2, FOUR(10, 10, 10, 0, 0) },
 };
