@@ -487,7 +487,8 @@ static const char *const TIEBS[] = { NULL, "points", "goal_difference", "goals_f
                                      "previous_stage_rank", "play_off_match", "draw_lots", "name", "faithful_1996",
                                      "head_to_head_reapplied" };
 static const char *const DECIS[] = { NULL, "aggregate", "away_goals", "extra_time", "penalties", "better_placed", "replay",
-                                     "draw_lots", "golden_goal" };
+                                     "draw_lots", "golden_goal",
+                                     "better_placed_unless_level_on_points", "seed" };   /* (9, 10: swc/1.4, 42-s3shape) */
 static const char *const TAGS[] = { NULL, "champion", "promoted", "relegated", "playoff", "playout", "continental", "qualified" };
 static const char *const ZONES[] = { NULL, "CL", "EL", "CONF", "PROM", "P.OFF", "P.OUT", "RETR" };
 static const char *const HOMES[] = { "draw", "better_placed", "better_placed_second_leg", "neutral", "fixed" };
@@ -534,6 +535,95 @@ static int stage_index(StageInfo *si, int n, const char *id)
     return -1;
 }
 
+/* v1.4 (42-s3shape): {"cup_place": {...}} -- the play-off place of a cup's winner (the Coppa Italia Serie C's, FIGC
+   C.U. 209/A): "cup" the cup, "groups" the leagues whose tables it is read from (default this competition's), "takes"
+   the places from which the winner takes it ("table#11-15"), "takes_if_safe" those it takes when their play-out is not
+   held ("table#16-17"), "instead" what takes it otherwise, in order: "finalist" (the other finalist, the same
+   preclusions), "group#N" (place N of the winner's group), {"place": "winner_group#N", "scroll": true} (that place,
+   its group's play-off scrolled up); "unknown" the place when the winner is not known ("best_of:#N"). One club. */
+static void gap_obj(C *c, JNode *o, const char *path);
+static int cup_place_item(C *c, JNode *it, const char *sp, int *src, int *per)
+{
+    JNode *cp = opt(c, it, "cup_place", J_OBJ, sp), *v, *x;
+    int a, b, ok = 1;
+    unknown_keys(c, it, sp);
+    if (!cp) return -1;
+    need_minor(c, cp, sp, 4, "'cup_place'");
+    if ((v = need(c, cp, "cup", J_STR, sp)) && find_comp(c, v->str) < 0) { ERR(v, sp, "cup_place: no competition \"%s\"", v->str); ok = 0; }
+    if ((v = opt(c, cp, "groups", J_ARR, sp)))
+        for (x = v->child; x; x = x->next)
+            if (x->type != J_STR || find_comp(c, x->str) < 0) { ERR(x, sp, "cup_place.groups: a league id of this file"); ok = 0; }
+    for (int k = 0; k < 2; k++) {
+        const char *key = k ? "takes_if_safe" : "takes";
+        char *hash;
+        if (!(v = k ? opt(c, cp, key, J_STR, sp) : need(c, cp, key, J_STR, sp))) { ok &= k; continue; }
+        if (!(hash = strchr(v->str, '#')) || !positions(hash + 1, &a, &b) || a < 1 || b < a) {
+            ERR(v, sp, "cup_place.%s \"%s\": write 'stage#N-M'", key, v->str);
+            ok = 0;
+        }
+    }
+    if ((v = need(c, cp, "instead", J_ARR, sp))) {
+        if (!v->n) { ERR(v, sp, "cup_place.instead: at least one entry"); ok = 0; }
+        for (x = v->child; x; x = x->next) {
+            long n = 0;
+            if (x->type == J_STR && (!strcmp(x->str, "finalist") ||
+                                     (!strncmp(x->str, "group#", 6) && (n = strtol(x->str + 6, NULL, 10)) >= 1 && n <= 64)))
+                continue;
+            if (x->type == J_OBJ) {
+                JNode *pl = need(c, x, "place", J_STR, sp), *sc = opt(c, x, "scroll", J_BOOL, sp);
+                unknown_keys(c, x, sp);
+                (void)sc;
+                if (pl && !strncmp(pl->str, "winner_group#", 13) && (n = strtol(pl->str + 13, NULL, 10)) >= 1 && n <= 64)
+                    continue;
+            }
+            ERR(x, sp, "cup_place.instead: \"finalist\", \"group#N\" or {\"place\": \"winner_group#N\", \"scroll\": true}");
+            ok = 0;
+        }
+    }
+    if ((v = opt(c, cp, "unknown", J_STR, sp)) && (strncmp(v->str, "best_of:#", 9) || strtol(v->str + 9, NULL, 10) < 1)) {
+        ERR(v, sp, "cup_place.unknown: \"best_of:#N\" (the best placed N-th of the groups)");
+        ok = 0;
+    }
+    unknown_keys(c, cp, sp);
+    *src = -1; *per = 0;
+    return ok ? 1 : -1;
+}
+
+/* v1.4 (42-s3shape): a club of a play-off round named by an earlier round -- "winner:R.T" / "loser:R.T" (round R,
+   tie T, from 1), {"best_of": "winners:R"} / {"rest_of": "winners:R"} (the best placed of round R's winners, the
+   others) -- or a place "stage#N". rties: the ties of the rounds so far. 1, or 0 after an error. */
+static int ko_ref(C *c, JNode *it, const char *rp, int ri, const long *rties)
+{
+    long r = 0, t = 0;
+    char *e;
+    if (it->type == J_OBJ) {
+        JNode *v = json_get(it, "best_of") ? opt(c, it, "best_of", J_STR, rp) : opt(c, it, "rest_of", J_STR, rp);
+        unknown_keys(c, it, rp);
+        need_minor(c, it, rp, 4, "a 'best_of' / 'rest_of' of a round's winners");
+        if (v && !strncmp(v->str, "winners:", 8) && (r = strtol(v->str + 8, &e, 10)) >= 1 && r <= ri && !*e) return 1;
+        ERR(it, rp, "{\"best_of\" / \"rest_of\": \"winners:R\"}: R an earlier round (from 1)");
+        return 0;
+    }
+    if (it->type != J_STR) { ERR(it, rp, "a round's club: \"winner:R.T\", \"loser:R.T\", \"stage#N\" or {\"best_of\": \"winners:R\"}"); return 0; }
+    if (!strncmp(it->str, "winner:", 7) || !strncmp(it->str, "loser:", 6)) {
+        need_minor(c, it, rp, 4, "a round's \"winner:R.T\" / \"loser:R.T\"");
+        r = strtol(strchr(it->str, ':') + 1, &e, 10);
+        if (*e == '.') t = strtol(e + 1, &e, 10);
+        if (*e || r < 1 || r > ri || t < 1 || t > rties[r - 1]) {
+            ERR(it, rp, "\"%s\": round R earlier than this one, tie T of it (from 1)", it->str);
+            return 0;
+        }
+        return 1;
+    }
+    {
+        const char *h = strchr(it->str, '#');
+        int a, b;
+        if (h && positions(h + 1, &a, &b) && a == b) return 1;
+    }
+    ERR(it, rp, "\"%s\": \"winner:R.T\", \"loser:R.T\" or one place \"stage#N\"", it->str);
+    return 0;
+}
+
 /* One item of a stage's 'entrants': "stage#N-M", the places N..M of every table of an earlier stage (*per = 1: the
    count is per table), or (v1.2) {"best_of": "stage#P", "count": K}, the K best clubs placed P across the groups of a
    groups stage, ranked by that stage's tie-breakers (*per = 0). Returns the clubs, -1 after an error; *src = the
@@ -545,6 +635,7 @@ static int entr_item(C *c, JNode *it, const char *sp, StageInfo *all_st, int fir
     char *hash;
     int a, b, ix, n = -1;
     long k = 0;
+    if (it->type == J_OBJ && json_get(it, "cup_place")) return cup_place_item(c, it, sp, src, per);
     if (it->type == J_OBJ) {
         ref = need(c, it, "best_of", J_STR, sp);
         cnt = need(c, it, "count", J_NUM, sp);
@@ -851,6 +942,19 @@ static void do_comp(C *c, int ci, StageInfo *all_st, int *nall)
                 int ri = 0, left = s.teams, joined = 0, jbad = 0, jn[256] = { 0 };
                 s.first_round = (uint16_t)(c->roun.n / sizeof(SwcRound));
                 rounds = need(c, st, "rounds", J_ARR, sp);
+                {                                       /* v1.4 (42-s3shape): the first entrant straight through when that
+                                                           far ahead; a level of groups ranked place, then the record */
+                    JNode *di = opt(c, st, "direct_if", J_OBJ, sp), *rk = opt(c, st, "rank", J_STR, sp);
+                    if (di) {
+                        need_minor(c, di, sp, 4, "a playoff stage's 'direct_if'");
+                        if (t != SWC_ST_PLAYOFF) ERR(di, sp, "'direct_if' goes on a playoff stage");
+                        gap_obj(c, di, sp);
+                    }
+                    if (rk) {
+                        need_minor(c, rk, sp, 4, "'rank'");
+                        if (strcmp(rk->str, "place_then_record")) ERR(rk, sp, "rank: \"place_then_record\"");
+                    }
+                }
                 if ((sk = opt(c, st, "skip_if", J_OBJ, sp))) {             /* v1.3: no play-off when the gap is big */
                     long g2 = 0;
                     need_minor(c, sk, sp, 3, "'skip_if'");
@@ -877,6 +981,7 @@ static void do_comp(C *c, int ci, StageInfo *all_st, int *nall)
                     left -= joined;
                 }
                 ri = 0;
+                long rties[256];
                 for (r = rounds ? rounds->child : NULL; r; r = r->next, ri++) {
                     SwcRound rr;
                     JNode *dec;
@@ -898,6 +1003,20 @@ static void do_comp(C *c, int ci, StageInfo *all_st, int *nall)
                     else if (dec->type != J_ARR) ERR(dec, rp, "'decider' must be an array");
                     rr.deci = code_list(c, &c->deci, dec, "decider", rp, DECIS, NE(DECIS), &nd);
                     if (dec && dec->type == J_ARR && !nd) ERR(dec, rp, "decider: at least one entry");
+                    for (JNode *d = dec && dec->type == J_ARR ? dec->child : NULL; d; d = d->next)
+                        if (d->type == J_STR && (!strcmp(d->str, DECIS[9]) || !strcmp(d->str, DECIS[10])))
+                            need_minor(c, d, rp, 4, d->str[0] == 's' ? "the decider \"seed\"" : "the decider \"better_placed_unless_level_on_points\"");
+                    {                                       /* v1.4: a seeded round's seeds, the clubs drawn against them */
+                        JNode *se = opt(c, r, "seeds", J_ARR, rp), *dr = opt(c, r, "drawn", J_ARR, rp), *q;
+                        if (se) {
+                            need_minor(c, se, rp, 4, "'seeds'");
+                            if (pr != 1) ERR(se, rp, "'seeds' need \"pairing\": \"seeded\"");
+                            if (se->n != ties) ERR(se, rp, "seeds: %d listed, 'ties' says %ld", se->n, ties);
+                            if (dr && dr->n != ties) ERR(dr, rp, "drawn: %d listed, 'ties' says %ld", dr->n, ties);
+                            for (q = se->child; q; q = q->next) ko_ref(c, q, rp, ri, rties);
+                            for (q = dr ? dr->child : NULL; q; q = q->next) ko_ref(c, q, rp, ri, rties);
+                        } else if (dr) ERR(dr, rp, "'drawn' goes with 'seeds'");
+                    }
                     if (pr == 3) {                          /* pairing "fixed": the draw as really made */
                         JNode *fx = need(c, r, "fixed", J_ARR, rp), *pair;
                         int fi = 0;
@@ -908,6 +1027,16 @@ static void do_comp(C *c, int ci, StageInfo *all_st, int *nall)
                             int hx, ax;
                             if (pair->type != J_ARR || pair->n != 2 || h1->type != J_STR || a1->type != J_STR) {
                                 ERR(pair, rp, "fixed[%d]: a pair is [\"home club id\", \"away club id\"]", fi);
+                                continue;
+                            }
+                            if (strncmp(h1->str, "club:", 5) || strncmp(a1->str, "club:", 5)) {   /* v1.4: places and earlier
+                                                           ties' winners ("table#3", "winner:1.2"): a bracket of the shape */
+                                for (int k2 = 0; k2 < 2; k2++) {
+                                    JNode *q = k2 ? a1 : h1;
+                                    if (strncmp(q->str, "club:", 5)) ko_ref(c, q, rp, ri, rties);
+                                    else ERR(q, rp, "fixed[%d]: clubs and places are not mixed in one pair", fi);
+                                }
+                                if (!strcmp(h1->str, a1->str)) ERR(a1, rp, "fixed[%d]: a club cannot play itself", fi);
                                 continue;
                             }
                             hx = find_club(c, h1->str);
@@ -945,6 +1074,7 @@ static void do_comp(C *c, int ci, StageInfo *all_st, int *nall)
                             ERR(r, rp, "%ld ties + %ld byes take %ld clubs, %d reach this round", ties, byes, ties * 2 + byes, left);
                     }
                     left = (int)(ties + byes);
+                    if (ri < 256) rties[ri] = ties;
                     all_st[*nall].last_ties = (int)ties;
                     rr.ties = (uint16_t)ties;
                     rr.legs = (uint8_t)rl;
