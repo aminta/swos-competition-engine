@@ -10,7 +10,7 @@
  *   invariants (every summer)  every club in exactly one place; Serie D 9 x 18, each Eccellenza group its real size;
  *                           36 distinct up = 28 champions (each its table's top) + 7 + 1; 36 distinct down; strengths
  *                           within 0 .. 375
- * Usage: italysim [CHAINS [SEASONS]] (default 1000 100: 10^5 summers). Exit 1 on any broken invariant.
+ * Usage: [SPREAD=n] italysim [CHAINS [SEASONS]] (default 1000 100: 10^5 summers). Exit 1 on any broken invariant.
  * Controls: ITALYSIM_BREAK=drop (a club lost in the summer), twice (a club up twice), 35 (one up too few) must FAIL. */
 #include <stdio.h>
 #include <stdlib.h>
@@ -26,7 +26,8 @@ static uint16_t str_of[NCLUB];
 static uint8_t lat_of[NCLUB];
 static int dgrp[DG][DS], pgrp[IT_GROUPS][SR_LP_CLUBS], down_season[NCLUB];
 
-static int brk;                 /* the controls: 1 drop, 2 twice, 3 thirty-five */
+static int brk;                     /* the controls: 1 drop, 2 twice, 3 thirty-five */
+static int spread = SR_LP_SPREAD;   /* the pool's spread: SPREAD=n in the environment, else the default */
 
 static uint32_t h32(uint32_t x) { x ^= x >> 16; x *= 0x7FEB352Du; x ^= x >> 15; x *= 0x846CA68Bu; return x ^ (x >> 16); }
 
@@ -64,6 +65,7 @@ static void chain_run(uint32_t chain, int seasons, stats *st)
     sr_lp_rpo rpo[IT_GROUPS];
     uint8_t urn[IT_GROUPS];
     it_shape(&sh, rpo, urn, NULL, 0);
+    sh.spread = spread;
     for (int s = 0; s < seasons; s++) {
         const uint32_t seed = h32(chain * 1000003u + (uint32_t)s);
         unsigned bad = 0;
@@ -95,7 +97,7 @@ static void chain_run(uint32_t chain, int seasons, stats *st)
             for (int k = 0; k < nup; k++) { upc[k] = pgrp[up[k].div][up[k].idx]; if (seen[upc[k]]++) bad |= 1u << 2; }
             for (int g = 0; g < IT_GROUPS; g++) {
                 sr_row t[SR_LP_CLUBS];
-                sr_lp_table(seed, g, pc[g], pn[g], t);
+                sr_lp_table_sp(seed, g, pc[g], pn[g], t, spread);
                 if (up[g].how != SR_LP_UP_CHAMPION || up[g].div != g || up[g].idx != t[0].team) bad |= 1u << 2;
                 for (int k = IT_GROUPS; k < nup; k++) {
                     if (up[k].div != g) continue;
@@ -172,11 +174,12 @@ int main(int argc, char **argv)
 {
     const int chains = argc > 1 ? atoi(argv[1]) : 1000, seasons = argc > 2 ? atoi(argv[2]) : 100;
     static stats st;
-    const char *b = getenv("ITALYSIM_BREAK");
+    const char *b = getenv("ITALYSIM_BREAK"), *spv = getenv("SPREAD");
+    if (spv) spread = atoi(spv);
     brk = !b ? 0 : !strcmp(b, "drop") ? 1 : !strcmp(b, "twice") ? 2 : !strcmp(b, "35") ? 3 : 0;
     for (int c = 0; c < chains; c++) chain_run((uint32_t)c, seasons, &st);
     printf("italysim: %d chains x %d seasons = %ld summers (Serie D 9 x 18 <-> Eccellenza 28 groups, 465 clubs; "
-           "SR_LP_SPREAD %d)\n", chains, seasons, st.summers, SR_LP_SPREAD);
+           "SR_LP_SPREAD %d)\n", chains, seasons, st.summers, spread);
     printf("  invariants: %ld summers broken\n", st.bad);
     for (int k = 0; k < 6; k++) if (st.why[k]) printf("    %s: %ld\n", why_txt[k], st.why[k]);
     printf("  up by: champion %ld, national play-off %ld, cup rule %ld, override %ld (per summer %.2f / %.2f / %.2f)\n",

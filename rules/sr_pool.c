@@ -29,9 +29,9 @@ static u32 below(rng *r, u32 n)                 /* 0 .. n-1 */
     return ((r->h >> 16) * n) >> 16;
 }
 
-static u32 str2(int strength, int home)         /* 30 .. 30 + SPREAD for 0.00 .. 2.50, linear on to 3.75 */
+static u32 str2(int strength, int home, int sp)  /* 30 .. 30 + spread for 0.00 .. 2.50, linear on to 3.75 */
 {
-    int s = 30 + (strength > 375 ? 375 : strength) * SR_LP_SPREAD / 250;
+    int s = 30 + (strength > 375 ? 375 : strength) * sp / 250;
     if (home) s = s * 11 / 10;
     return (u32)(s * s);
 }
@@ -46,7 +46,7 @@ static void goals(rng *r, u32 sh, u32 sa, int *gh, int *ga)
 
 typedef struct { int pts, gd, gf, gp, won; } fig;
 
-int32_t sr_lp_table(uint32_t seed, int32_t d, const sr_lp_club *c, int32_t n, sr_row *out)
+int32_t sr_lp_table_sp(uint32_t seed, int32_t d, const sr_lp_club *c, int32_t n, sr_row *out, int32_t sp)
 {
     fig f[SR_LP_CLUBS];
     int ord[SR_LP_CLUBS];
@@ -56,7 +56,7 @@ int32_t sr_lp_table(uint32_t seed, int32_t d, const sr_lp_club *c, int32_t n, sr
         for (int a = 0; a < n; a++) {
             if (h == a) continue;
             rng r = { mix(mix(mix(seed, (u32)d), c[h].ident), (u32)c[a].ident << 16 | 1u) };
-            const u32 sh = str2(c[h].strength, 1), sa = str2(c[a].strength, 0);
+            const u32 sh = str2(c[h].strength, 1, sp), sa = str2(c[a].strength, 0, sp);
             int gh, ga;
             goals(&r, sh, sa, &gh, &ga);
             f[h].gf += gh; f[h].gd += gh - ga; f[a].gf += ga; f[a].gd += ga - gh;
@@ -89,32 +89,32 @@ int32_t sr_lp_table(uint32_t seed, int32_t d, const sr_lp_club *c, int32_t n, sr
 }
 
 /* one match, places a < b (a the better placed, at home): the winner's place */
-static int tie(rng *r, const sr_row *t, const sr_lp_club *c, int a, int b)
+static int tie(rng *r, const sr_row *t, const sr_lp_club *c, int a, int b, int sp)
 {
     const int x = c[t[a].team].strength, y = c[t[b].team].strength;
-    u32 sa = str2(x, 1), sb = str2(y, 0);
-    if (below(r, 100) < 22) { const u32 p = str2(x, 0), q = str2(y, 0); sa = 2 * p + q; sb = p + 2 * q; }
+    u32 sa = str2(x, 1, sp), sb = str2(y, 0, sp);
+    if (below(r, 100) < 22) { const u32 p = str2(x, 0, sp), q = str2(y, 0, sp); sa = 2 * p + q; sb = p + 2 * q; }
     return below(r, sa + sb) < sa ? a : b;
 }
 
-int32_t sr_lp_playoff(uint32_t seed, int32_t d, const sr_row *table, int32_t n, const sr_lp_club *c)
+int32_t sr_lp_playoff_sp(uint32_t seed, int32_t d, const sr_row *table, int32_t n, const sr_lp_club *c, int32_t sp)
 {
     if (!table || !c || n < 7) return -1;
     rng r = { mix(mix(seed, (u32)d), 0x504Fu) };
-    const int q1 = tie(&r, table, c, 3, 6), q2 = tie(&r, table, c, 4, 5);   /* 4v7, 5v6 */
+    const int q1 = tie(&r, table, c, 3, 6, sp), q2 = tie(&r, table, c, 4, 5, sp);   /* 4v7, 5v6 */
     const int lo = q1 > q2 ? q1 : q2, hi = q1 > q2 ? q2 : q1;
-    const int s1 = tie(&r, table, c, 1, lo), s2 = tie(&r, table, c, 2, hi);  /* 2 v the lower placed */
-    return s1 < s2 ? tie(&r, table, c, s1, s2) : tie(&r, table, c, s2, s1);
+    const int s1 = tie(&r, table, c, 1, lo, sp), s2 = tie(&r, table, c, 2, hi, sp);  /* 2 v the lower placed */
+    return s1 < s2 ? tie(&r, table, c, s1, s2, sp) : tie(&r, table, c, s2, s1, sp);
 }
 
-int32_t sr_lp_season(uint32_t seed, int32_t nd, const sr_lp_club *const *c, const int32_t *n, int32_t *up)
+int32_t sr_lp_season_sp(uint32_t seed, int32_t nd, const sr_lp_club *const *c, const int32_t *n, int32_t *up, int32_t sp)
 {
     sr_row t[SR_LP_CLUBS];
     if (!c || !n || !up || nd < 1 || nd > SR_LP_DIVS) return -1;
     for (int d = 0; d < nd; d++) {
-        if (n[d] < 7 || sr_lp_table(seed, d, c[d], n[d], t) != 0) return -1;
+        if (n[d] < 7 || sr_lp_table_sp(seed, d, c[d], n[d], t, sp) != 0) return -1;
         up[2 * d] = t[0].team;
-        up[2 * d + 1] = t[sr_lp_playoff(seed, d, t, n[d], c[d])].team;
+        up[2 * d + 1] = t[sr_lp_playoff_sp(seed, d, t, n[d], c[d], sp)].team;
     }
     return 0;
 }
@@ -122,22 +122,22 @@ int32_t sr_lp_season(uint32_t seed, int32_t nd, const sr_lp_club *const *c, cons
 /* ---- a pool with a cross play-off (Italy's Eccellenza) ---- */
 
 /* a regional tie, places a < b: the winner's place */
-static int rtie(rng *r, const sr_row *t, const sr_lp_club *c, const sr_lp_rpo *p, int a, int b, int gap, int neutral)
+static int rtie(rng *r, const sr_row *t, const sr_lp_club *c, const sr_lp_rpo *p, int a, int b, int gap, int neutral, int sp)
 {
     if (gap && t[a].pts - t[b].pts >= gap) return a;
     const int x = c[t[a].team].strength, y = c[t[b].team].strength;
     if (p->draw_better) {
         if (below(r, 100) < 25) return a;
-        const u32 sa = str2(x, !neutral), sb = str2(y, 0);
+        const u32 sa = str2(x, !neutral, sp), sb = str2(y, 0, sp);
         return below(r, sa + sb) < sa ? a : b;
     }
-    u32 sa = str2(x, !neutral), sb = str2(y, 0);
-    if (below(r, 100) < 22) { const u32 q = str2(x, 0), w = str2(y, 0); sa = 2 * q + w; sb = q + 2 * w; }
+    u32 sa = str2(x, !neutral, sp), sb = str2(y, 0, sp);
+    if (below(r, 100) < 22) { const u32 q = str2(x, 0, sp), w = str2(y, 0, sp); sa = 2 * q + w; sb = q + 2 * w; }
     return below(r, sa + sb) < sa ? a : b;
 }
 
-int32_t sr_lp_regional(uint32_t seed, int32_t d, const sr_row *table, int32_t n, const sr_lp_club *c,
-                       const sr_lp_rpo *p)
+int32_t sr_lp_regional_sp(uint32_t seed, int32_t d, const sr_row *table, int32_t n, const sr_lp_club *c,
+                          const sr_lp_rpo *p, int32_t sp)
 {
     if (!table || !c || !p || p->first < 1) return -1;
     const int f = p->first;
@@ -148,30 +148,30 @@ int32_t sr_lp_regional(uint32_t seed, int32_t d, const sr_row *table, int32_t n,
     case SR_LP_RPO_FOUR: {
         if (f + 3 >= n) return -1;
         if (p->direct_gap && table[f].pts - table[f + 1].pts >= p->direct_gap) return f;
-        const int s1 = rtie(&r, table, c, p, f, f + 3, p->gap_skip, 0), s2 = rtie(&r, table, c, p, f + 1, f + 2, p->gap_skip, 0);
-        return rtie(&r, table, c, p, s1 < s2 ? s1 : s2, s1 < s2 ? s2 : s1, p->gap_final, p->final_neutral);
+        const int s1 = rtie(&r, table, c, p, f, f + 3, p->gap_skip, 0, sp), s2 = rtie(&r, table, c, p, f + 1, f + 2, p->gap_skip, 0, sp);
+        return rtie(&r, table, c, p, s1 < s2 ? s1 : s2, s1 < s2 ? s2 : s1, p->gap_final, p->final_neutral, sp);
     }
     case SR_LP_RPO_LADDER: {
         if (f + 2 >= n) return -1;
         if (p->direct_gap && table[f].pts - table[f + 1].pts >= p->direct_gap) return f;
-        const int w = rtie(&r, table, c, p, f + 1, f + 2, p->gap_skip, 0);
-        return rtie(&r, table, c, p, f, w, p->gap_final, p->final_neutral);
+        const int w = rtie(&r, table, c, p, f + 1, f + 2, p->gap_skip, 0, sp);
+        return rtie(&r, table, c, p, f, w, p->gap_final, p->final_neutral, sp);
     }
     }
     return -1;
 }
 
 /* a national tie of `legs` legs (x at home first): 1 x goes through, 0 y */
-static int ntie(rng *r, const sr_lp_club *x, const sr_lp_club *y, int legs)
+static int ntie(rng *r, const sr_lp_club *x, const sr_lp_club *y, int legs, int sp)
 {
     int gx = 0, gy = 0;
     for (int k = 0; k < legs; k++) {
         int a, b;
-        if (k % 2 == 0) { goals(r, str2(x->strength, 1), str2(y->strength, 0), &a, &b); gx += a; gy += b; }
-        else { goals(r, str2(y->strength, 1), str2(x->strength, 0), &a, &b); gy += a; gx += b; }
+        if (k % 2 == 0) { goals(r, str2(x->strength, 1, sp), str2(y->strength, 0, sp), &a, &b); gx += a; gy += b; }
+        else { goals(r, str2(y->strength, 1, sp), str2(x->strength, 0, sp), &a, &b); gy += a; gx += b; }
     }
     if (gx != gy) return gx > gy;
-    const u32 p = str2(x->strength, 0), q = str2(y->strength, 0), sa = 2 * p + q, sb = p + 2 * q;
+    const u32 p = str2(x->strength, 0, sp), q = str2(y->strength, 0, sp), sa = 2 * p + q, sb = p + 2 * q;
     return below(r, sa + sb) < sa;                  /* extra time, penalties: near a coin toss */
 }
 
@@ -180,8 +180,8 @@ static void shuffle(rng *r, int32_t *v, int n)
     for (int i = n - 1; i > 0; i--) { const int j = (int)below(r, (u32)i + 1); const int32_t t = v[i]; v[i] = v[j]; v[j] = t; }
 }
 
-int32_t sr_lp_cross(uint32_t seed, const sr_lp_club *e, int32_t ne, const uint8_t *urn, int32_t nu,
-                       const uint8_t (*pair)[2], int32_t np, int32_t legs1, int32_t legs2, int32_t *up)
+int32_t sr_lp_cross_sp(uint32_t seed, const sr_lp_club *e, int32_t ne, const uint8_t *urn, int32_t nu,
+                       const uint8_t (*pair)[2], int32_t np, int32_t legs1, int32_t legs2, int32_t *up, int32_t sp)
 {
     int32_t box[SR_LP_DIVS][SR_LP_DIVS], cnt[SR_LP_DIVS] = { 0 }, nup = 0;
     if (!e || !urn || !pair || !up || ne < 2 || ne > SR_LP_DIVS || nu < 1 || nu > SR_LP_DIVS || np < 1
@@ -193,7 +193,7 @@ int32_t sr_lp_cross(uint32_t seed, const sr_lp_club *e, int32_t ne, const uint8_
         shuffle(&r, box[u], cnt[u]);
         int w = 0;
         for (int k = 0; k + 1 < cnt[u]; k += 2)
-            box[u][w++] = ntie(&r, &e[box[u][k]], &e[box[u][k + 1]], legs1) ? box[u][k] : box[u][k + 1];
+            box[u][w++] = ntie(&r, &e[box[u][k]], &e[box[u][k + 1]], legs1, sp) ? box[u][k] : box[u][k + 1];
         cnt[u] = w;
         shuffle(&r, box[u], cnt[u]);
     }
@@ -202,7 +202,7 @@ int32_t sr_lp_cross(uint32_t seed, const sr_lp_club *e, int32_t ne, const uint8_
         if (u >= nu || v >= nu) return -1;
         while (u == v ? cnt[u] >= 2 : cnt[u] >= 1 && cnt[v] >= 1) {
             const int32_t a = box[u][--cnt[u]], b = box[v][--cnt[v]];
-            up[nup++] = ntie(&r, &e[a], &e[b], legs2) ? a : b;
+            up[nup++] = ntie(&r, &e[a], &e[b], legs2, sp) ? a : b;
         }
     }
     for (int u = 0; u < nu; u++) if (cnt[u]) return -1;
@@ -237,19 +237,20 @@ int32_t sr_lp_season_cross(uint32_t seed, int32_t nd, const sr_lp_club *const *c
     sr_lp_club e[SR_LP_DIVS];
     int32_t ei[SR_LP_DIVS], w[SR_LP_DIVS];
     int nup = 0;
+    const int sp = s && s->spread >= 0 ? s->spread : SR_LP_SPREAD;
     if (!c || !n || !s || !s->rpo || !s->urn || !up || nd < 1 || nd > SR_LP_DIVS || s->extra < 0 || s->nov < 0
         || (s->nov && !s->override)) return -1;
     for (int d = 0; d < nd; d++) {
-        if (n[d] < 2 || sr_lp_table(seed, d, c[d], n[d], t) != 0) return -1;
+        if (n[d] < 2 || sr_lp_table_sp(seed, d, c[d], n[d], t, sp) != 0) return -1;
         for (int k = 0; k < n[d]; k++) { place[d][t[k].team] = (uint8_t)k; isup[d][k] = 0; }
-        const int p = sr_lp_regional(seed, d, t, n[d], c[d], &s->rpo[d]);
+        const int p = sr_lp_regional_sp(seed, d, t, n[d], c[d], &s->rpo[d], sp);
         if (p < 0) return -1;
         up[nup++] = (sr_lp_up){ (int16_t)d, (int16_t)t[0].team, SR_LP_UP_CHAMPION };
         isup[d][t[0].team] = 1;
         e[d] = c[d][t[p].team]; ei[d] = t[p].team;
         pl[d] = place[d]; iu[d] = isup[d];
     }
-    const int nw = sr_lp_cross(seed, e, nd, s->urn, s->nu, s->pair, s->np, s->legs1, s->legs2, w);
+    const int nw = sr_lp_cross_sp(seed, e, nd, s->urn, s->nu, s->pair, s->np, s->legs1, s->legs2, w, sp);
     if (nw < 0) return -1;
     for (int k = 0; k < nw; k++) {
         up[nup++] = (sr_lp_up){ (int16_t)w[k], (int16_t)ei[w[k]], SR_LP_UP_CROSS };
@@ -270,6 +271,33 @@ int32_t sr_lp_season_cross(uint32_t seed, int32_t nd, const sr_lp_club *const *c
         isup[od][oi] = 1;
     }
     return nup;
+}
+
+/* the compiled default spread (SR_LP_SPREAD) */
+int32_t sr_lp_table(uint32_t seed, int32_t d, const sr_lp_club *c, int32_t n, sr_row *out)
+{
+    return sr_lp_table_sp(seed, d, c, n, out, SR_LP_SPREAD);
+}
+
+int32_t sr_lp_playoff(uint32_t seed, int32_t d, const sr_row *table, int32_t n, const sr_lp_club *c)
+{
+    return sr_lp_playoff_sp(seed, d, table, n, c, SR_LP_SPREAD);
+}
+
+int32_t sr_lp_season(uint32_t seed, int32_t nd, const sr_lp_club *const *c, const int32_t *n, int32_t *up)
+{
+    return sr_lp_season_sp(seed, nd, c, n, up, SR_LP_SPREAD);
+}
+
+int32_t sr_lp_regional(uint32_t seed, int32_t d, const sr_row *table, int32_t n, const sr_lp_club *c, const sr_lp_rpo *p)
+{
+    return sr_lp_regional_sp(seed, d, table, n, c, p, SR_LP_SPREAD);
+}
+
+int32_t sr_lp_cross(uint32_t seed, const sr_lp_club *e, int32_t ne, const uint8_t *urn, int32_t nu,
+                    const uint8_t (*pair)[2], int32_t np, int32_t legs1, int32_t legs2, int32_t *up)
+{
+    return sr_lp_cross_sp(seed, e, ne, urn, nu, pair, np, legs1, legs2, up, SR_LP_SPREAD);
 }
 
 /* the value at position x / 1000 of a list sorted strongest first (0 .. n - 1, linear between neighbours) */

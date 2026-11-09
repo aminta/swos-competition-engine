@@ -71,7 +71,10 @@ $(OUT)/ecclp: tests/rules/ecclp.c tests/sim/ecclp_italy.h $(RULES) rules/swosrul
 GAME_SPREAD = -DSR_LP_SPREAD=40 -Dsr_lp_table=sr_lp_table_game -Dsr_lp_playoff=sr_lp_playoff_game \
               -Dsr_lp_season=sr_lp_season_game -Dsr_lp_rank_strength=sr_lp_rank_strength_game \
               -Dsr_lp_newcomer_strength=sr_lp_newcomer_strength_game -Dsr_lp_regional=sr_lp_regional_game \
-              -Dsr_lp_cross=sr_lp_cross_game -Dsr_lp_extra=sr_lp_extra_game -Dsr_lp_season_cross=sr_lp_season_cross_game
+              -Dsr_lp_cross=sr_lp_cross_game -Dsr_lp_extra=sr_lp_extra_game -Dsr_lp_season_cross=sr_lp_season_cross_game \
+              -Dsr_lp_table_sp=sr_lp_table_sp_game -Dsr_lp_playoff_sp=sr_lp_playoff_sp_game \
+              -Dsr_lp_season_sp=sr_lp_season_sp_game -Dsr_lp_regional_sp=sr_lp_regional_sp_game \
+              -Dsr_lp_cross_sp=sr_lp_cross_sp_game
 $(OUT)/masssim: tests/sim/masssim.c $(RULES) rules/swosrules.h | $(OUT)
 	$(CC) $(CFLAGS) $(GAME_SPREAD) -Irules -c -o $(OUT)/sr_pool_game.o rules/sr_pool.c
 	$(CC) $(CFLAGS) $(SIM_FLAGS) -Irules -o $@ tests/sim/masssim.c rules/sr_pool.c rules/sr_groups.c $(OUT)/sr_pool_game.o

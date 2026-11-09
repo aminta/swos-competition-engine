@@ -446,6 +446,13 @@ int32_t sr_lp_newcomer_strength(uint16_t own, const uint16_t *pool, int32_t np);
 
 int32_t sr_lp_season(uint32_t seed, int32_t nd, const sr_lp_club *const *c, const int32_t *n, int32_t *up);
 
+/* The same with the spread given at run time (MC 09/11: a calibration of the engine's strength mapping, not a fact of
+ * the competition, so not in the spec; the sims sweep it). The names above = these at SR_LP_SPREAD. */
+int32_t sr_lp_table_sp(uint32_t seed, int32_t d, const sr_lp_club *c, int32_t n, sr_row *out, int32_t spread);
+int32_t sr_lp_playoff_sp(uint32_t seed, int32_t d, const sr_row *table, int32_t n, const sr_lp_club *c, int32_t spread);
+int32_t sr_lp_season_sp(uint32_t seed, int32_t nd, const sr_lp_club *const *c, const int32_t *n, int32_t *up,
+                        int32_t spread);
+
 /* ---- A pool with a cross play-off (swc/1.4 'up.cross'; Italy's Eccellenza 2026-27, 4.2 light; MC 42-ecclp) ----
  * Each division sends up its champion and one club to a play-off across the pool's divisions through its own
  * play-off (Italy: the regional play-offs, then the national one); the cross play-off's winners go up; then `extra`
@@ -462,9 +469,12 @@ int32_t sr_lp_season(uint32_t seed, int32_t nd, const sr_lp_club *const *c, cons
 enum { SR_LP_RPO_DIRECT, SR_LP_RPO_FOUR, SR_LP_RPO_LADDER };
 typedef struct { uint8_t kind, first, gap_skip, gap_final, direct_gap, draw_better, final_neutral; } sr_lp_rpo;
 
-/* The regional play-off's winner: its place in the table (0-based). -1 a shape out of the table. */
+/* The regional play-off's winner: its place in the table (0-based). -1 a shape out of the table. (_sp: the spread
+ * at run time.) */
 int32_t sr_lp_regional(uint32_t seed, int32_t d, const sr_row *table, int32_t n, const sr_lp_club *c,
                        const sr_lp_rpo *r);
+int32_t sr_lp_regional_sp(uint32_t seed, int32_t d, const sr_row *table, int32_t n, const sr_lp_club *c,
+                          const sr_lp_rpo *r, int32_t spread);
 
 /* The cross play-off. e[0 .. ne): the entrants, urn[i] entrant i's urn (0 .. nu - 1). Round 1: each urn drawn in
  * pairs (legs1 legs). Round 2: its winners paired by pair[0 .. np) ({u, v}: one of urn u v one of urn v; u == v:
@@ -473,6 +483,8 @@ int32_t sr_lp_regional(uint32_t seed, int32_t d, const sr_row *table, int32_t n,
  * -1 an urn of odd size, a winner left without a pair, a shape out of range. */
 int32_t sr_lp_cross(uint32_t seed, const sr_lp_club *e, int32_t ne, const uint8_t *urn, int32_t nu,
                        const uint8_t (*pair)[2], int32_t np, int32_t legs1, int32_t legs2, int32_t *up);
+int32_t sr_lp_cross_sp(uint32_t seed, const sr_lp_club *e, int32_t ne, const uint8_t *urn, int32_t nu,
+                       const uint8_t (*pair)[2], int32_t np, int32_t legs1, int32_t legs2, int32_t *up, int32_t spread);
 
 /* The cup's place (5d): of the clubs not up (isup[d][i] == 0), the strongest; ties: the better place in its table,
  * then the lower ident. override (SR_LP_NONE: none): that ident takes the place instead when it is in the pool and
@@ -491,6 +503,7 @@ typedef struct {
     int32_t np, legs1, legs2, extra;
     const uint16_t *override;
     int32_t nov;
+    int32_t spread;                 /* < 0: SR_LP_SPREAD (0 is a spread: pure chance) */
 } sr_lp_shape;
 
 /* How a club went up: its division's champion, the cross play-off, the extra rule, an override club. */

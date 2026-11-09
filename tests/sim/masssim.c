@@ -13,7 +13,8 @@
  *               changes nothing; strengths within 0 .. 375
  *   real        a club relegated from N / S straight back up: 4 of 55 = 7.3% (2011-12 .. 2023-24,
  *               the Mod's internal/nonleague2627/bounce)
- * Usage: masssim [CHAINS [SEASONS [WORKERS]]] (default 1000 100 8). Exit 1 on any broken invariant. */
+ * Usage: [SPREAD=n] masssim [CHAINS [SEASONS [WORKERS]]] (default 1000 100 8). Exit 1 on any broken invariant.
+ * SPREAD: the pool's light-table spread at run time (default SR_LP_SPREAD; printed only when set). */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -39,6 +40,7 @@ static const char *why_txt[8] = { "an identity lost or doubled", "a level's size
                                   "re-allocation refused", "a strength out of range" };
 
 /* an identity's fixed attributes: the ground's rank (0 north .. 254) and its area byte at N / S */
+static int pool_spread = SR_LP_SPREAD;  /* the pool's spread: SPREAD=n in the environment (the sweep), else the default */
 static uint8_t rank_of[MAXID], area_of[MAXID];
 static uint16_t str_of[MAXID];
 static unsigned char dead[MAXID];   /* an identity drawn for a full feed division: never used */
@@ -126,12 +128,12 @@ static void chain_run(uint32_t chain, int seasons, stats *st)
             for (int i = 0; i < PD; i++) pc[d][i].ident = (uint16_t)pool[d][i], pc[d][i].strength = str_of[pool[d][i]];
             pcp[d] = pc[d]; pn[d] = PD;
         }
-        sr_lp_season(seed, PDIV, pcp, pn, up);
+        sr_lp_season_sp(seed, PDIV, pcp, pn, up, pool_spread);
         int p_up[8];
         for (int d = 0; d < PDIV; d++) {
             p_up[2 * d] = pool[d][up[2 * d]]; p_up[2 * d + 1] = pool[d][up[2 * d + 1]];
             sr_row tt[SR_LP_CLUBS];
-            sr_lp_table(seed, d, pc[d], PD, tt);
+            sr_lp_table_sp(seed, d, pc[d], PD, tt, pool_spread);
             if (pool[d][tt[0].team] != p_up[2 * d]) bad |= 1u << 3;
             for (int k = 0; k < PD; k++) if (pool[d][tt[k].team] == p_up[2 * d + 1]) st->po_place[k < 7 ? k : 7]++;
         }
@@ -265,6 +267,8 @@ static void chain_run(uint32_t chain, int seasons, stats *st)
 
 int main(int argc, char **argv)
 {
+    const char *spv = getenv("SPREAD");
+    if (spv) { pool_spread = atoi(spv); printf("masssim: pool spread %d (SPREAD)\n", pool_spread); }
     const int chains = argc > 1 ? atoi(argv[1]) : 1000, seasons = argc > 2 ? atoi(argv[2]) : 100,
               workers = argc > 3 ? atoi(argv[3]) : 8;
     int fd[64][2];
