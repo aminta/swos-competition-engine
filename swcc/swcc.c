@@ -1081,10 +1081,157 @@ void swcc_set_loader(swcc_loader f) { g_loader = f; }
 
 static const char *jstr(JNode *o, const char *k) { JNode *v = json_get(o, k); return v && v->type == J_STR ? v->str : NULL; }
 
+/* v1.3: a light pool's play-off to its national play-off (a division's 'playoff', else the pool's 'up.playoff'): the
+   library's shapes only (rules sr_lp_regional): "table#N" and no rounds (that place goes straight); "table#N-N+3" in two
+   rounds (2 ties by_place, then the final); "table#N+1-N+2" in one tie by_place, then a round of one tie that 'joins'
+   "table#N". One match a tie. 'skip_if' (the stage, or a round's own) and 'direct_if' {points_gap_ge}. */
+static void gap_obj(C *c, JNode *o, const char *path)
+{
+    long g = 0;
+    int_in(c, need(c, o, "points_gap_ge", J_NUM, path), "points_gap_ge", path, 1, 99, &g);
+    unknown_keys(c, o, path);
+}
+
+static int deciders_ok(C *c, JNode *r, const char *rp, int *better)
+{
+    JNode *dec = need(c, r, "decider", J_ARR, rp), *d;
+    if (!dec) return 0;
+    if (!dec->n) { ERR(dec, rp, "decider: at least one entry"); return 0; }
+    for (d = dec->child; d; d = d->next) {
+        const int k = d->type == J_STR ? enum_of(d->str, DECIS, NE(DECIS)) : -1;
+        if (k < 1) { char l[400]; list_names(l, sizeof l, DECIS + 1, NE(DECIS) - 1); ERR(d, rp, "decider: one of %s", l); }
+        else if (!strcmp(DECIS[k], "better_placed")) *better = 1;
+    }
+    return 1;
+}
+
+static void check_pool_playoff(C *c, JNode *po, const char *path, int size)
+{
+    JNode *rr, *r, *e, *o;
+    int a = 0, b = 0, ri = 0, shape_ok = 0, nb = -1;
+    long ties[2] = { 0, 0 };
+    int bypl[2] = { 0, 0 }, join[2] = { 0, 0 };
+    const char *ty = jstr(po, "type");
+    if (!ty || strcmp(ty, "playoff")) ERR(po, path, "a pool play-off is a stage with \"type\": \"playoff\"");
+    e = need(c, po, "entrants", J_STR, path);
+    if (e && (strncmp(e->str, "table#", 6) || !positions(e->str + 6, &a, &b) || a > 127 || b > 127 || a < 2 || b < a)) {
+        ERR(e, path, "entrants \"%s\": \"table#N\" or \"table#N-M\" (places from the 2nd)", e->str);
+        a = 0;
+    }
+    if (a && size && b > size) ERR(e, path, "entrants \"%s\": the division has %d clubs", e->str, size), a = 0;
+    if ((o = opt(c, po, "skip_if", J_OBJ, path))) gap_obj(c, o, path);
+    if ((o = opt(c, po, "direct_if", J_OBJ, path))) gap_obj(c, o, path);
+    rr = opt(c, po, "rounds", J_ARR, path);
+    for (r = rr ? rr->child : NULL; r; r = r->next, ri++) {
+        char rp[300];
+        long legs = 1;
+        int better = 0;
+        JNode *jl;
+        pathf(rp, sizeof rp, "%s.rounds[%d]", path, ri);
+        if (r->type != J_OBJ) { ERR(r, rp, "a round is an object"); continue; }
+        if (ri < 2) int_in(c, need(c, r, "ties", J_NUM, rp), "ties", rp, 1, 2, &ties[ri]);
+        int_in(c, need(c, r, "legs", J_NUM, rp), "legs", rp, 1, 1, &legs);
+        enum_member(c, need(c, r, "home", J_STR, rp), "home", rp, HOMES, NE(HOMES));
+        if (ri < 2) bypl[ri] = enum_member(c, need(c, r, "pairing", J_STR, rp), "pairing", rp, PAIRS, NE(PAIRS)) == 4;
+        else json_get(r, "pairing");
+        deciders_ok(c, r, rp, &better);
+        if (nb < 0) nb = better;
+        else if (nb != better) ERR(r, rp, "a light play-off has one decider rule for all its rounds (\"better_placed\" in all or none)");
+        if ((o = opt(c, r, "skip_if", J_OBJ, rp))) gap_obj(c, o, rp);
+        if ((jl = opt(c, r, "joins", J_ARR, rp))) {
+            int ja = 0, jb = 0;
+            JNode *it = jl->child;
+            if (jl->n != 1 || it->type != J_STR || strncmp(it->str, "table#", 6) || !positions(it->str + 6, &ja, &jb) || ja != jb
+                || ja != a - 1)
+                ERR(jl, rp, "joins: one place, \"table#%d\" (the place above the entrants)", a > 1 ? a - 1 : 1);
+            else if (ri < 2) join[ri] = 1;
+        }
+        unknown_keys(c, r, rp);
+    }
+    if (a) {
+        const int n = b - a + 1;
+        if (n == 1) shape_ok = ri == 0;                                                  /* direct */
+        else if (n == 4) shape_ok = ri == 2 && ties[0] == 2 && bypl[0] && !join[0] && ties[1] == 1 && !join[1];
+        else if (n == 2) shape_ok = ri == 2 && ties[0] == 1 && bypl[0] && !join[0] && ties[1] == 1 && join[1];   /* the ladder */
+        if (!shape_ok)
+            ERR(po, path, "a light pool's play-off: \"table#N\" with no rounds, \"table#N-N+3\" in two rounds (2 ties "
+                "by_place, the final), or \"table#N+1-N+2\" (1 tie by_place) then one tie that joins \"table#N\"");
+    }
+    unknown_keys(c, po, path);
+}
+
+/* v1.3: a pool's national play-off ('up.national'): urns of divisions; round 1 drawn within each urn, round 2 by the
+   urn pairs, each kind of pair as long as it can be used, in order (rules sr_lp_national). nd: the divisions. */
+static void check_national(C *c, JNode *na, const char *const *dname, int nd)
+{
+    JNode *ur = need(c, na, "urns", J_ARR, "up.national"), *m, *rr, *r;
+    const char *uid[64];
+    int nu = 0, cnt[64] = { 0 }, seen[256] = { 0 }, ri = 0;
+    long ties[2] = { 0, 0 };
+    for (m = ur ? ur->child : NULL; m && nu < 64; m = m->next, nu++) {
+        char up_[120];
+        JNode *id, *dv, *d;
+        pathf(up_, sizeof up_, "up.national.urns[%d]", nu);
+        uid[nu] = "";
+        if (m->type != J_OBJ) { ERR(m, up_, "an urn is {\"id\", \"divisions\"}"); continue; }
+        if ((id = need(c, m, "id", J_STR, up_))) {
+            for (int j = 0; j < nu; j++) if (!strcmp(uid[j], id->str)) ERR(id, up_, "urn id \"%s\" used twice", id->str);
+            uid[nu] = id->str;
+        }
+        if ((dv = need(c, m, "divisions", J_ARR, up_)))
+            for (d = dv->child; d; d = d->next) {
+                int j = 0;
+                if (d->type == J_STR) while (j < nd && strcmp(dname[j], d->str)) j++;
+                if (d->type != J_STR || j == nd) { ERR(d, up_, "no division \"%s\" in this pool", d->type == J_STR ? d->str : "?"); continue; }
+                if (seen[j]++) ERR(d, up_, "division \"%s\" in two urns", d->str);
+                cnt[nu]++;
+            }
+        if (cnt[nu] % 2) ERR(m, up_, "urn \"%s\": %d divisions, round 1 draws them in pairs", uid[nu], cnt[nu]);
+        unknown_keys(c, m, up_);
+    }
+    for (int j = 0; j < nd; j++) if (!seen[j]) ERR(ur, "up.national", "division \"%s\" is in no urn", dname[j]);
+    rr = need(c, na, "rounds", J_ARR, "up.national");
+    if (rr && rr->n != 2) ERR(rr, "up.national", "the national play-off has 2 rounds (within the urns, then by urn pairs)");
+    for (r = rr ? rr->child : NULL; r && ri < 2; r = r->next, ri++) {
+        char rp[120];
+        long legs = 1;
+        int better = 0, pr;
+        JNode *ps;
+        pathf(rp, sizeof rp, "up.national.rounds[%d]", ri);
+        if (r->type != J_OBJ) { ERR(r, rp, "a round is an object"); continue; }
+        int_in(c, need(c, r, "ties", J_NUM, rp), "ties", rp, 1, 1024, &ties[ri]);
+        int_in(c, need(c, r, "legs", J_NUM, rp), "legs", rp, 1, 2, &legs);
+        enum_member(c, need(c, r, "home", J_STR, rp), "home", rp, HOMES, NE(HOMES));
+        pr = enum_member(c, need(c, r, "pairing", J_STR, rp), "pairing", rp, PAIRS, NE(PAIRS));
+        if (pr != 0) ERR(r, rp, "the national play-off's pairing is \"draw\" (round 1 within the urns, round 2 by 'urn_pairs')");
+        deciders_ok(c, r, rp, &better);
+        ps = ri == 1 ? need(c, r, "urn_pairs", J_ARR, rp) : NULL;
+        if (ri == 1 && ps) {                    /* the winners per urn consumed as the library does */
+            int left[64], made = 0;
+            JNode *pp;
+            for (int u = 0; u < nu; u++) left[u] = cnt[u] / 2;
+            for (pp = ps->child; pp; pp = pp->next) {
+                JNode *x = json_at(pp, 0), *y = json_at(pp, 1);
+                int u = -1, v = -1;
+                if (pp->type != J_ARR || pp->n != 2 || x->type != J_STR || y->type != J_STR) { ERR(pp, rp, "urn_pairs: a pair is [\"urn\", \"urn\"]"); continue; }
+                for (int j = 0; j < nu; j++) { if (!strcmp(uid[j], x->str)) u = j; if (!strcmp(uid[j], y->str)) v = j; }
+                if (u < 0 || v < 0) { ERR(pp, rp, "urn_pairs: no urn \"%s\"", u < 0 ? x->str : y->str); continue; }
+                while (u == v ? left[u] >= 2 : left[u] >= 1 && left[v] >= 1) { left[u]--; left[v]--; made++; }
+            }
+            for (int u = 0; u < nu; u++)
+                if (left[u]) ERR(ps, rp, "urn_pairs: %d round-1 winners of urn \"%s\" left without a pair", left[u], uid[u]);
+            if (ties[1] && made != ties[1]) ERR(ps, rp, "urn_pairs make %d ties, 'ties' says %ld", made, ties[1]);
+        }
+        unknown_keys(c, r, rp);
+    }
+    if (ties[0] && ties[0] * 2 != nd) ERR(rr, "up.national", "round 1: %ld ties for %d divisions (one entrant each)", ties[0], nd);
+    unknown_keys(c, na, "up.national");
+}
+
 /* one pool file (root p) of the world's pool `pid`; ids: the pool clubs' ids seen so far (all pools) */
 static void check_pool_file(C *c, JNode *p, const char *pid, const char ***ids, int *nids)
 {
-    JNode *v, *divs, *cls, *up, *m;
+    JNode *v, *divs, *cls, *up, *m, *dpo[256] = { 0 };
     int nd = 0, i, j, cnt[256] = { 0 }, size[256] = { 0 };
     const char *dname[256];
     char path[160];
@@ -1115,6 +1262,11 @@ static void check_pool_file(C *c, JNode *p, const char *pid, const char ***ids, 
                 unknown_keys(c, nm, path);
             }
             if (int_in(c, need(c, m, "size", J_NUM, path), "size", path, 2, c->max_teams, &sz)) size[nd] = (int)sz;
+            if ((dpo[nd] = opt(c, m, "playoff", J_OBJ, path))) {    /* v1.3: its own regional play-off */
+                char pp[200];
+                pathf(pp, sizeof pp, "%s.playoff", path);
+                check_pool_playoff(c, dpo[nd], pp, size[nd]);
+            }
             unknown_keys(c, m, path);
         }
     }
@@ -1166,13 +1318,38 @@ static void check_pool_file(C *c, JNode *p, const char *pid, const char ***ids, 
     }
     if ((up = need(c, p, "up", J_OBJ, ""))) {
         long ch = 0;
-        JNode *po = opt(c, up, "playoff", J_OBJ, "up");
+        JNode *po = opt(c, up, "playoff", J_OBJ, "up"), *na = opt(c, up, "national", J_OBJ, "up"), *ex = opt(c, up, "extra", J_OBJ, "up");
         int_in(c, need(c, up, "champion", J_NUM, "up"), "champion", "up", 0, 8, &ch);
-        if (po) {                                       /* a playoff stage's shape: the engine reads it (S3) */
+        if (po && !na) {                                /* a playoff stage's shape: the engine reads it (S3) */
             const char *ty = jstr(po, "type");
             JNode *rr = json_get(po, "rounds");
             if (!ty || strcmp(ty, "playoff")) ERR(po, "up.playoff", "up.playoff is a stage with \"type\": \"playoff\"");
             if (!rr || rr->type != J_ARR || !rr->n) ERR(po, "up.playoff", "up.playoff needs its 'rounds'");
+        }
+        if (!na)
+            for (j = 0; j < nd; j++) if (dpo[j]) ERR(dpo[j], dname[j], "a division's own 'playoff' goes with 'up.national'");
+        if (na) {                                       /* v1.3: a national play-off (Italy's Eccellenza) */
+            int small = 0;
+            for (j = 0; j < nd; j++) if (size[j] && (!small || size[j] < small)) small = size[j];
+            if (po) check_pool_playoff(c, po, "up.playoff", small);
+            for (j = 0; j < nd; j++)
+                if (!dpo[j] && !po) ERR(na, "up.national", "division \"%s\": no 'playoff' of its own and no 'up.playoff'", dname[j]);
+            if (ch != 1) ERR(up, "up", "with 'national': champion 1 (each division's champion up, its play-off to the national one)");
+            check_national(c, na, dname, nd);
+        }
+        if (ex) {                                       /* v1.3: places by a declared rule (the cup's, Italy's 5d) */
+            long k = 0;
+            JNode *ru = need(c, ex, "rule", J_STR, "up.extra"), *ov = opt(c, ex, "override", J_STR, "up.extra");
+            if (ru && strcmp(ru->str, "strongest_not_up")) ERR(ru, "up.extra", "rule \"%s\": the only rule is \"strongest_not_up\"", ru->str);
+            int_in(c, need(c, ex, "count", J_NUM, "up.extra"), "count", "up.extra", 1, 8, &k);
+            if (ov) {
+                JNode *q;
+                int found = 0;
+                for (q = cls ? cls->child : NULL; q; q = q->next) { const char *qi = jstr(q, "id"); found |= qi && !strcmp(qi, ov->str); }
+                if (!found) ERR(ov, "up.extra", "override \"%s\" is not a club of this pool", ov->str);
+            }
+            if (!na) ERR(ex, "up.extra", "'extra' goes with 'national'");
+            unknown_keys(c, ex, "up.extra");
         }
         unknown_keys(c, up, "up");
     }
