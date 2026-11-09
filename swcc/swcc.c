@@ -691,7 +691,12 @@ static int entr_item(C *c, JNode *it, const char *sp, StageInfo *all_st, int fir
             need_minor(c, it, sp, 4, "a playoff competition's entrants \"<league>#N-M\"");
             if (!kd || kd->type != J_STR || strcmp(kd->str, "league")) ERR(it, sp, "entrants \"%s\": not a league", it->str);
             if (!positions(hash + 1, &a, &b) || a < 1 || b < a) { ERR(it, sp, "entrants \"%s\": write '<league>#N-M'", it->str); return -1; }
-            *src = -1; *per = 0; *pa = a; *pb = b;
+            JNode *pc = json_get(json_get(c->comps[ix], "participants"), "count");
+            if (pc && pc->type == J_NUM && b > (int)pc->num) {
+                ERR(it, sp, "entrants \"%s\": positions outside the league (%d clubs)", it->str, (int)pc->num);
+                return -1;
+            }
+            *src = -2 - ix; *per = 0; *pa = a; *pb = b;     /* (src -2 - league: the taken-twice check by league) */
             return b - a + 1;
         }
     }
@@ -943,8 +948,9 @@ static void do_comp(C *c, int ci, StageInfo *all_st, int *nall)
                         ERR(it, sp, "cup_place: one per stage");
                     if (gsrc < 0) gsrc = src; else if (src != gsrc) same = 0;
                     for (i2 = 0; i2 < nr; i2++)
-                        if (rg[i2].src == src && src >= 0 && a <= rg[i2].b && rg[i2].a <= b)
-                            ERR(it, sp, "entrants: place %d of stage \"%s\" is taken twice", a > rg[i2].a ? a : rg[i2].a, all_st[src].id);
+                        if (rg[i2].src == src && src != -1 && a <= rg[i2].b && rg[i2].a <= b)
+                            ERR(it, sp, "entrants: place %d of %s \"%s\" is taken twice", a > rg[i2].a ? a : rg[i2].a,
+                                src >= 0 ? "stage" : "league", src >= 0 ? all_st[src].id : json_get(c->comps[-2 - src], "id")->str);
                     if (nr < 64) { rg[nr].src = src; rg[nr].a = a; rg[nr].b = b; nr++; }
                 }
                 if (!ok) s.teams = 0;              /* (unknown: no round counts) */
@@ -1059,7 +1065,7 @@ static void do_comp(C *c, int ci, StageInfo *all_st, int *nall)
                                                                clubs listed ("#N-M" of that league, "<league>#N",
                                                                "winners:R": an earlier round's -- that league's under 'per') */
                         JNode *pe = opt(c, r, "per", J_ARR, rp), *cl = opt(c, r, "clubs", J_ARR, rp), *q;
-                        int np = 0, ncl = 0;
+                        int np = 0;
                         if (pe) {
                             need_minor(c, pe, rp, 4, "a round's 'per'");
                             if (rec.kind != SWC_K_PLAYOFF) ERR(pe, rp, "'per' goes on a playoff competition's round");
@@ -1076,11 +1082,10 @@ static void do_comp(C *c, int ci, StageInfo *all_st, int *nall)
                                 char *e2;
                                 int a2, b2;
                                 const char *h2 = q->type == J_STR ? strchr(q->str, '#') : NULL;
-                                if (q->type == J_STR && !strncmp(q->str, "winners:", 8) && (rr2 = strtol(q->str + 8, &e2, 10)) >= 1 && rr2 <= ri && !*e2) { ncl += -1000; continue; }
-                                if (h2 && positions(h2 + 1, &a2, &b2) && a2 >= 1 && b2 >= a2 && (h2 != q->str || pe)) { ncl += b2 - a2 + 1; continue; }
+                                if (q->type == J_STR && !strncmp(q->str, "winners:", 8) && (rr2 = strtol(q->str + 8, &e2, 10)) >= 1 && rr2 <= ri && !*e2) continue;
+                                if (h2 && positions(h2 + 1, &a2, &b2) && a2 >= 1 && b2 >= a2 && (h2 != q->str || pe)) continue;
                                 ERR(q, rp, "clubs: \"#N-M\" (with 'per'), \"<league>#N-M\" or \"winners:R\" (an earlier round)");
                             }
-                            (void)ncl;
                         }
                         if (np > 1) ties *= np;             /* (the count checks: every league's ties) */
                     }
