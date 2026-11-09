@@ -3,7 +3,7 @@
  "id": "test.numbers-no-competition",
  "host_world": 9,
  "_expect": "numbers \"ita.z#1\": no competition \"ita.z\"",
- "_note": "swc/1.4, 42-s2ko: the Coppa Italia (bracket numbers from last season, the fixed bracket) and the Supercoppa on v14_ita_playoffs' Italy with the real 2026-27 clubs of Serie A, B and C (it.wikipedia \"Serie A/B/C 2026-2027\", \"Squadre partecipanti\"; host words are placeholders). The Coppa Italia Serie C here is still the 4-club placeholder of v14_ita_playoffs (its real format: 42-s2ko M2).",
+ "_note": "swc/1.4, 42-s2ko: the Coppa Italia (bracket numbers from last season, the fixed bracket) and the Supercoppa on v14_ita_playoffs' Italy with the real 2026-27 clubs of Serie A, B and C (it.wikipedia \"Serie A/B/C 2026-2027\", \"Squadre partecipanti\"; host words are placeholders). The Coppa Italia Serie C here is still the 4-club placeholder of v14_ita_playoffs (its real format: 42-s2ko M2). The Coppa Italia Serie D (42-s2ko M2b) on Serie D 2026-27's 9 groups (it.wikipedia town tables; host words placeholders, files 91-92).",
  "languages": [
   "it",
   "en",

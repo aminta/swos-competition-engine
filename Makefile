@@ -97,7 +97,7 @@ $(OUT)/s2ko_gen.h: tests/rules/s2ko.py tests/specs/ok/v14_ita_cups.json tests/ru
 	python3 -I tests/rules/s2ko.py $@
 $(OUT)/s2ko: tests/rules/s2ko.c $(OUT)/s2ko_gen.h rules/sr_kn.c rules/swosrules.h | $(OUT)
 	$(CC) -std=c11 -O1 -g -Wall -Wextra -Wno-missing-field-initializers $(SANITIZE) -Irules -I$(OUT) -o $@ \
-	    tests/rules/s2ko.c rules/sr_kn.c
+	    tests/rules/s2ko.c rules/sr_kn.c -lm
 
 # Italy's Eccellenza: the light pool with regional + national play-offs and the cup rule (invariants + controls)
 $(OUT)/ecclp: tests/rules/ecclp.c tests/sim/ecclp_italy.h $(RULES) rules/swosrules.h | $(OUT)

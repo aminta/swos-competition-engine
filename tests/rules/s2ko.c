@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 #include "swosrules.h"
 #include "s2ko_gen.h"
 
@@ -490,6 +491,174 @@ static void coppa_c_random(int seasons)
            !bad ? "PASS" : "FAIL", seasons, bad);
 }
 
+/* ---- 42-s2ko M2b: the Coppa Italia Serie D ---- */
+static uint8_t d_real[8][64];                   /* (season 1: the ties with a real result) */
+static int32_t play_d(void *vc, int32_t r, int32_t t, const sr_kn_tie *o)
+{
+    RealCtx *c = vc;
+    for (int i = 0; i < S2D_NRES; i++) {
+        const uint16_t *x = s2d_res[i];
+        if (x[0] != r + 1 || !((x[1] == o->home && x[2] == o->away) || (x[1] == o->away && x[2] == o->home))) continue;
+        c->checked++;
+        if (x[1] != o->home) c->mism++;
+        if (r < 8 && t < 64) d_real[r][t] = 1;
+        return x[3] == o->away;
+    }
+    c->rng = c->rng * 1103515245u + 12345u;
+    return (c->rng >> 16) & 1;
+}
+
+static double d_km(const sr_kn_geo *geo, uint16_t a, uint16_t b)
+{
+    const double dy = geo[a].lat - geo[b].lat, dx = (geo[a].lon - geo[b].lon) * 0.7431;
+    return sqrt(dy * dy + dx * dx) * 1.112;     /* (1/100 degree of latitude = 1.112 km) */
+}
+
+/* the side away in its previous tie hosts (both alike: drawn) -- the hosts against the rule in rounds r0 .. r1 of a
+   bracket whose fixed pairs are winner refs; *decided: the ties the rule decides */
+static int alt_bad(const sr_kn_round *rd, int r0, int r1, const sr_kn_pair *pairs, const sr_kn_tie *out, int *decided, int real_only)
+{
+    int bad = 0;
+    for (int r = r0; r <= r1; r++)
+        for (int t = 0; t < rd[r].ties; t++) {
+            const sr_kn_pair *p = &pairs[rd[r].first + t];
+            const sr_kn_tie *o = &out[rd[r].first + t], *x = &out[rd[(p->a >> 9) & 0x3F].first + (p->a & 0x1FF)],
+                            *y = &out[rd[(p->b >> 9) & 0x3F].first + (p->b & 0x1FF)];
+            const int wa = x->winner == x->home, wb = y->winner == y->home;
+            if (real_only && !(d_real[(p->a >> 9) & 0x3F][p->a & 0x1FF] && d_real[(p->b >> 9) & 0x3F][p->b & 0x1FF])) continue;
+            if (wa == wb) continue;
+            (*decided)++;
+            bad += o->home != (wa ? y->winner : x->winner);
+        }
+    return bad;
+}
+
+static void coppa_d(void)
+{
+    static sr_kn_tie out[256];
+    static sr_kn_pair pairs[256];
+    uint32_t rng = 3;
+    RealCtx c = { 0, 0, 0, 11 };
+    /* season 1: the real bracket (preliminary .. quarter-finals) with the hosts as played, then drawn two-leg
+       semi-finals and final */
+    memset(d_real, 0, sizeof d_real);
+    int w = sr_kn_cup(s2d_rounds, S2D_NR, s2d_pairs, s2d_num, 162, NULL, NULL, &rng, play_d, &c, &work, out);
+    int bb = bracket_ok(s2d_rounds, S2D_NR, out, 162);
+    for (int t = 0; t < 3; t++) bb += out[s2d_rounds[6].first + t].legs != 2;
+    int ok = w >= 0 && c.checked == S2D_NRES && !c.mism && !bb;
+    CHECK(ok, "Coppa D 2026-27: %d of %d real ties, %d hosts wrong, rules %d", c.checked, S2D_NRES, c.mism, bb);
+    printf("%s: Coppa Italia Serie D 2026-27: all %d real ties played so far (preliminary, first round, round of 64) with their hosts as played; the bracket of the last 32 / 16 / quarter-finals as drawn, then drawn two-leg semi-finals and final, one winner\n",
+           ok ? "PASS" : "FAIL", c.checked);
+    /* the rule of alternation (art. 4) on the real last 32: where both sides' round-of-64 ties are played and one was
+       at home, the other away, the club away hosts -- the LND's own schedule (TM) against the rule */
+    int dec = 0, bad = alt_bad(s2d_rounds, 3, 3, s2d_pairs, out, &dec, 1);
+    ok = dec >= 4 && !bad;
+    CHECK(ok, "Coppa D alternation: %d decided, %d against", dec, bad);
+    printf("%s: Coppa Italia Serie D 2026-27: alternation (art. 4) -- the %d ties of the last 32 it decides, the LND's listed host each time (%d against)\n",
+           ok ? "PASS" : "FAIL", dec, bad);
+    /* the geographic blocks on the real entrants: the preliminary's 68 (blocks of 2) and round 1's real 128 (the
+       preliminary's real winners, the 94 others; blocks of 4), 1000 draws each: the km of all ties against the
+       calibration (2740 / 3977 km; the real 2610 / 4048) */
+    sr_kn_round g1 = { 34, 0, 1, SR_KN_DRAW, SR_KN_PAIR_GEO, 2, 0, 68 }, g2 = { 64, 0, 1, SR_KN_DRAW, SR_KN_PAIR_GEO, 4, 0, 128 };
+    sr_kn_entry join[128];
+    double k1 = 0, k2 = 0;
+    int b1 = 0, n = 0;
+    for (int i = 0; i < 68; i++) { join[i].club = s2d_num[i]; join[i].zone = 0; }
+    work.geo = s2c_geo;
+    for (int it = 0; it < 1000; it++) {
+        uint32_t r2 = (uint32_t)it * 7919u + 1;
+        b1 += sr_kn_cup(&g1, 1, NULL, NULL, 0, join, NULL, &r2, play_rand, NULL, &work, out) < 0;
+        for (int t = 0; t < 34; t++) k1 += d_km(s2c_geo, out[t].home, out[t].away);
+    }
+    for (int i = 0; i < S2D_NRES; i++) if (s2d_res[i][0] == 1) { join[n].club = s2d_res[i][3]; join[n++].zone = 0; }
+    for (int i = 68; i < 162; i++) { join[n].club = s2d_num[i]; join[n++].zone = 0; }
+    for (int it = 0; it < 1000 && n == 128; it++) {
+        uint32_t r2 = (uint32_t)it * 104729u + 5;
+        b1 += sr_kn_cup(&g2, 1, NULL, NULL, 0, join, NULL, &r2, play_rand, NULL, &work, out) < 0;
+        for (int t = 0; t < 64; t++) k2 += d_km(s2c_geo, out[t].home, out[t].away);
+    }
+    k1 /= 1000; k2 /= 1000;
+    ok = !b1 && n == 128 && k1 > 2500 && k1 < 3000 && k2 > 3600 && k2 < 4400;
+    CHECK(ok, "Coppa D blocks: %d bad, %.0f km / %.0f km", b1, k1, k2);
+    printf("%s: Coppa Italia Serie D: the geographic blocks on the real 2026-27 entrants, 1000 draws -- the preliminary %.0f km in all (real 2610), round 1 %.0f km (real 4048)\n",
+           ok ? "PASS" : "FAIL", k1, k2);
+    (void)pairs;
+}
+
+/* later seasons at random: 9 groups of 18 last season (1st up, 15th-18th down: 45 gone), 45 new clubs; the numbers
+   as the spec (the preliminary: the new, then from the bottom of the tables; the others), then the rounds -- every
+   club enters once, the preliminary's old clubs placed no higher than any other's, geographic blocks, the bracket of
+   winners, alternation from the last 32, one winner */
+static void coppa_d_random(int seasons)
+{
+    static sr_kn_geo geo[SR_KN_CLUBS];
+    static uint16_t tab[9][18], nw[9][5], num[SR_KN_NUMBERS];
+    static sr_kn_rec rec[SR_KN_CLUBS];
+    static uint8_t el[SR_KN_CLUBS], isnew[SR_KN_CLUBS];
+    static sr_kn_tie out[256];
+    static sr_kn_pair pairs[256];
+    sr_kn_list lists[18];
+    sr_kn_group g[2];
+    sr_kn_entry join[162];
+    sr_kn_round rd[8] = {
+        { 34, 0, 1, SR_KN_DRAW, SR_KN_PAIR_GEO, 2, 0, 68 }, { 64, 34, 1, SR_KN_DRAW, SR_KN_PAIR_GEO, 4, 68, 94 },
+        { 32, 98, 1, SR_KN_DRAW, SR_KN_PAIR_FIXED, 0, 0, 0 }, { 16, 130, 1, SR_KN_ALTERNATE, SR_KN_PAIR_FIXED, 0, 0, 0 },
+        { 8, 146, 1, SR_KN_ALTERNATE, SR_KN_PAIR_FIXED, 0, 0, 0 }, { 4, 154, 1, SR_KN_ALTERNATE, SR_KN_PAIR_FIXED, 0, 0, 0 },
+        { 2, 158, 2, SR_KN_DRAW, SR_KN_PAIR_DRAW, 0, 0, 0 }, { 1, 160, 2, SR_KN_DRAW, SR_KN_PAIR_DRAW, 0, 0, 0 } };
+    int bad = 0, fails0 = 0, dec = 0;
+    double km = 0;
+    for (int r = 2; r < 6; r++)
+        for (int t = 0; t < rd[r].ties; t++) {
+            pairs[rd[r].first + t].a = SR_KN_WIN(r - 1, 2 * t);
+            pairs[rd[r].first + t].b = SR_KN_WIN(r - 1, 2 * t + 1);
+        }
+    memset(&g, 0, sizeof g);
+    g[0].take = 68; g[0].order = SR_KN_LIST; g[0].else_order = SR_KN_PLACE_DESC; g[0].nfrom = 9; g[0].nelse = 9;
+    g[1].take = 94; g[1].order = SR_KN_LIST; g[1].else_order = SR_KN_LIST; g[1].nfrom = 9; g[1].nelse = 9;
+    for (int i = 0; i < 9; i++) { g[0].from[i] = (uint8_t)i; g[0].els[i] = (uint8_t)(9 + i); g[1].from[i] = (uint8_t)(9 + i); g[1].els[i] = (uint8_t)i; }
+    work.geo = geo;
+    for (int s = 0; s < seasons; s++) {
+        uint32_t rng = (uint32_t)s * 2654435761u + 7;
+        int b = 0, n;
+        memset(el, 0, sizeof el); memset(isnew, 0, sizeof isnew); memset(rec, 0, sizeof rec);
+        for (int i = 0; i < 207; i++) {         /* (a club: a real Serie D town, moved a little) */
+            const sr_kn_geo *x = &s2c_geo[s2d_num[rnd(162)]];
+            geo[i].lat = (int16_t)(x->lat + (int)rnd(41) - 20); geo[i].lon = (int16_t)(x->lon + (int)rnd(41) - 20);
+        }
+        for (int i = 0; i < 162; i++) { tab[i / 18][i % 18] = (uint16_t)i; }
+        for (int i = 161; i > 0; i--) { const int j = (int)rnd((uint32_t)i + 1); const uint16_t x = tab[i / 18][i % 18]; tab[i / 18][i % 18] = tab[j / 18][j % 18]; tab[j / 18][j % 18] = x; }
+        for (int L = 0; L < 9; L++) {
+            for (int p = 0; p < 18; p++) { rec[tab[L][p]].place = (uint8_t)(p + 1); rec[tab[L][p]].pld = 34; el[tab[L][p]] = p > 0 && p < 14; }
+            for (int k = 0; k < 5; k++) { nw[L][k] = (uint16_t)(162 + L * 5 + k); el[nw[L][k]] = 1; isnew[nw[L][k]] = 1; }
+            lists[L].club = nw[L]; lists[L].n = 5; lists[L].unknown = SR_KN_NONE;
+            lists[9 + L].club = tab[L]; lists[9 + L].n = 18; lists[9 + L].unknown = SR_KN_NONE;
+        }
+        n = sr_kn_number(g, 2, lists, rec, el, &rng, &work, num, SR_KN_NUMBERS);
+        if (n != 162) { bad++; continue; }
+        int maxp = 99, minp = 0;                /* (the preliminary's old clubs placed no higher than the others) */
+        for (int i = 0; i < 162; i++) {
+            const int p = rec[num[i]].place;
+            b += !el[num[i]];
+            if (i < 45) b += !isnew[num[i]];    /* (the 45 new first) */
+            else if (i < 68) { if (p < maxp) maxp = p; }
+            else if (p > minp) minp = p;
+        }
+        b += maxp < minp;
+        for (int i = 0; i < 162; i++) { join[i].club = num[i]; join[i].zone = 0; }
+        int w = sr_kn_cup(rd, 8, pairs, NULL, 0, join, NULL, &rng, play_rand, NULL, &work, out);
+        b += w < 0 || bracket_ok(rd, 8, out, 162);
+        b += alt_bad(rd, 3, 5, pairs, out, &dec, 0);
+        for (int t = 0; t < 34; t++) km += d_km(geo, out[t].home, out[t].away);
+        for (int t = 0; t < 3; t++) b += out[158 + t].legs != 2;
+        if (b && fails0++ < 3) printf("  random Coppa D season %d: %d bad\n", s, b);
+        bad += b != 0;
+    }
+    km /= seasons > 0 ? seasons : 1;
+    CHECK(!bad && km < 4000, "Coppa D random: %d bad, preliminary %.0f km", bad, km);
+    printf("%s: Coppa Italia Serie D, %d random seasons: the numbers (the 45 new clubs, then from the bottom of the tables: no preliminary club placed higher than an exempt one), the preliminary and round 1 in geographic blocks (%.0f km a preliminary), the fixed bracket of winners, alternation in the %d ties it decides, two-leg semi-finals and final, one winner (%d bad)\n",
+           !bad && km < 4000 ? "PASS" : "FAIL", seasons, km, dec, bad);
+}
+
 int main(int argc, char **argv)
 {
     real_season();
@@ -498,5 +667,7 @@ int main(int argc, char **argv)
     random_seasons(argc > 1 ? atoi(argv[1]) : 100000);
     coppa_c();
     coppa_c_random(argc > 1 ? atoi(argv[1]) : 100000);
+    coppa_d();
+    coppa_d_random(argc > 1 ? atoi(argv[1]) : 100000);
     return fails != 0;
 }

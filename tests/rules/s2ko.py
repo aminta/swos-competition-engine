@@ -134,6 +134,39 @@ cres = fx['coppa_c_2627']
 out.append('static const uint16_t s2c_res[][4] = { %s };' % ', '.join('{ %d, %d, %d, %d }' % (
     r, code[h], code[a], code[w]) for r, h, a, w in cres))
 out.append('#define S2C_NRES %d' % len(cres))
+# 42-s2ko M2b: the Coppa Italia Serie D -- the first season's numbers (entry order: the preliminary's 68, then the
+# others), its rounds 1-6 as drawn (pairs of numbers / earlier winners, home first as played), the played ties; the
+# later seasons' shape (groups, blocks, homes) as the spec writes it, checked here and rebuilt in s2ko.c
+cdd = comps['ita.coppa-d']['stages'][0]
+cfs = cdd['first_season']
+dnum = [code[k[len('club:ita.'):]] for k in cfs['numbers']]
+def dside(x):
+    if x.startswith('club:'):
+        return str(dnum.index(code[x[len('club:ita.'):]]) + 1)
+    r, t = x[len('winner:'):].split('.')
+    return 'SR_KN_WIN(%d, %d)' % (int(r) - 1, int(t) - 1)
+drd, dpr, at = [], [], 0
+for ri, r in enumerate(cdd['rounds']):
+    fixed = ri < len(cfs['rounds'])
+    drd.append('{ %d, %d, %d, %d, %d, 0, 0, 0 }' % (r['ties'], at, r['legs'], 4 if fixed else HOMES.index(r['home']), 0 if fixed else 1))
+    if fixed: dpr += ['{ %s, %s }' % (dside(a), dside(b)) for a, b in cfs['rounds'][ri]]
+    at += r['ties']
+G = ['ita.d-' + L for L in 'abcdefghi']
+ng = cdd['numbers']
+assert [g['take'] for g in ng] == [68, 94] and ng[0]['from'] == [x + ':new' for x in G] and ng[0]['else'] == [x + '#1-18' for x in G]
+assert ng[0]['else_order'] == 'place_desc' and ng[1]['from'] == ng[0]['else'] and ng[1]['else'] == ng[0]['from']
+shape = [(r['ties'], r['legs'], r['home'], r['pairing'], r.get('block', 0), r.get('numbers', '')) for r in cdd['rounds']]
+assert shape[:2] == [(34, 1, 'draw', 'geo', 2, '1-68'), (64, 1, 'draw', 'geo', 4, '69-162')], shape
+assert [x[2:4] for x in shape[2:]] == [('draw', 'fixed')] + [('alternate', 'fixed')] * 3 + [('draw', 'draw')] * 2, shape
+for ri in range(2, 6):
+    assert cdd['rounds'][ri]['fixed'] == [['winner:%d.%d' % (ri, 2 * t + 1), 'winner:%d.%d' % (ri, 2 * t + 2)] for t in range(shape[ri][0])]
+cres = fx['coppa_d_2627']
+out += ['static const sr_kn_round s2d_rounds[] = { %s };' % ', '.join(drd),
+        'static const sr_kn_pair s2d_pairs[] = { %s };' % ', '.join(dpr),
+        'static const uint16_t s2d_num[] = { %s };' % ', '.join(map(str, dnum)),
+        'static const uint16_t s2d_res[][4] = { %s };' % ', '.join('{ %d, %d, %d, %d }' % (r, code[h], code[a], code[w]) for r, h, a, w in cres),
+        '#define S2D_NR %d' % len(drd), '#define S2D_NFIXED %d' % len(cfs['rounds']), '#define S2D_NRES %d' % len(cres),
+        '#define S2D_P %d' % shape[0][0], '#define S2D_R1 %d' % shape[1][0]]
 out.append('#define S2_NLISTS %d' % len(lists))
 for i, (ref, l, u) in enumerate(lists):
     out.append('static const uint16_t s2_l%d[] = { %s };   /* %s */' % (i, ', '.join(map(str, l)) or '0', ref))

@@ -12,7 +12,10 @@
  * the host by the lower entry number (the second leg's, in two legs), neutral, drawn or as listed; a first season's
  * field swaps (C.U. 253 3.3: "inversione del campo"). M2: drawn rounds (the previous winners and the round's
  * joiners, drawn openly or within each zone, a joiner hosting) and the zones by proximity (the Coppa Italia Serie
- * C's geographic groups, Lega Pro C.U. n. 36/L 2.1-2.2: four groups of 14, each seed to the nearest group).
+ * C's geographic groups, Lega Pro C.U. n. 36/L 2.1-2.2: four groups of 14, each seed to the nearest group). M2b
+ * (the Coppa Italia Serie D, LND Dipartimento Interregionale C.U. n. 1 of 06/08/2026): a draw within geographic
+ * blocks (the pool halved by geography, the Dipartimento's "abbinamenti" -- a fixed bracket of neighbours), the
+ * host by alternation (art. 4) and the entry order from the bottom of last season's tables.
  *
  * Copyright (c) 2026 Davide Lorigliola. MIT licence (LICENSE).
  */
@@ -33,6 +36,7 @@ static int kn_before(const sr_kn_rec *rec, const u32 *key, u16 a, u16 b, int32_t
     const sr_kn_rec *x = &rec[a], *y = &rec[b];
     u32 l, r;
     if (order == SR_KN_PLACE_RECORD && x->place != y->place) return x->place < y->place;
+    if (order == SR_KN_PLACE_DESC) return x->place != y->place ? x->place > y->place : key[a] < key[b];
     l = (u32)x->pts * (y->pld ? y->pld : 1);
     r = (u32)y->pts * (x->pld ? x->pld : 1);
     if (l != r) return l > r;
@@ -101,6 +105,54 @@ int32_t sr_kn_number(const sr_kn_group *g, int32_t ng, const sr_kn_list *lists, 
     return n;
 }
 
+/* M2b: idx[0 .. n) (pool places) in geographic order -- a segment over 'block' clubs sorted along its longer extent
+   (latitude, or longitude by cos 42 degrees; equal: the lower club) and halved (both halves even), down to blocks of
+   at most 'block', each block then shuffled (the draw). 0; -1 an odd pool or a block under 2. */
+static int32_t kn_geo(u16 *idx, int32_t n, int32_t block, const sr_kn_work *w, uint32_t *rng)
+{
+    int32_t lo[24], len[24], sp = 0;
+    if (n & 1 || block < 2 || !w->geo) return -1;
+    lo[0] = 0; len[0] = n; sp = 1;
+    while (sp) {
+        const int32_t a = lo[--sp], k = len[sp];
+        if (k <= block) {
+            for (int32_t i = k - 1; i > 0; i--) {
+                const int32_t j = (int32_t)below(rng, (u32)i + 1);
+                const u16 x = idx[a + i]; idx[a + i] = idx[a + j]; idx[a + j] = x;
+            }
+            continue;
+        }
+        int32_t x0 = 0x7FFF, x1 = -0x8000, y0 = 0x7FFF, y1 = -0x8000, h = k / 2;
+        for (int32_t i = a; i < a + k; i++) {
+            const sr_kn_geo *g = &w->geo[w->pool[idx[i]]];
+            const int32_t x = g->lon * 761 / 1024;
+            if (x < x0) x0 = x;
+            if (x > x1) x1 = x;
+            if (g->lat < y0) y0 = g->lat;
+            if (g->lat > y1) y1 = g->lat;
+        }
+        const int32_t lon = x1 - x0 > y1 - y0;
+        for (int32_t i = a + 1; i < a + k; i++) {   /* (insertion: stable, the key then the club) */
+            const u16 v = idx[i];
+            const sr_kn_geo *gv = &w->geo[w->pool[v]];
+            const int32_t kv = lon ? gv->lon * 761 / 1024 : gv->lat;
+            int32_t j = i;
+            while (j > a) {
+                const sr_kn_geo *gp = &w->geo[w->pool[idx[j - 1]]];
+                const int32_t kp = lon ? gp->lon * 761 / 1024 : gp->lat;
+                if (kp < kv || (kp == kv && w->pool[idx[j - 1]] <= w->pool[v])) break;
+                idx[j] = idx[j - 1]; j--;
+            }
+            idx[j] = v;
+        }
+        if (h & 1) h--;
+        if (sp + 2 > 24) return -1;
+        lo[sp] = a + h; len[sp++] = k - h;
+        lo[sp] = a; len[sp++] = h;
+    }
+    return 0;
+}
+
 /* A drawn round's sides into out[first ..): the previous round's winners (their zones) and this round's joiners,
    drawn within each zone (or all as one); under home "joiner" each joiner against a club of the earlier round. The
    ties made; -1 they do not fit. */
@@ -118,6 +170,18 @@ static int32_t kn_draw(const sr_kn_round *rd, int32_t r, const sr_kn_entry *join
         const sr_kn_entry *e = &join[rd[r].jfirst + k];
         if (m >= SR_KN_NUMBERS) return -1;
         w->pool[m] = e->club; w->pnum[m] = 0; w->pzone[m] = e->zone; w->pjoin[m++] = rd[r].home == SR_KN_JOINER;
+    }
+    if (rd[r].pairing == SR_KN_PAIR_GEO) {          /* (M2b: neighbours, in the order's pairs) */
+        u16 *idx = w->cand;
+        for (int32_t i = 0; i < m; i++) idx[i] = (u16)i;
+        if (kn_geo(idx, m, rd[r].block, w, rng) < 0 || m / 2 != rd[r].ties) return -1;
+        for (int32_t i = 0; i < m / 2; i++) {
+            sr_kn_tie *o = &out[rd[r].first + i];
+            o->home = w->pool[idx[2 * i]]; o->away = w->pool[idx[2 * i + 1]];
+            o->nhome = w->pnum[idx[2 * i]]; o->naway = w->pnum[idx[2 * i + 1]];
+            o->zone = 0; o->flags = 0;
+        }
+        return m / 2;
     }
     for (int32_t z = 0; z < (rd[r].pairing == SR_KN_PAIR_ZONE ? SR_KN_ZONES : 1); z++) {
         u16 *idx = w->cand;                         /* (the zone's members: indexes into the pool) */
@@ -157,7 +221,7 @@ int32_t sr_kn_cup(const sr_kn_round *rd, int32_t nr, const sr_kn_pair *pairs, co
         for (int32_t t = 0; t < rd[r].ties; t++) {
             const int32_t p = rd[r].first + t;
             u16 club[2], num[2];
-            uint8_t zone = 0, joined = 0;
+            uint8_t zone = 0, joined = 0, was[2] = { 2, 2 };   /* (each side's previous tie: 1 home, 0 away, 2 none) */
             sr_kn_tie *o = &out[p];
             if (drawn) {
                 club[0] = o->home; club[1] = o->away; num[0] = o->nhome; num[1] = o->naway;
@@ -168,8 +232,10 @@ int32_t sr_kn_cup(const sr_kn_round *rd, int32_t nr, const sr_kn_pair *pairs, co
                     if (v & 0x8000u) {              /* an earlier tie's winner: its club, its entry number */
                         const int32_t wr = (v >> 9) & 0x3F, wt = v & 0x1FF;
                         if (wr >= r || wt >= rd[wr].ties) return -1;
-                        club[s] = out[rd[wr].first + wt].winner;
-                        num[s] = out[rd[wr].first + wt].nwin;
+                        const sr_kn_tie *pt = &out[rd[wr].first + wt];
+                        club[s] = pt->winner;
+                        num[s] = pt->nwin;
+                        if (!(pt->flags & SR_KN_F_NEUTRAL)) was[s] = pt->winner == pt->home;
                         if (!s) zone = out[rd[wr].first + wt].zone;
                     } else {
                         if (v < 1 || v > nn) return -1;
@@ -185,6 +251,7 @@ int32_t sr_kn_cup(const sr_kn_round *rd, int32_t nr, const sr_kn_pair *pairs, co
             case SR_KN_NEUTRAL: o->flags |= SR_KN_F_NEUTRAL; break;
             case SR_KN_DRAW: h = (int32_t)below(rng, 2); break;
             case SR_KN_JOINER: h = joined ? 0 : (int32_t)below(rng, 2); break;
+            case SR_KN_ALTERNATE: h = was[0] != 2 && was[1] != 2 && was[0] != was[1] ? was[0] : (int32_t)below(rng, 2); break;
             default: break;                         /* (fixed: as listed) */
             }
             if (swap && swap[p]) h ^= 1;
