@@ -98,42 +98,102 @@ static void put(sr_registry *r, int32_t i, int32_t o, u16 c)
     if (c != SR_REG_NONE) r->word[c] = (u16)(r->f[i].file | o << 8);
 }
 
-int32_t sr_reg_season(sr_registry *r, const uint8_t *nd, const uint16_t *order, int32_t norder, sr_reg_swap *out,
-                      int32_t max)
+uint32_t sr_reg_size(void) { return sizeof(sr_registry); }
+uint32_t sr_reg_work_size(void) { return sizeof(sr_reg_work); }
+
+/* the division of file i's row o as built (its range), SR_REG_OUT past the rows */
+static u8 range_div(const sr_registry *r, int32_t i, int32_t o)
 {
-    u16 rank[SR_REG_CLUBS], want[SR_REG_FILES][256], fr[256], en[256];
-    int32_t changed = 0, ns = 0;
-    if (!r || !nd || (norder && !order)) return -1;
+    for (int32_t k = 0; k < r->f[i].ndiv; k++) {
+        if (o < r->f[i].size[k]) return r->f[i].div[k];
+        o -= r->f[i].size[k];
+    }
+    return o < r->f[i].pool ? SR_REG_POOL : SR_REG_OUT;
+}
+
+/* the file index division d lives in, -1 off the files */
+static int32_t file_of(const sr_registry *r, u8 d)
+{
+    for (int32_t i = 0; i < r->nfiles; i++) {
+        if (d == SR_REG_POOL && r->f[i].pool) return i;
+        for (int32_t k = 0; k < r->f[i].ndiv; k++) if (r->f[i].div[k] == d) return i;
+    }
+    return -1;
+}
+
+/* one range of rows (contiguous: a division's; default: a whole file's) -- its leavers' rows to its comers, both by
+ * rank; the number of rows changed, -1 not equal */
+static int32_t fill(const sr_registry *r, const uint8_t *nd, int32_t contiguous, int32_t i, int32_t o0, int32_t o1,
+                    u8 d, sr_reg_work *w)
+{
+    int32_t nf = 0, ne = 0;
+    for (int32_t o = o0; o < o1; o++) {
+        const u16 c = r->at[i][o];
+        w->want[i][o] = c;
+        if (contiguous ? nd[c] == d : file_of(r, nd[c]) == i) continue;
+        int32_t j = nf++;
+        for (; j > 0 && w->rank[r->at[i][w->fr[j - 1]]] > w->rank[c]; j--) w->fr[j] = w->fr[j - 1];
+        w->fr[j] = (u16)o;
+    }
     for (int32_t c = 0; c < r->nclub; c++) {
-        rank[c] = (u16)(norder + c);
+        const u16 cw = r->word[c];
+        const int32_t ci = cw == SR_REG_NONE ? -1 : fidx(r, cw);
+        if (contiguous ? nd[c] != d || (ci == i && (cw >> 8) >= o0 && (cw >> 8) < o1) : file_of(r, nd[c]) != i || ci == i)
+            continue;
+        if (ne == 256) return -1;
+        int32_t j = ne++;
+        for (; j > 0 && w->rank[w->en[j - 1]] > w->rank[c]; j--) w->en[j] = w->en[j - 1];
+        w->en[j] = (u16)c;
+    }
+    if (nf != ne) return -1;
+    if (!contiguous)                    /* (first a club leaving to file j against one coming from j, by rank: two files
+                                           trade as single swaps; then the rest -- the off-file pool -- by rank) */
+        for (int32_t j = 0; j < r->nfiles; j++) {
+            int32_t a = 0, b = 0;
+            if (j == i) continue;
+            for (;;) {
+                while (a < nf && (w->fr[a] == SR_REG_NONE || file_of(r, nd[r->at[i][w->fr[a]]]) != j)) a++;
+                while (b < ne && (w->en[b] == SR_REG_NONE || r->word[w->en[b]] == SR_REG_NONE ||
+                                  fidx(r, r->word[w->en[b]]) != j)) b++;
+                if (a == nf || b == ne) break;
+                w->want[i][w->fr[a]] = w->en[b];
+                w->fr[a++] = SR_REG_NONE; w->en[b++] = SR_REG_NONE;
+            }
+        }
+    for (int32_t a = 0, b = 0;; a++, b++) {
+        while (a < nf && w->fr[a] == SR_REG_NONE) a++;
+        while (b < ne && w->en[b] == SR_REG_NONE) b++;
+        if (a == nf || b == ne) break;
+        w->want[i][w->fr[a]] = w->en[b];
+    }
+    return nf;
+}
+
+int32_t sr_reg_season(sr_registry *r, const uint8_t *nd, const uint16_t *order, int32_t norder, int32_t contiguous,
+                      sr_reg_work *w, sr_reg_swap *out, int32_t max)
+{
+    int32_t changed = 0, ns = 0;
+    if (!r || !nd || !w || (norder && !order)) return -1;
+    for (int32_t c = 0; c < r->nclub; c++) {
+        w->rank[c] = (u16)(norder + c);
         if (!known_div(r, nd[c])) return -1;
     }
-    for (int32_t k = norder - 1; k >= 0; k--) if (order[k] < r->nclub) rank[order[k]] = (u16)k;
+    for (int32_t k = norder - 1; k >= 0; k--) if (order[k] < r->nclub) w->rank[order[k]] = (u16)k;
     for (int32_t i = 0; i < r->nfiles; i++) {
-        int32_t o = 0;
-        for (int32_t k = 0; k < r->f[i].ndiv + (r->f[i].pool != 0); k++) {
-            const u8 d = k < r->f[i].ndiv ? r->f[i].div[k] : SR_REG_POOL;
-            const int32_t o0 = o, o1 = o + (k < r->f[i].ndiv ? r->f[i].size[k] : r->f[i].pool);
-            int32_t nf = 0, ne = 0;
-            for (; o < o1; o++) {               /* the rows its leavers free, by their rank */
-                const u16 c = r->at[i][o];
-                want[i][o] = c;
-                if (nd[c] == d) continue;
-                int32_t j = nf++;
-                for (; j > 0 && rank[r->at[i][fr[j - 1]]] > rank[c]; j--) fr[j] = fr[j - 1];
-                fr[j] = (u16)o;
-            }
-            for (int32_t c = 0; c < r->nclub; c++) {    /* the clubs coming in, by theirs */
-                if (nd[c] != d || sr_reg_div(r, c) == d) continue;
-                if (ne == 256) return -1;
-                int32_t j = ne++;
-                for (; j > 0 && rank[en[j - 1]] > rank[c]; j--) en[j] = en[j - 1];
-                en[j] = (u16)c;
-            }
-            if (nf != ne) return -1;
-            for (int32_t j = 0; j < nf; j++) want[i][fr[j]] = en[j];
-            changed += nf;
-            (void)o0;
+        if (!contiguous) {
+            const int32_t n = fill(r, nd, 0, i, 0, r->rows[i], 0, w);
+            if (n < 0) return -1;
+            changed += n;
+            continue;
+        }
+        for (int32_t o = 0; o < r->rows[i];) {
+            const u8 d = range_div(r, i, o);
+            int32_t o1 = o;
+            while (o1 < r->rows[i] && range_div(r, i, o1) == d) o1++;
+            const int32_t n = fill(r, nd, 1, i, o, o1, d, w);
+            if (n < 0) return -1;
+            changed += n;
+            o = o1;
         }
     }
     if (changed > max) return -2;
@@ -142,18 +202,20 @@ int32_t sr_reg_season(sr_registry *r, const uint8_t *nd, const uint16_t *order, 
     for (int32_t pass = 0; pass < 2; pass++)
         for (int32_t i = 0; i < r->nfiles; i++)
             for (int32_t o = 0; o < r->rows[i]; o++) {
-                const u16 x = want[i][o], y = r->at[i][o], w = (u16)(r->f[i].file | o << 8);
+                const u16 x = w->want[i][o], y = r->at[i][o], wd = (u16)(r->f[i].file | o << 8);
                 if (x == y) continue;
                 if (pass == 0 && r->word[x] != SR_REG_NONE) {
                     const u16 t = r->word[x];
                     const int32_t ti = fidx(r, t);
                     put(r, ti, t >> 8, y); put(r, i, o, x);
-                    out[ns].a = w; out[ns].b = t; out[ns].on = SR_REG_NONE; ns++;
+                    out[ns].a = wd; out[ns].b = t; out[ns].on = SR_REG_NONE; ns++;
                 } else if (pass == 1) {
                     r->word[y] = SR_REG_NONE; put(r, i, o, x);
-                    out[ns].a = w; out[ns].b = SR_REG_NONE; out[ns].on = x; ns++;
+                    out[ns].a = wd; out[ns].b = SR_REG_NONE; out[ns].on = x; ns++;
                 }
             }
+    for (int32_t i = 0; i < r->nfiles; i++)         /* each row's division: its club's */
+        for (int32_t o = 0; o < r->rows[i]; o++) r->rdiv[i][o] = nd[r->at[i][o]];
     return ns;
 }
 

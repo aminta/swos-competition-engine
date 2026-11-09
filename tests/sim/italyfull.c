@@ -27,10 +27,10 @@
  * the play-out gaps to the real ones (80: C 3.9, D 3.6 points v 5.8, 4.8): they come from the in-group strength
  * dispersion the light tables don't model -- a recorded model limit (MC 2026-11-09), 40 kept; the Mod plays A .. D.
  * Two team files (42-s7reg, sr_reg): file 102 Serie A + B + C, file 144 Serie D + 36 pool rows; every summer the
- * registry's swap list, replayed by records as the exe would, must equal the registry; every club in one row, each
- * division in its rows, a club that kept its division kept its word, the clubs that changed file = C/D's down + up,
- * the B teams resolved through the registry. Controls regdrop (a swap dropped), regdup (a slot twice), regsplit (a
- * division split) must FAIL.
+ * registry's swap list (the exe's mode: only clubs changing file move), replayed by records as the exe would, must
+ * equal the registry; every club in one row, its division byte = its table division, a club staying in its file
+ * keeps its record, the clubs that changed file = C/D's down + up, files <= 256, the B teams resolved through the
+ * registry. Controls regdrop (a swap dropped), regdup (a slot twice), regdiv (a wrong division byte) must FAIL.
  * Real (tests/sim/itwiki_rates.py, it.wikipedia 2014-15 .. 2025-26): play-out ties the 8-point gap skips, Serie C
  * 31.6% (12 of 38), Serie D 22.1% (30 of 136); straight back up C/D 12.3% (9 of 73).
  * Usage: [SPREAD=n] [GAME_SPREAD=n] [BFLOOR=n] italyfull [CHAINS [SEASONS]] (default 1000 100). Exit 1 on any broken invariant.
@@ -72,6 +72,7 @@ enum { FILE_A = 102, FILE_B = 144, POOL_ROWS = 36 };
 static sr_registry REG;
 static uint16_t rec_at[2][256];
 static sr_reg_swap SW[1024];
+static sr_reg_work WK;
 
 static uint32_t h32(uint32_t x) { x ^= x >> 16; x *= 0x7FEB352Du; x ^= x >> 15; x *= 0x846CA68Bu; return x ^ (x >> 16); }
 
@@ -123,7 +124,7 @@ static unsigned reg_summer(int s, const uint16_t *order, int norder, const int *
     for (int k = 0; k < norder && free_rows; k++)
         if (nd[order[k]] == SR_REG_OUT && down_de[order[k]] == s) nd[order[k]] = SR_REG_POOL, free_rows--;
     for (int i = 0; i < NI && free_rows; i++) if (nd[i] == SR_REG_OUT && od[i] == SR_REG_OUT) nd[i] = SR_REG_POOL, free_rows--;
-    const int n = sr_reg_season(&REG, nd, order, norder, SW, (int)(sizeof SW / sizeof SW[0]));
+    const int n = sr_reg_season(&REG, nd, order, norder, 0, &WK, SW, (int)(sizeof SW / sizeof SW[0]));
     if (n < 0) return 1u << W_REG;
     for (int k = 0; k < n; k++) {               /* (the exe's side) */
         if (brk == 4 && s == 1 && k == 0) continue;
@@ -137,17 +138,15 @@ static unsigned reg_summer(int s, const uint16_t *order, int norder, const int *
     st->reg_swaps += n;
     if (n > st->reg_max) st->reg_max = n;
     if (brk == 5 && s == 1) REG.at[1][0] = REG.at[1][1];                /* (a slot twice) */
-    if (brk == 6 && s == 1) {                                           /* (a division split: two rows' clubs swapped) */
-        const uint16_t a = REG.at[1][0], b = REG.at[1][DS];
-        REG.at[1][0] = b; REG.at[1][DS] = a; REG.word[b] = FILE_B; REG.word[a] = (uint16_t)(FILE_B | DS << 8);
-    }
+    if (brk == 6 && s == 1) REG.rdiv[1][0] = (uint8_t)(REG.rdiv[1][0] == FIRST_D ? FIRST_D + 1 : FIRST_D);   /* (a wrong division byte) */
     if (sr_reg_check(&REG)) bad |= 1u << W_REG;
     for (int i = 0; i < 2; i++)
         for (int o = 0; o < REG.rows[i]; o++) if (rec_at[i][o] != REG.at[i][o]) bad |= 1u << W_REG;
     int a2b = 0, b2a = 0;
     for (int i = 0; i < NI; i++) {
-        if (sr_reg_div(&REG, i) != nd[i]) bad |= 1u << W_REG;               /* (every division in its rows) */
-        if (od[i] == nd[i] && od[i] != SR_REG_OUT && REG.word[i] != oldw[i]) bad |= 1u << W_REG;
+        if (sr_reg_div(&REG, i) != nd[i]) bad |= 1u << W_REG;               /* (its division byte = its table division) */
+        if (oldw[i] != SR_REG_NONE && REG.word[i] != SR_REG_NONE && (oldw[i] & 0xFF) == (REG.word[i] & 0xFF) &&
+            REG.word[i] != oldw[i]) bad |= 1u << W_REG;                     /* (in its file: its record stays) */
         if (oldw[i] != SR_REG_NONE && REG.word[i] != SR_REG_NONE && (oldw[i] & 0xFF) != (REG.word[i] & 0xFF)) {
             st->reg_crossed++;
             if ((oldw[i] & 0xFF) == FILE_A) a2b++; else b2a++;
@@ -464,7 +463,7 @@ int main(int argc, char **argv)
     if (getenv("GAME_SPREAD")) game_spread = atoi(getenv("GAME_SPREAD"));
     if (getenv("BFLOOR")) floor_lv = atoi(getenv("BFLOOR"));
     brk = !b ? 0 : !strcmp(b, "drop") ? 1 : !strcmp(b, "bteam") ? 2 : !strcmp(b, "updown") ? 3 : !strcmp(b, "regdrop") ? 4 :
-          !strcmp(b, "regdup") ? 5 : !strcmp(b, "regsplit") ? 6 : 0;
+          !strcmp(b, "regdup") ? 5 : !strcmp(b, "regdiv") ? 6 : 0;
     {   /* each Serie D group's most common Serie C area among the real clubs */
         int cnt[DG][256];
         memset(cnt, 0, sizeof cnt);

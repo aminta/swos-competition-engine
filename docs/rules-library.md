@@ -38,7 +38,11 @@ What changed in the move here: the file statics are one caller-owned state, `sr_
   builds every module as one i486 object and fails on any undefined symbol;
 - **one caller-owned state passed by pointer**, no globals (few absolute references: each is a
   fixup);
-- `<stdint.h>` the one include.
+- `<stdint.h>` the one include;
+- **at most 512 bytes of locals** a function (the game's DOS stack is small and deep at the season end; MC 09/11):
+  `make test` builds rules/ with `-Wframe-larger-than=512` (`tests/rules/frames.sh`); the exceptions of today are
+  listed with their size in `tests/rules/frames.txt` (may shrink, not grow) -- big work areas are the caller's
+  (`sr_reg_work`).
 
 ## 3. Interface (`rules/swosrules.h`)
 
@@ -163,7 +167,7 @@ a crash once in a few runs; pattern-filled it is negative, the library's "no clu
   colours): the game's, not yet the library's;
 - the pool's queue (OpenSWOS `src/team_pool.c`): once compared with the Mod's RI section.
 | 12 | The generic stages (new: not in the Mod) | -- (`rules/sr_stage.c`) | `tests/rules/stage.c` in `make test`: the competition editor's round robin calendar (n 2..64, legs 1..4: pairs, rests, home balance, mirrored legs), a table ranked by the spec's tie-breakers (head to head included, once in list order or UEFA's `head_to_head_reapplied`; the ones needing the game's data refused), swcc's knockout arithmetic, a tie by the spec's deciders, group sizes, the group draw by pots with associations apart, the best placed across groups (UEFA's dropped results), knockout pairings (draw / seeded / bracket / fixed, a group or association kept apart), a whole cup from the draw to the final -- invariants with controls; SR_TB_* / SR_D_* checked equal to swcc's codes |
-| 13 | One league across N team files (new: not in the Mod; 42-s7reg) | -- (`rules/sr_reg.c`) | `tests/rules/reg.c` in `make test`: the club registry (a club's identity <-> its team word) built from swc/1.4 `countries.<c>.files`; one file (identity), two (Serie C <-> D across files), three, the pool rows and the off-file pool, the limits (a file of 257 rows, a division in two files, pool rows in two files, counts that don't add up: refused, nothing changed); each season end's moves as a swap list replayed by records = the registry; the old-save import on the Mod's italy42 map (`tests/rules/italy42_map.h`, `mkitaly42map.py`: 298 clubs, 156 words moved, 42 come on, Serie A / B / C's 100 ordinals of file 102 unchanged). `make sim`: italyfull with the two files, 10^5 summers. `sr_reg_season` keeps ~7 KB on the stack (its rank and target tables) |
+| 13 | One league across N team files (new: not in the Mod; 42-s7reg) | -- (`rules/sr_reg.c`) | `tests/rules/reg.c` in `make test`: the club registry (a club's identity <-> its team word) built from swc/1.4 `countries.<c>.files`; one file (identity; Italy 4.1's one-file layout, 1000 summers: no swap), two (Serie C <-> D: the exe's default, only the clubs changing file swap; contiguous, each division in its rows), three, the pool rows and the off-file pool, the limits (a file of 257 rows, a division in two files, pool rows in two files, counts that don't add up: refused, nothing changed); each season end's moves as a swap list replayed by records = the registry; the old-save import on the Mod's italy42 map (`tests/rules/italy42_map.h`, `mkitaly42map.py`: 298 clubs, 156 words moved, 42 come on, Serie A / B / C's 100 ordinals of file 102 unchanged). `make sim`: italyfull with the two files, 10^5 summers. `sr_reg_season` works in a caller-owned `sr_reg_work` (`sr_reg_work_size()` 7168 bytes; `sr_reg_size()` 8504) |
 
 ## 5. Tests
 

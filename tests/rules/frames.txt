@@ -1,0 +1,9 @@
+sr_cupd_make 3408
+sr_cup_entrants 3248
+sr_knockouts 2276
+sr_lp_table_sp 620
+sr_lp_cross_sp 4280
+sr_lp_season_cross 2532
+sr_rr_table 1540
+sr_group_draw 2872
+sr_best_placed 1664

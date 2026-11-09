@@ -1,5 +1,7 @@
-/* The club registry (sr_reg.c; MC 42-s7reg): one league across N team files. Built cases: one file (identity),
- * two files (C <-> D across the boundary), three files, the pool rows and the off-file pool, the limits (a full
+/* The club registry (sr_reg.c; MC 42-s7reg): one league across N team files. Built cases: one file (identity; and
+ * Italy 4.1's one-file layout over 1000 random summers: no swap, every word kept), two files (C <-> D across the
+ * boundary: the exe's default, only the clubs that change file move; contiguous, every division in its rows), three
+ * files, the pool rows and the off-file pool, the limits (a full
  * file, a division in two files, counts that don't add up), and the old-save import on the Mod's italy42 map
  * (tests/rules/italy42_map.h: every word resolved, Serie A / B / C's ordinals of file 102 unchanged). */
 #include <stdio.h>
@@ -7,6 +9,7 @@
 #include "swosrules.h"
 #include "italy42_map.h"
 static sr_registry R;
+static sr_reg_work WK;
 static int fails;
 #define FAIL(...) do { if (fails++ < 20) { printf("FAIL "); printf(__VA_ARGS__); printf("\n"); } } while (0)
 #define W(f, o) ((uint16_t)((f) | (o) << 8))
@@ -57,7 +60,7 @@ int main(void)
         for (int c = 0; c < 12; c++) div[c] = (uint8_t)(c / 4);
         if (sr_reg_build(&R, 1, &f, 12, div)) FAIL("one file: refused");
         for (int c = 0; c < 12; c++) if (R.word[c] != W(90, c) || sr_reg_ident(&R, W(90, c)) != c) FAIL("one file: club %d at %04X", c, R.word[c]);
-        if (sr_reg_season(&R, div, NULL, 0, sw, 600) != 0) FAIL("one file: swaps without a move");
+        if (sr_reg_season(&R, div, NULL, 0, 1, &WK, sw, 600) != 0) FAIL("one file: swaps without a move");
     }
     {   /* two files: A = divisions 0, 1; B = 2, 3 (4 clubs each). 0's 4th <-> 1's 1st, 1's 4th <-> 2's 1st (across),
          * 2's 3rd, 4th <-> 3's 1st, 2nd: the best promoted into the best placed relegated's row */
@@ -68,7 +71,7 @@ int main(void)
         memcpy(nd, div, 16);
         nd[3] = 1; nd[4] = 0; nd[7] = 2; nd[8] = 1; nd[10] = 3; nd[11] = 3; nd[12] = 2; nd[13] = 2;
         for (int c = 0; c < 16; c++) before[c] = R.word[c];
-        const int n = sr_reg_season(&R, nd, order, 16, sw, 600);
+        const int n = sr_reg_season(&R, nd, order, 16, 1, &WK, sw, 600);
         placed("two files", nd); kept("two files", div, nd, before);
         if (R.word[8] != W(102, 7) || R.word[7] != W(144, 0)) FAIL("two files: across the boundary %04X %04X", R.word[8], R.word[7]);
         if (R.word[12] != W(144, 2) || R.word[13] != W(144, 3)) FAIL("two files: the best promoted not in the best relegated's row");
@@ -82,8 +85,48 @@ int main(void)
         /* counts that don't add up: refused, nothing changed */
         memcpy(nd, div, 16); nd[3] = 1;
         for (int c = 0; c < 16; c++) before[c] = R.word[c];
-        if (sr_reg_season(&R, nd, order, 16, sw, 600) != -1) FAIL("two files: one up and none down not refused");
+        if (sr_reg_season(&R, nd, order, 16, 1, &WK, sw, 600) != -1) FAIL("two files: one up and none down not refused");
         for (int c = 0; c < 16; c++) if (R.word[c] != before[c]) FAIL("two files: a refused season changed club %d", c);
+    }
+    {   /* the exe's default: the same two files and moves -- only 7 and 8 change file (one swap), the others keep their
+         * rows with their division changed; one club across and none back: refused */
+        const int da[2] = { 0, 1 }, db[2] = { 2, 3 }, s[2] = { 4, 4 };
+        sr_reg_file f[2] = { file(102, 2, da, s, 0), file(144, 2, db, s, 0) };
+        for (int c = 0; c < 16; c++) div[c] = (uint8_t)(c / 4), order[c] = (uint16_t)c;
+        sr_reg_build(&R, 2, f, 16, div);
+        memcpy(nd, div, 16);
+        nd[3] = 1; nd[4] = 0; nd[7] = 2; nd[8] = 1; nd[10] = 3; nd[11] = 3; nd[12] = 2; nd[13] = 2;
+        for (int c = 0; c < 16; c++) before[c] = R.word[c];
+        const int n = sr_reg_season(&R, nd, order, 16, 0, &WK, sw, 600);
+        placed("default mode", nd);
+        if (n != 1 || sw[0].a != W(102, 7) || sw[0].b != W(144, 0)) FAIL("default mode: %d swaps (1: 102/7 <-> 144/0)", n);
+        for (int c = 0; c < 16; c++)
+            if (c != 7 && c != 8 && R.word[c] != before[c]) FAIL("default mode: club %d moved inside its file", c);
+        memcpy(nd, div, 16); nd[3] = 1; nd[4] = 0; nd[7] = 2;
+        for (int c = 0; c < 16; c++) before[c] = R.word[c];
+        if (sr_reg_season(&R, nd, order, 16, 0, &WK, sw, 600) != -1) FAIL("default mode: one across and none back not refused");
+        for (int c = 0; c < 16; c++) if (R.word[c] != before[c]) FAIL("default mode: a refused season changed club %d", c);
+    }
+    {   /* Italy 4.1's one file (102: A, B 20, C 3 x 20, D 6 x 17 + 3 x 18), 1000 summers of random moves between
+         * neighbouring divisions: the registry is the identity, no swap, every word kept */
+        static const int sz[14] = { 20, 20, 20, 20, 20, 17, 17, 17, 17, 17, 17, 18, 18, 18 };
+        int d14[14], s14[14], n = 0;
+        uint32_t h = 12345;
+        for (int d = 0; d < 14; d++) { d14[d] = d; s14[d] = sz[d]; for (int k = 0; k < sz[d]; k++) div[n++] = (uint8_t)d; }
+        sr_reg_file f = file(102, 14, d14, s14, 0);
+        if (sr_reg_build(&R, 1, &f, n, div)) FAIL("Italy 4.1 one file: refused");
+        for (int c = 0; c < n; c++) if (R.word[c] != W(102, c)) FAIL("Italy 4.1 one file: club %d at %04X", c, R.word[c]);
+        memcpy(nd, div, (size_t)n);
+        for (int it = 0; it < 1000; it++) {
+            for (int k = 0; k < 20; k++) {      /* (two clubs of neighbouring divisions trade divisions) */
+                h = h * 1103515245u + 12345u; const int a = (int)((h >> 8) % (unsigned)n);
+                h = h * 1103515245u + 12345u; const int b = (int)((h >> 8) % (unsigned)n);
+                if (nd[a] + 1 == nd[b] || nd[b] + 1 == nd[a]) { const uint8_t x = nd[a]; nd[a] = nd[b]; nd[b] = x; }
+            }
+            const int m = sr_reg_season(&R, nd, NULL, 0, 0, &WK, sw, 600);
+            if (m != 0) { FAIL("Italy 4.1 one file: summer %d gave %d swaps", it, m); break; }
+            for (int c = 0; c < n; c++) if (R.word[c] != W(102, c) || sr_reg_div(&R, c) != nd[c]) { FAIL("Italy 4.1 one file: club %d", c); break; }
+        }
     }
     {   /* three files, one division each (3 clubs): 0 <-> 1 <-> 2, two each way, then the pool rows of file 3 and
          * the off-file pool: 2's last two out (one to the pool rows, one off the files), a pool row's club and an
@@ -97,15 +140,15 @@ int main(void)
         memcpy(nd, div, 12);
         nd[2] = 1; nd[3] = 0; nd[5] = 2; nd[6] = 1; nd[7] = SR_REG_POOL; nd[8] = SR_REG_OUT; nd[9] = 2; nd[11] = 2;
         for (int c = 0; c < 12; c++) before[c] = R.word[c];
-        const int n = sr_reg_season(&R, nd, order, 12, sw, 600);
+        const int n = sr_reg_season(&R, nd, order, 12, 1, &WK, sw, 600);
         placed("three files", nd); kept("three files", div, nd, before);
         uint16_t slot[12];
         for (int c = 0; c < 12; c++) slot[c] = before[c];
         apply(sw, n, slot, 12);
         for (int c = 0; c < 12; c++) if (slot[c] != R.word[c]) FAIL("three files: the swap list puts club %d at %04X, not %04X", c, slot[c], R.word[c]);
-        if (sr_reg_season(&R, nd, order, 12, sw, 0) != 0) FAIL("three files: a second summer without moves");
+        if (sr_reg_season(&R, nd, order, 12, 1, &WK, sw, 0) != 0) FAIL("three files: a second summer without moves");
         nd[0] = 1; nd[6] = 0;
-        if (sr_reg_season(&R, nd, order, 12, sw, 0) != -2) FAIL("three files: more swaps than max not refused");
+        if (sr_reg_season(&R, nd, order, 12, 1, &WK, sw, 0) != -2) FAIL("three files: more swaps than max not refused");
     }
     {   /* the limits */
         const int d[2] = { 0, 1 }, s1[2] = { 200, 56 }, s2[2] = { 200, 57 }, dd[1] = { 1 }, s3[1] = { 4 };
@@ -141,7 +184,8 @@ int main(void)
         for (int o = 0; o < 100; o++) if (sr_reg_ident(&R, W(I42_FILE_A, o)) != o) FAIL("italy42: file %d ordinal %d moved", I42_FILE_A, o);
         if (moved != 156 || on != 42 || sr_reg_check(&R)) FAIL("italy42: %d moved, %d on (156, 42)", moved, on);
     }
-    printf("%s: the club registry (one, two, three files, the pool, the limits, the italy42 import), %d case(s) failed\n",
-           fails ? "FAIL" : "PASS", fails);
+    printf("%s: the club registry (one file + Italy 4.1 identity, two files default / contiguous, three files, the pool, "
+           "the limits, the italy42 import; sizeof sr_registry %u, sr_reg_work %u), %d case(s) failed\n",
+           fails ? "FAIL" : "PASS", (unsigned)sr_reg_size(), (unsigned)sr_reg_work_size(), fails);
     return fails != 0;
 }
