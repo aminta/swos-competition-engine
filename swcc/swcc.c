@@ -1513,6 +1513,78 @@ static void check_second_floor(C *c)
     }
 }
 
+/* v1.4: countries.<c>.files -- every league of that country in exactly one file, each a league of that country; a
+   file's rows (its leagues' clubs + its pool rows) <= 256; file numbers unique, no file shared with another country;
+   pool rows in one file at most (the engine's sr_reg_build) */
+static void check_files(C *c)
+{
+    JNode *m, *o;
+    if (!c->countries || c->countries->type != J_OBJ) return;
+    for (m = c->countries->child; m; m = m->next) {
+        JNode *fl = json_get(m, "files"), *e, *d;
+        int i, fi, pools = -1;
+        char path[96];
+        if (!fl || fl->type != J_ARR) continue;
+        for (e = fl->child, fi = 0; e; e = e->next, fi++) {
+            JNode *fn = json_get(e, "file"), *dv = json_get(e, "divisions"), *pr = json_get(e, "pool_rows"), *e2;
+            int rows = pr && pr->type == J_NUM ? (int)pr->num : 0, fj;
+            pathf(path, sizeof path, "countries.%s.files[%d]", m->key, fi);
+            if (!fn || fn->type != J_NUM || !dv || dv->type != J_ARR) continue;
+            for (e2 = fl->child, fj = 0; e2 != e; e2 = e2->next, fj++) {
+                JNode *f2 = json_get(e2, "file");
+                if (f2 && f2->type == J_NUM && f2->num == fn->num) ERR(fn, path, "file %d is in 'files' twice", (int)fn->num);
+            }
+            for (o = c->countries->child; o; o = o->next) {
+                JNode *f3 = o == m ? NULL : json_get(o, "files"), *e3;
+                for (e3 = f3 && f3->type == J_ARR ? f3->child : NULL; e3; e3 = e3->next) {
+                    JNode *n3 = json_get(e3, "file");
+                    if (n3 && n3->type == J_NUM && n3->num == fn->num)
+                        ERR(fn, path, "file %d is %s's too: a team file belongs to one country", (int)fn->num, o->key);
+                }
+            }
+            if (rows) {
+                if (pools >= 0) ERR(pr, path, "pool rows in two files (%d, %d): the pool rows live in one file", pools, (int)fn->num);
+                else pools = (int)fn->num;
+            }
+            for (d = dv->child; d; d = d->next) {
+                int k = d->type == J_STR ? find_comp(c, d->str) : -1;
+                JNode *kind = k >= 0 ? json_get(c->comps[k], "kind") : NULL, *cc = k >= 0 ? json_get(c->comps[k], "country") : NULL,
+                      *cnt = k >= 0 ? json_get(json_get(c->comps[k], "participants"), "count") : NULL;
+                if (k < 0 || !kind || kind->type != J_STR || strcmp(kind->str, "league") || !cc || cc->type != J_STR ||
+                    strcmp(cc->str, m->key)) {
+                    ERR(d, path, "division '%s' is not a league of %s", d->type == J_STR ? d->str : "?", m->key);
+                    continue;
+                }
+                rows += cnt && cnt->type == J_NUM ? (int)cnt->num : 0;
+                for (e2 = fl->child; e2 != e; e2 = e2->next) {
+                    JNode *d2v = json_get(e2, "divisions"), *d2, *f2 = json_get(e2, "file");
+                    for (d2 = d2v && d2v->type == J_ARR ? d2v->child : NULL; d2; d2 = d2->next)
+                        if (d2->type == J_STR && !strcmp(d2->str, d->str))
+                            ERR(d, path, "division '%s' is in two files (%d, %d)", d->str,
+                                f2 && f2->type == J_NUM ? (int)f2->num : 0, (int)fn->num);
+                }
+                for (JNode *d2 = dv->child; d2 != d; d2 = d2->next)
+                    if (d2->type == J_STR && !strcmp(d2->str, d->str)) ERR(d, path, "division '%s' twice in file %d", d->str, (int)fn->num);
+            }
+            if (rows > 256) ERR(fn, path, "file %d holds %d rows (its divisions' clubs + pool rows; at most 256)", (int)fn->num, rows);
+        }
+        for (i = 0; i < c->ncomps; i++) {          /* every league of the country in a file */
+            JNode *cp = c->comps[i], *kind = json_get(cp, "kind"), *cc = json_get(cp, "country"), *id = json_get(cp, "id");
+            int found = 0;
+            if (!kind || kind->type != J_STR || strcmp(kind->str, "league") || !cc || cc->type != J_STR ||
+                strcmp(cc->str, m->key) || !id || id->type != J_STR)
+                continue;
+            for (e = fl->child; e && !found; e = e->next) {
+                JNode *dv = json_get(e, "divisions");
+                for (d = dv && dv->type == J_ARR ? dv->child : NULL; d && !found; d = d->next)
+                    found = d->type == J_STR && !strcmp(d->str, id->str);
+            }
+            pathf(path, sizeof path, "countries.%s.files", m->key);
+            if (!found) ERR(fl, path, "league '%s' of %s is in no file", id->str, m->key);
+        }
+    }
+}
+
 static void check_links(C *c)
 {
     /* every league keeps its size: the clubs that leave it (promoted, relegated, out of the world) = the clubs that
@@ -1748,6 +1820,21 @@ int swcc_compile(const char *spec, size_t len, const char *name, const char *pro
                     }
                     unknown_keys(c, cn, cpth);
                 }
+                if ((cn = opt(c, m, "files", J_ARR, cpth))) {             /* v1.4: one league across N team files */
+                    JNode *e;
+                    int fi = 0;
+                    need_minor(c, cn, cpth, 4, "'files'");
+                    for (e = cn->child; e; e = e->next, fi++) {
+                        char fp[96];
+                        long x;
+                        pathf(fp, sizeof fp, "%s.files[%d]", cpth, fi);
+                        if (e->type != J_OBJ) { ERR(e, fp, "a file is {\"file\", \"divisions\": [league ids], \"pool_rows\"}"); continue; }
+                        int_in(c, need(c, e, "file", J_NUM, fp), "file", fp, 1, 255, &x);
+                        need(c, e, "divisions", J_ARR, fp);
+                        int_in(c, opt(c, e, "pool_rows", J_NUM, fp), "pool_rows", fp, 0, 256, &x);
+                        unknown_keys(c, e, fp);
+                    }
+                }
                 unknown_keys(c, m, cpth);
             }
             if ((v = need(c, c->root, "clubs", J_ARR, ""))) {
@@ -1772,6 +1859,7 @@ int swcc_compile(const char *spec, size_t len, const char *name, const char *pro
                 if (c->errors == 0) check_links(c);
                 if (c->errors == 0) check_second_teams(c);
                 if (c->errors == 0) check_second_floor(c);
+                if (c->errors == 0) check_files(c);
                 check_pools(c);
             }
             unknown_keys(c, c->root, "");

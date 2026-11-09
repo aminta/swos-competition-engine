@@ -26,6 +26,11 @@
  * GAME_SPREAD=n: the light tables of A .. D with sr_lp_table_sp at spread n instead of the game's (40). No value brings
  * the play-out gaps to the real ones (80: C 3.9, D 3.6 points v 5.8, 4.8): they come from the in-group strength
  * dispersion the light tables don't model -- a recorded model limit (MC 2026-11-09), 40 kept; the Mod plays A .. D.
+ * Two team files (42-s7reg, sr_reg): file 102 Serie A + B + C, file 144 Serie D + 36 pool rows; every summer the
+ * registry's swap list, replayed by records as the exe would, must equal the registry; every club in one row, each
+ * division in its rows, a club that kept its division kept its word, the clubs that changed file = C/D's down + up,
+ * the B teams resolved through the registry. Controls regdrop (a swap dropped), regdup (a slot twice), regsplit (a
+ * division split) must FAIL.
  * Real (tests/sim/itwiki_rates.py, it.wikipedia 2014-15 .. 2025-26): play-out ties the 8-point gap skips, Serie C
  * 31.6% (12 of 38), Serie D 22.1% (30 of 136); straight back up C/D 12.3% (9 of 73).
  * Usage: [SPREAD=n] [GAME_SPREAD=n] [BFLOOR=n] italyfull [CHAINS [SEASONS]] (default 1000 100). Exit 1 on any broken invariant.
@@ -61,13 +66,20 @@ static int spread = SR_LP_SPREAD;
 static int floor_lv = LEVELS - 1;           /* the B teams' floor (sr_league.second_floor): Serie D; BFLOOR=0 the Mod 4.1's */
 static int game_spread = -1;              /* A .. D: GAME_SPREAD=n, else the game copy (sr_pool_game.o, 40) */
 static sr_state S;
+/* 4.2's two team files (42-s7reg): file 102 Serie A + B + C, file 144 Serie D + 36 pool rows (the stand-ins: clubs of the
+ * Eccellenza on the file) -- the registry over the slots' moves; rec_at the exe's side, by the swap lists */
+enum { FILE_A = 102, FILE_B = 144, POOL_ROWS = 36 };
+static sr_registry REG;
+static uint16_t rec_at[2][256];
+static sr_reg_swap SW[1024];
 
 static uint32_t h32(uint32_t x) { x ^= x >> 16; x *= 0x7FEB352Du; x ^= x >> 15; x *= 0x846CA68Bu; return x ^ (x >> 16); }
 
-enum { W_LOST, W_SIZE, W_UPDOWN, W_BTEAM, W_STR, W_REFUSED, W_N };
+enum { W_LOST, W_SIZE, W_UPDOWN, W_BTEAM, W_STR, W_REFUSED, W_REG, W_N };
 static const char *why_txt[W_N] = { "a club lost or doubled", "a division's size", "up != down at a boundary",
                                     "a B team in or above its first team's level (or above Serie B)",
-                                    "a strength out of range", "the library refused a season" };
+                                    "a strength out of range", "the library refused a season",
+                                    "the two team files (registry, swaps, rows)" };
 typedef struct {
     long summers, bad, why[W_N];
     long bound[LEVELS][2];                  /* down from level l, up from level l + 1 (l = 3: D down, the pool's up) */
@@ -77,7 +89,77 @@ typedef struct {
 
     long barred, bt_ko, gap_same, gap_below, gap_two, gap_carry, surplus, surplus_n, exits_d, exits_above;                    /* B-team rule: moves it changed (want differs from places) */
     long dec_sum[LEVELS + 1][10], dec_cnt[10];
+    long reg_swaps, reg_across, reg_off, reg_crossed, reg_max;   /* the two files: swaps, across files, with the
+                                                                    off-file pool; clubs that changed file; most swaps */
 } stats;
+
+static void reg_init(void)
+{
+    static uint8_t div[NI];
+    sr_reg_file f[2];
+    memset(f, 0, sizeof f);
+    f[0].file = FILE_A; f[0].ndiv = FIRST_D;
+    for (int d = 0; d < FIRST_D; d++) f[0].div[d] = (uint8_t)d, f[0].size[d] = ITF_SIZE[d];
+    f[1].file = FILE_B; f[1].ndiv = DG; f[1].pool = POOL_ROWS;
+    for (int g = 0; g < DG; g++) f[1].div[g] = (uint8_t)(FIRST_D + g), f[1].size[g] = ITF_SIZE[FIRST_D + g];
+    for (int i = 0; i < NI; i++) div[i] = i < NF ? ITF_CLUB[i].div : i < NF + POOL_ROWS ? SR_REG_POOL : SR_REG_OUT;
+    if (sr_reg_build(&REG, 2, f, NI, div)) { printf("italyfull: the two-file layout refused\n"); exit(2); }
+    for (int i = 0; i < 2; i++) for (int o = 0; o < 256; o++) rec_at[i][o] = REG.at[i][o];
+}
+
+/* the summer's places in the two files: every club of A .. D in its new division, the pool rows' clubs still in the
+ * Eccellenza kept, the rows freed by the ones promoted given to this summer's relegated (best placed first); the
+ * swap list applied to rec_at as the exe would. The broken rules (0 none). */
+static unsigned reg_summer(int s, const uint16_t *order, int norder, const int *down, const int *up, stats *st)
+{
+    static uint8_t nd[NI], od[NI];
+    static uint16_t oldw[NI];
+    unsigned bad = 0;
+    int free_rows = 0;
+    for (int i = 0; i < NI; i++) nd[i] = SR_REG_OUT, od[i] = (uint8_t)sr_reg_div(&REG, i), oldw[i] = REG.word[i];
+    for (int i = 0; i < NF; i++) nd[slot_ident[i]] = (uint8_t)slot_div[i];
+    for (int i = 0; i < NI; i++)
+        if (od[i] == SR_REG_POOL) { if (nd[i] == SR_REG_OUT) nd[i] = SR_REG_POOL; else free_rows++; }
+    for (int k = 0; k < norder && free_rows; k++)
+        if (nd[order[k]] == SR_REG_OUT && down_de[order[k]] == s) nd[order[k]] = SR_REG_POOL, free_rows--;
+    for (int i = 0; i < NI && free_rows; i++) if (nd[i] == SR_REG_OUT && od[i] == SR_REG_OUT) nd[i] = SR_REG_POOL, free_rows--;
+    const int n = sr_reg_season(&REG, nd, order, norder, SW, (int)(sizeof SW / sizeof SW[0]));
+    if (n < 0) return 1u << W_REG;
+    for (int k = 0; k < n; k++) {               /* (the exe's side) */
+        if (brk == 4 && s == 1 && k == 0) continue;
+        const int fa = (SW[k].a & 0xFF) == FILE_B, oa = SW[k].a >> 8;
+        if (SW[k].b == SR_REG_NONE) { rec_at[fa][oa] = SW[k].on; st->reg_off++; continue; }
+        const int fb = (SW[k].b & 0xFF) == FILE_B, ob = SW[k].b >> 8;
+        const uint16_t x = rec_at[fa][oa];
+        rec_at[fa][oa] = rec_at[fb][ob]; rec_at[fb][ob] = x;
+        st->reg_across += fa != fb;
+    }
+    st->reg_swaps += n;
+    if (n > st->reg_max) st->reg_max = n;
+    if (brk == 5 && s == 1) REG.at[1][0] = REG.at[1][1];                /* (a slot twice) */
+    if (brk == 6 && s == 1) {                                           /* (a division split: two rows' clubs swapped) */
+        const uint16_t a = REG.at[1][0], b = REG.at[1][DS];
+        REG.at[1][0] = b; REG.at[1][DS] = a; REG.word[b] = FILE_B; REG.word[a] = (uint16_t)(FILE_B | DS << 8);
+    }
+    if (sr_reg_check(&REG)) bad |= 1u << W_REG;
+    for (int i = 0; i < 2; i++)
+        for (int o = 0; o < REG.rows[i]; o++) if (rec_at[i][o] != REG.at[i][o]) bad |= 1u << W_REG;
+    int a2b = 0, b2a = 0;
+    for (int i = 0; i < NI; i++) {
+        if (sr_reg_div(&REG, i) != nd[i]) bad |= 1u << W_REG;               /* (every division in its rows) */
+        if (od[i] == nd[i] && od[i] != SR_REG_OUT && REG.word[i] != oldw[i]) bad |= 1u << W_REG;
+        if (oldw[i] != SR_REG_NONE && REG.word[i] != SR_REG_NONE && (oldw[i] & 0xFF) != (REG.word[i] & 0xFF)) {
+            st->reg_crossed++;
+            if ((oldw[i] & 0xFF) == FILE_A) a2b++; else b2a++;
+        }
+        if (first_of[i] >= 0 && REG.word[i] != SR_REG_NONE &&             /* (a B team, through the registry) */
+            (sr_reg_ident(&REG, REG.word[i]) != i || ((REG.word[i] & 0xFF) == FILE_A) != (nd[i] < FIRST_D)))
+            bad |= 1u << W_REG;
+    }
+    if (a2b != down[2] || b2a != up[3]) bad |= 1u << W_REG;               /* (the C/D boundary's moves, no more) */
+    for (int i = 0; i < 2; i++) if (REG.rows[i] > 256) bad |= 1u << W_REG;
+    return bad;
+}
 
 
 /* another B team in B team i's division at the season end */
@@ -115,6 +197,7 @@ static void chain_init(uint32_t chain)
             ident_areas_from_ecc(id, g);
         }
     for (int i = 0; i < NI; i++) down_cd[i] = down_de[i] = -100, viol[i] = 0;
+    reg_init();
 }
 
 static void chain_run(uint32_t chain, int seasons, stats *st)
@@ -327,6 +410,12 @@ static void chain_run(uint32_t chain, int seasons, stats *st)
                     }
                 break;
             }
+        {   /* the two team files */
+            static uint16_t order[NI];
+            int no = 0;
+            for (int d = 0; d < ITF_NDIV; d++) for (int k = 0; k < S.t.n[d]; k++) order[no++] = S.t.t[d][k].glob;
+            bad |= reg_summer(s, order, no, down, up, st);
+        }
         /* the invariants */
         {
             static unsigned char seen[NI];
@@ -374,7 +463,8 @@ int main(int argc, char **argv)
     if (spv) spread = atoi(spv);
     if (getenv("GAME_SPREAD")) game_spread = atoi(getenv("GAME_SPREAD"));
     if (getenv("BFLOOR")) floor_lv = atoi(getenv("BFLOOR"));
-    brk = !b ? 0 : !strcmp(b, "drop") ? 1 : !strcmp(b, "bteam") ? 2 : !strcmp(b, "updown") ? 3 : 0;
+    brk = !b ? 0 : !strcmp(b, "drop") ? 1 : !strcmp(b, "bteam") ? 2 : !strcmp(b, "updown") ? 3 : !strcmp(b, "regdrop") ? 4 :
+          !strcmp(b, "regdup") ? 5 : !strcmp(b, "regsplit") ? 6 : 0;
     {   /* each Serie D group's most common Serie C area among the real clubs */
         int cnt[DG][256];
         memset(cnt, 0, sizeof cnt);
@@ -406,6 +496,10 @@ int main(int argc, char **argv)
            "over its first team in the Eccellenza %ld,\n    two B teams in one division whose first teams both come in (the "
            "second's stay undoes the first's drop) %ld,\n    still over its first team from the summer before %ld\n",
            st.gap_same, st.gap_below, st.gap_two, st.gap_carry);
+    printf("  two team files (%d: A, B, C; %d: D + %d pool rows): %.2f swaps a summer (most %ld), %.2f across the files, "
+           "%.2f with the off-file pool; %.2f clubs changed file a summer (= C/D's down + up)\n", FILE_A, FILE_B, POOL_ROWS,
+           (double)st.reg_swaps / st.summers, st.reg_max, (double)st.reg_across / st.summers,
+           (double)st.reg_off / st.summers, (double)st.reg_crossed / st.summers);
     printf("  drift (mean strength by tenth of the chain) A / B / C / D / Ecc:\n   ");
     for (int z = 0; z < 10; z++) {
         const long n = st.dec_cnt[z] ? st.dec_cnt[z] : 1;

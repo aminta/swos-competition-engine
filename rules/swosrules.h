@@ -615,4 +615,56 @@ int32_t sr_best_placed(const sr_group *g, int32_t ng, int32_t place, int32_t win
 enum { SR_PAIR_DRAW = 0, SR_PAIR_SEEDED, SR_PAIR_BRACKET, SR_PAIR_FIXED };
 int32_t sr_ko_pairs(int32_t mode, int32_t n, const uint8_t *avoid, uint32_t seed, uint8_t *out);
 
+/* ---- sr_reg.c: one league across N team files -- the club registry (swc/1.4 countries.<c>.files; MC
+ * 42-s7reg: Italy 4.2 = file 102 Serie A + B + C, file 144 Serie D + the Eccellenza stand-ins) ----
+ * A club keeps its identity (an ident, 0 .. nclub-1) and has one place, its team word file | ordinal << 8,
+ * or none (off the files). Each file holds its divisions in its own order, each a fixed range of rows
+ * (its size), then its pool rows (at most one file has them); a division lives in exactly one file. */
+#define SR_REG_FILES 8
+#define SR_REG_CLUBS 1024
+#define SR_REG_NONE  0xFFFF         /* an off-file club's word; an empty row's ident */
+#define SR_REG_POOL  0xFE           /* a division value: the pool rows */
+#define SR_REG_OUT   0xFF           /* a division value: off the files */
+typedef struct {
+    uint8_t  file;                  /* the team file's number (the word's low byte) */
+    uint8_t  ndiv;
+    uint8_t  div[SR_DIVS];          /* its divisions (the league's indices), in the file's order */
+    uint8_t  size[SR_DIVS];         /* their sizes: rows */
+    uint16_t pool;                  /* pool rows after them */
+} sr_reg_file;
+typedef struct {
+    int32_t     nfiles, nclub;
+    sr_reg_file f[SR_REG_FILES];
+    uint16_t    word[SR_REG_CLUBS];         /* ident -> team word, SR_REG_NONE off the files */
+    uint16_t    at[SR_REG_FILES][256];      /* (file index, ordinal) -> ident */
+    uint8_t     rdiv[SR_REG_FILES][256];    /* (file index, ordinal) -> its row's division, SR_REG_POOL, SR_REG_OUT none */
+    uint16_t    rows[SR_REG_FILES];
+} sr_registry;
+/* The records at team words a and b swapped; b == SR_REG_NONE: a's club goes off the files and club `on`
+ * comes onto a (the off-file pool's record). In list order. */
+typedef struct { uint16_t a, b, on; } sr_reg_swap;
+
+/* Build from the layout: club i (0 .. n-1) of division div[i] (SR_REG_POOL a pool row, SR_REG_OUT off the
+ * files) takes the next row of that division's range, clubs in index order -- so an old save's file order
+ * (and then its off-file clubs) gives the new places with every club's order kept within its division: the
+ * old-save import (a v1.3 save's words -> the registry, the caller keeping old word i -> word[i]). 0; -1 a
+ * layout past the limits (files 1 .. 8, unique numbers, a division in one file, rows <= 256, pool rows in one
+ * file at most) or a division's clubs not its size. */
+int32_t sr_reg_build(sr_registry *r, int32_t nfiles, const sr_reg_file *f, int32_t n, const uint8_t *div);
+uint16_t sr_reg_word(const sr_registry *r, int32_t ident);     /* SR_REG_NONE: off the files, or no such club */
+int32_t sr_reg_ident(const sr_registry *r, uint16_t word);     /* -1: no club at that word */
+int32_t sr_reg_div(const sr_registry *r, int32_t ident);       /* its row's division, SR_REG_POOL, SR_REG_OUT */
+/* The season end's places (after sr_final_moves, the pool exchange, the groups): nd[ident] each club's new
+ * division (SR_REG_POOL, SR_REG_OUT). A club staying in its division keeps its row; a division's rows freed
+ * by the clubs leaving it, ordered by their rank, go to the clubs coming in, ordered by theirs -- the best
+ * promoted into the row of the best placed relegated, across files or not, so every division stays in its
+ * range. rank: order[0 .. norder) best first (the tables' order); a club not in it after them, by ident.
+ * The moves as swaps out[0 .. count) for the exe to apply in order (its records move with the clubs: the
+ * identity is kept, not EN's strength swap); the registry updated. The count; -1 a division's clubs not its
+ * size or an unknown division (nothing changed), -2 more swaps than max (nothing changed). */
+int32_t sr_reg_season(sr_registry *r, const uint8_t *nd, const uint16_t *order, int32_t norder, sr_reg_swap *out,
+                      int32_t max);
+/* The invariants: every row holds one club, each club at most one row, words and rows agree. 0; -1. */
+int32_t sr_reg_check(const sr_registry *r);
+
 #endif

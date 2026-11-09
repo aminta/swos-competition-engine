@@ -67,6 +67,10 @@ $(OUT)/nonleague: tests/rules/nonleague.c $(RULES) rules/swosrules.h | $(OUT)
 $(OUT)/bteams42: tests/rules/bteams42.c $(RULES) rules/swosrules.h | $(OUT)
 	$(CC) -std=c99 -O1 -g -Wall -Wextra -Wno-missing-field-initializers $(SANITIZE) -Irules -o $@ \
 	    tests/rules/bteams42.c rules/sr_post.c rules/sr_check.c
+# The club registry: one league across N team files (42-s7reg)
+$(OUT)/reg: tests/rules/reg.c tests/rules/italy42_map.h $(RULES) rules/swosrules.h | $(OUT)
+	$(CC) -std=c99 -O1 -g -Wall -Wextra -Wno-missing-field-initializers $(SANITIZE) -Irules -o $@ \
+	    tests/rules/reg.c rules/sr_reg.c
 # The Coppa Italia Serie C winner's play-off place (F1: the Mod's dplay.c 353984f, one case per place)
 $(OUT)/cupplace: tests/rules/cupplace.c $(RULES) rules/swosrules.h | $(OUT)
 	$(CC) -std=c99 -O1 -g -Wall -Wextra -Wno-missing-field-initializers $(SANITIZE) -Irules -o $@ \
@@ -95,7 +99,7 @@ $(OUT)/italysim: tests/sim/italysim.c tests/sim/ecclp_italy.h $(RULES) rules/swo
 $(OUT)/italyfull: tests/sim/italyfull.c tests/sim/italyfull_data.h tests/sim/ecclp_italy.h $(RULES) rules/swosrules.h \
                   $(OUT)/masssim | $(OUT)
 	$(CC) $(CFLAGS) $(SIM_FLAGS) -Irules -o $@ tests/sim/italyfull.c rules/sr_dplay.c rules/sr_gplay.c rules/sr_post.c \
-	    rules/sr_check.c rules/sr_pool.c rules/sr_groups.c $(OUT)/sr_pool_game.o
+	    rules/sr_check.c rules/sr_pool.c rules/sr_groups.c rules/sr_reg.c $(OUT)/sr_pool_game.o
 
 sim: $(OUT)/masssim $(OUT)/italysim $(OUT)/italyfull
 	$(OUT)/masssim 1000 100 8
@@ -103,10 +107,10 @@ sim: $(OUT)/masssim $(OUT)/italysim $(OUT)/italyfull
 	@for b in drop twice 35; do if ITALYSIM_BREAK=$$b $(OUT)/italysim 2 3 >/dev/null; then echo "italysim control $$b NOT caught"; exit 1; fi; done
 	@echo "italysim controls: a club dropped, a club up twice, 35 up -> caught"
 	$(OUT)/italyfull 1000 100
-	@for b in drop bteam updown; do if ITALYFULL_BREAK=$$b $(OUT)/italyfull 2 3 >/dev/null; then echo "italyfull control $$b NOT caught"; exit 1; fi; done
-	@echo "italyfull controls: a club dropped, a B team in its first team's division, one too many up -> caught"
+	@for b in drop bteam updown regdrop regdup regsplit; do if ITALYFULL_BREAK=$$b $(OUT)/italyfull 2 3 >/dev/null; then echo "italyfull control $$b NOT caught"; exit 1; fi; done
+	@echo "italyfull controls: a club dropped, a B team in its first team's division, one too many up, a swap dropped, a slot twice, a division split -> caught"
 
-test: $(OUT)/test_format $(OUT)/swcc $(OUT)/swc_i486.o $(RULES_I486) $(OUT)/spec_check $(OUT)/team_order $(OUT)/groups_guard $(OUT)/nonleague $(OUT)/ecclp $(OUT)/stage $(OUT)/bteams42 $(OUT)/cupplace
+test: $(OUT)/test_format $(OUT)/swcc $(OUT)/swc_i486.o $(RULES_I486) $(OUT)/spec_check $(OUT)/team_order $(OUT)/groups_guard $(OUT)/nonleague $(OUT)/ecclp $(OUT)/stage $(OUT)/bteams42 $(OUT)/cupplace $(OUT)/reg
 	$(OUT)/swcc compile packs/sample/world.json -o $(OUT)/sample.swc >/dev/null
 	$(OUT)/test_format $(OUT)/sample.swc
 	sh tests/run_specs.sh $(OUT)/swcc
@@ -124,6 +128,7 @@ test: $(OUT)/test_format $(OUT)/swcc $(OUT)/swc_i486.o $(RULES_I486) $(OUT)/spec
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/ecclp 500
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/bteams42
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/cupplace
+	ASAN_OPTIONS=detect_leaks=0 $(OUT)/reg
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/stage 500
 	@if grep -n '(const Swc[A-Za-z]* \*)\|(const uint16_t \*)\|(const uint32_t \*)' format/*.c; then echo "the reader reads the spec buffer through a cast (big-endian rule: BE accessors only)"; exit 1; fi
 	@echo "reader: no casts over the spec buffer (BE accessors only)"
