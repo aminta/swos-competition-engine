@@ -67,6 +67,10 @@ $(OUT)/league_rank: tests/rules/league_rank.c rules/sr_stage.c rules/swosrules.h
 $(OUT)/nonleague: tests/rules/nonleague.c $(RULES) rules/swosrules.h | $(OUT)
 	$(CC) -std=c99 -O1 -g -Wall -Wextra -Wno-missing-field-initializers $(SANITIZE) -Irules -o $@ \
 	    tests/rules/nonleague.c rules/sr_pool.c rules/sr_groups.c
+# the National League / North / South play-offs as gplay bytes against the real format (specs/eng_nl.spec)
+$(OUT)/nlplayoff: tests/rules/nlplayoff.c $(RULES) rules/swosrules.h | $(OUT)
+	$(CC) -std=c99 -O1 -g -Wall -Wextra -Wno-missing-field-initializers $(SANITIZE) -Irules -o $@ \
+	    tests/rules/nlplayoff.c $(RULES)
 # the same rules on the 2026-27 clubs (tests/rules/step3real_data.h, mkstep3real.py from the Mod's data)
 $(OUT)/step3real: tests/rules/step3real.c tests/rules/step3real_data.h $(RULES) rules/swosrules.h | $(OUT)
 	$(CC) -std=c99 -O1 -g -Wall -Wextra -Wno-missing-field-initializers $(SANITIZE) -Irules -o $@ \
@@ -136,7 +140,7 @@ sim: $(OUT)/masssim $(OUT)/italysim $(OUT)/italyfull
 	@for b in drop bteam updown regdrop regdup regdiv; do if ITALYFULL_BREAK=$$b $(OUT)/italyfull 2 3 >/dev/null; then echo "italyfull control $$b NOT caught"; exit 1; fi; done
 	@echo "italyfull controls: a club dropped, a B team in its first team's division, one too many up, a swap dropped, a slot twice, a wrong division byte -> caught"
 
-test: $(OUT)/test_format $(OUT)/swcc $(OUT)/swc_i486.o $(RULES_I486) $(OUT)/spec_check $(OUT)/team_order $(OUT)/groups_guard $(OUT)/nonleague $(OUT)/step3real $(OUT)/ecclp $(OUT)/stage $(OUT)/bteams42 $(OUT)/cupplace $(OUT)/reg $(OUT)/s3shape $(OUT)/league_rank $(OUT)/uefa_final $(OUT)/s2ko
+test: $(OUT)/test_format $(OUT)/swcc $(OUT)/swc_i486.o $(RULES_I486) $(OUT)/spec_check $(OUT)/team_order $(OUT)/groups_guard $(OUT)/nonleague $(OUT)/step3real $(OUT)/nlplayoff $(OUT)/ecclp $(OUT)/stage $(OUT)/bteams42 $(OUT)/cupplace $(OUT)/reg $(OUT)/s3shape $(OUT)/league_rank $(OUT)/uefa_final $(OUT)/s2ko
 	$(OUT)/swcc compile packs/sample/world.json -o $(OUT)/sample.swc >/dev/null
 	$(OUT)/test_format $(OUT)/sample.swc
 	sh tests/run_specs.sh $(OUT)/swcc
@@ -152,6 +156,7 @@ test: $(OUT)/test_format $(OUT)/swcc $(OUT)/swc_i486.o $(RULES_I486) $(OUT)/spec
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/groups_guard
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/nonleague 500
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/step3real
+	ASAN_OPTIONS=detect_leaks=0 $(OUT)/nlplayoff tests/rules/specs/eng_nl.spec
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/ecclp 500
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/bteams42
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/cupplace
