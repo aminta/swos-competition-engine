@@ -1,7 +1,7 @@
 /* The mass simulation of Italy's chain Serie D <-> Eccellenza (42-ecclp; the Mod's notes/CONVENTIONS.md 17b):
  *   Serie D (9 x 18)        light tables (the game's spread, standing for its played matches): the last 4 of each
  *                           group down (36); no moves with Serie C here (the chain's top is closed)
- *   Eccellenza (28 groups)  sr_lp_season_np: the 28 champions, the regional play-offs, the national play-off (7),
+ *   Eccellenza (28 groups)  sr_lp_season_cross: the 28 champions, the regional play-offs, the national play-off (7),
  *                           the cup rule (1): 36 up
  *   summer                  the 36 down take the 36 promoted clubs' Eccellenza places, nearest by ground (both sorted
  *                           north to south); a promoted club takes a relegated club's record (its strength), the
@@ -63,7 +63,7 @@ static void chain_run(uint32_t chain, int seasons, stats *st)
     sr_lp_shape sh;
     sr_lp_rpo rpo[IT_GROUPS];
     uint8_t urn[IT_GROUPS];
-    it_shape(&sh, rpo, urn, SR_LP_NONE);
+    it_shape(&sh, rpo, urn, NULL, 0);
     for (int s = 0; s < seasons; s++) {
         const uint32_t seed = h32(chain * 1000003u + (uint32_t)s);
         unsigned bad = 0;
@@ -85,7 +85,7 @@ static void chain_run(uint32_t chain, int seasons, stats *st)
             for (int i = 0; i < IT_G[g].size; i++) pc[g][i].ident = (uint16_t)pgrp[g][i], pc[g][i].strength = str_of[pgrp[g][i]];
             pp[g] = pc[g]; pn[g] = IT_G[g].size;
         }
-        int nup = sr_lp_season_np(seed, IT_GROUPS, pp, pn, &sh, up);
+        int nup = sr_lp_season_cross(seed, IT_GROUPS, pp, pn, &sh, up);
         if (brk == 2 && s == 1) up[IT_GROUPS + 1] = up[IT_GROUPS];
         if (brk == 3 && s == 1) nup--;
         if (nup != IT_UP) { const int w = nup < 0 ? 5 : 2; st->bad++; st->why[w]++; st->summers++; continue; }
@@ -101,7 +101,7 @@ static void chain_run(uint32_t chain, int seasons, stats *st)
                     if (up[k].div != g) continue;
                     int pl = 0;
                     while (pl < pn[g] && t[pl].team != up[k].idx) pl++;
-                    if (up[k].how == SR_LP_UP_NATIONAL) st->nat_place[pl < 5 ? pl : 5]++;
+                    if (up[k].how == SR_LP_UP_CROSS) st->nat_place[pl < 5 ? pl : 5]++;
                     else st->cup_place[pl < 19 ? pl : 19]++;
                 }
             }

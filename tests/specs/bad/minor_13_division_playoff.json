@@ -1,9 +1,9 @@
 {
  "schema": "swc/1.3",
- "id": "test.pool-playoff-without-national",
+ "id": "test.minor-13-division-playoff",
  "host_world": 9,
- "_note": "A national play-off pool, broken: a division's own 'playoff' goes with 'up.national'",
- "_expect": "a division's own 'playoff' goes with 'up.national'",
+ "_note": "A cross play-off pool (swc/1.4), broken: a division's 'playoff' is swc/1.4: this pool file says \"swc/1.3\"",
+ "_expect": "a division's 'playoff' is swc/1.4: this pool file says \"swc/1.3\"",
  "languages": [
   "it",
   "en",
@@ -321,7 +321,7 @@
  "pools": [
   {
    "id": "ecc-pool",
-   "file": "../pools/ecc_playoff_without_national.json"
+   "file": "../pools/ecc_minor_13_division_playoff.json"
   }
  ]
 }

@@ -1,7 +1,7 @@
 {
  "schema": "swc/1.3",
  "id": "ecc-pool",
- "_note": "A light pool with a national play-off (Italy's Eccellenza shape, 42-ecclp): per-division regional play-offs, urns, the cup rule.",
+ "_note": "A light pool with a cross play-off (Italy's Eccellenza shape, 42-ecclp): per-division regional play-offs, urns, the cup rule.",
  "country": "TST",
  "divisions": [
   {
@@ -67,8 +67,7 @@
    },
    "size": 8,
    "playoff": {
-    "type": "playoff",
-    "entrants": "table#2",
+    "direct": "table#2",
     "_note": "FVG: the 2nd goes straight"
    }
   },
@@ -338,7 +337,7 @@
     }
    ]
   },
-  "national": {
+  "cross": {
    "urns": [
     {
      "id": "north",
@@ -360,7 +359,7 @@
      "ties": 2,
      "legs": 2,
      "home": "draw",
-     "pairing": "draw",
+     "pairing": "urn",
      "decider": [
       "aggregate",
       "extra_time",
@@ -371,7 +370,7 @@
      "ties": 1,
      "legs": 2,
      "home": "draw",
-     "pairing": "draw",
+     "pairing": "urn_pairs",
      "decider": [
       "aggregate",
       "extra_time",
@@ -380,16 +379,19 @@
      "urn_pairs": [
       [
        "north",
-       "north"
+       "south"
       ]
      ]
     }
-   ]
+   ],
+   "up": 1
   },
   "extra": {
    "rule": "strongest_not_up",
    "count": 1,
-   "override": "club:ecc.d0"
+   "override": [
+    "club:ecc.d0"
+   ]
   }
  },
  "feeds": [

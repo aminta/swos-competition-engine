@@ -33,8 +33,8 @@ static const char *up_bad(const sr_lp_up *up, int nup, int nd, const sr_lp_club 
     for (int k = 0; k < nup; k++) {
         if (up[k].div < 0 || up[k].div >= nd || up[k].idx < 0 || up[k].idx >= n[up[k].div]) return "a club out of the pool";
         if (seen[up[k].div][up[k].idx]++) return "a club up twice";
-        champ += up[k].how == SR_LP_UP_CHAMPION; nat += up[k].how == SR_LP_UP_NATIONAL;
-        cup += up[k].how == SR_LP_UP_CUP_RULE || up[k].how == SR_LP_UP_CUP_OVERRIDE;
+        champ += up[k].how == SR_LP_UP_CHAMPION; nat += up[k].how == SR_LP_UP_CROSS;
+        cup += up[k].how == SR_LP_UP_EXTRA || up[k].how == SR_LP_UP_OVERRIDE;
     }
     if (champ != nd || nat != 7 || cup != 1) return "not 28 + 7 + 1";
     for (int d = 0; d < nd; d++) {
@@ -114,7 +114,7 @@ static void national(int seasons)
     long top = 0;
     for (int s = 0; s < seasons; s++) {
         for (int g = 0; g < IT_GROUPS; g++) { e[g].ident = (uint16_t)g; e[g].strength = (uint16_t)(50 + rnd(150)); urn[g] = IT_G[g].urn; }
-        const int nw = sr_lp_national((uint32_t)s, e, IT_GROUPS, urn, IT_URNS, IT_PAIR, 2, 2, 2, up);
+        const int nw = sr_lp_cross((uint32_t)s, e, IT_GROUPS, urn, IT_URNS, IT_PAIR, 2, 2, 2, up);
         int seen[IT_GROUPS] = { 0 }, nu[3] = { 0 };
         if (nw != 7) { ok = 0; continue; }
         for (int k = 0; k < nw; k++) { if (seen[up[k]]++) ok = 0; nu[urn[up[k]]]++; }
@@ -126,9 +126,9 @@ static void national(int seasons)
     check(ok, m);
     check(top > 7L * seasons * 6 / 10, "national play-off: the stronger half wins most places");
     static const uint8_t odd_urn[4] = { 0, 0, 0, 1 }, only_nc[1][2] = { { 0, 1 } };
-    check(sr_lp_national(1, e, 4, odd_urn, 2, IT_PAIR, 2, 2, 2, up) == -1, "control: an urn of odd size refused");
+    check(sr_lp_cross(1, e, 4, odd_urn, 2, IT_PAIR, 2, 2, 2, up) == -1, "control: an urn of odd size refused");
     for (int g = 0; g < IT_GROUPS; g++) urn[g] = IT_G[g].urn;
-    check(sr_lp_national(1, e, IT_GROUPS, urn, IT_URNS, only_nc, 1, 2, 2, up) == -1,
+    check(sr_lp_cross(1, e, IT_GROUPS, urn, IT_URNS, only_nc, 1, 2, 2, up) == -1,
           "control: the South's winners left without a pair refused");
 }
 
@@ -165,13 +165,13 @@ static void seasons_it(int seasons)
     sr_lp_up up[48], up2[48];
     int ok = 1, total = 0;
     for (int g = 0; g < IT_GROUPS; g++) total += IT_G[g].size;
-    it_shape(&sh, rpo, urn, SR_LP_NONE);
+    it_shape(&sh, rpo, urn, NULL, 0);
     for (int s = 0; s < seasons; s++) {
         make_pool(900u + (unsigned)s);
-        const int nup = sr_lp_season_np((uint32_t)s, IT_GROUPS, pp, pn, &sh, up);
+        const int nup = sr_lp_season_cross((uint32_t)s, IT_GROUPS, pp, pn, &sh, up);
         const char *why = nup < 0 ? "refused" : up_bad(up, nup, IT_GROUPS, pp, pn, (uint32_t)s);
         if (why) { ok = 0; printf("      season %d: %s\n", s, why); continue; }
-        if (sr_lp_season_np((uint32_t)s, IT_GROUPS, pp, pn, &sh, up2) != nup || memcmp(up, up2, sizeof up[0] * (size_t)nup)) ok = 0;
+        if (sr_lp_season_cross((uint32_t)s, IT_GROUPS, pp, pn, &sh, up2) != nup || memcmp(up, up2, sizeof up[0] * (size_t)nup)) ok = 0;
     }
     char m[200];
     snprintf(m, sizeof m, "Eccellenza seasons, %d: the 28 real groups (%d clubs, 15..18): 36 distinct up = 28 champions + "
@@ -179,13 +179,22 @@ static void seasons_it(int seasons)
     check(ok && total == 465, m);
     /* the override */
     make_pool(5);
-    it_shape(&sh, rpo, urn, pool[22][14].ident);     /* a weak Molise club */
-    int nup = sr_lp_season_np(5, IT_GROUPS, pp, pn, &sh, up);
-    check(nup == IT_UP && up[35].how == SR_LP_UP_CUP_OVERRIDE && up[35].div == 22 && up[35].idx == 14,
+    const uint16_t ov1[1] = { pool[22][14].ident };                        /* a weak Molise club */
+    it_shape(&sh, rpo, urn, ov1, 1);
+    int nup = sr_lp_season_cross(5, IT_GROUPS, pp, pn, &sh, up);
+    check(nup == IT_UP && up[35].how == SR_LP_UP_OVERRIDE && up[35].div == 22 && up[35].idx == 14,
           "Eccellenza season: the real cup winner (override) takes the 36th place");
+    {   /* a list: an id not in the pool and a club already up are passed over, two extra places: override + rule */
+        const uint16_t ov3[3] = { 9999, (uint16_t)pool[up[0].div][up[0].idx].ident, pool[22][13].ident };
+        it_shape(&sh, rpo, urn, ov3, 3);
+        sh.extra = 2;
+        const int n2 = sr_lp_season_cross(5, IT_GROUPS, pp, pn, &sh, up2);
+        check(n2 == IT_UP + 1 && up2[35].how == SR_LP_UP_OVERRIDE && up2[35].div == 22 && up2[35].idx == 13
+              && up2[36].how == SR_LP_UP_EXTRA, "override list: passed over when not in the pool or up, then the rule");
+    }
     /* controls: up_bad on broken copies */
-    it_shape(&sh, rpo, urn, SR_LP_NONE);
-    nup = sr_lp_season_np(5, IT_GROUPS, pp, pn, &sh, up);
+    it_shape(&sh, rpo, urn, NULL, 0);
+    nup = sr_lp_season_cross(5, IT_GROUPS, pp, pn, &sh, up);
     memcpy(up2, up, sizeof up);
     up2[30] = up2[3];                                /* a club up twice (and one lost) */
     const char *w1 = up_bad(up2, nup, IT_GROUPS, pp, pn, 5), *w2 = up_bad(up, nup - 1, IT_GROUPS, pp, pn, 5);
@@ -196,8 +205,8 @@ static void seasons_it(int seasons)
     check(w1 && !strcmp(w1, "a club up twice") && w2 && w3 && !strcmp(w2, "not 36 up") && !strcmp(w3, "not 36 up") && w4,
           "controls: a club up twice, 35 up, 37 up, a champion swapped -> caught");
     sh.legs1 = 3;
-    check(sr_lp_season_np(5, IT_GROUPS, pp, pn, &sh, up) == -1, "control: three legs refused");
-    printf("      (sizes: sr_lp_rpo %zu B, sr_lp_shape %zu B, sr_lp_up %zu B; sr_lp_season_np's own frame ~%zu B)\n",
+    check(sr_lp_season_cross(5, IT_GROUPS, pp, pn, &sh, up) == -1, "control: three legs refused");
+    printf("      (sizes: sr_lp_rpo %zu B, sr_lp_shape %zu B, sr_lp_up %zu B; sr_lp_season_cross's own frame ~%zu B)\n",
            sizeof(sr_lp_rpo), sizeof(sr_lp_shape), sizeof(sr_lp_up),
            sizeof(sr_row) * SR_LP_CLUBS + 2 * SR_LP_DIVS * SR_LP_CLUBS + SR_LP_DIVS * (sizeof(sr_lp_club) + 8 + 2 * sizeof(void *)));
 }

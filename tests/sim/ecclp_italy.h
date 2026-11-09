@@ -48,10 +48,10 @@ static const it_group IT_G[IT_GROUPS] = {
 /* round 2: a North club v a Centre club, South v South */
 static const uint8_t IT_PAIR[2][2] = { { 0, 1 }, { 2, 2 } };
 
-static inline void it_shape(sr_lp_shape *s, sr_lp_rpo *rpo, uint8_t *urn, uint16_t override)
+static inline void it_shape(sr_lp_shape *s, sr_lp_rpo *rpo, uint8_t *urn, const uint16_t *override, int nov)
 {
     for (int g = 0; g < IT_GROUPS; g++) { rpo[g] = IT_G[g].rpo; urn[g] = IT_G[g].urn; }
     s->rpo = rpo; s->urn = urn; s->nu = IT_URNS; s->pair = IT_PAIR; s->np = 2;
-    s->legs1 = 2; s->legs2 = 2; s->extra = 1; s->override = override;
+    s->legs1 = 2; s->legs2 = 2; s->extra = 1; s->override = override; s->nov = nov;
 }
 #endif

@@ -1,0 +1,399 @@
+{
+ "schema": "swc/1.4",
+ "id": "ecc-pool",
+ "_note": "A light pool with a cross play-off (Italy's Eccellenza shape, 42-ecclp): per-division regional play-offs, urns, the cup rule.",
+ "country": "TST",
+ "divisions": [
+  {
+   "id": "ecca",
+   "names": {
+    "it": "ECC A",
+    "en": "ECC A",
+    "fr": "ECC A",
+    "de": "ECC A"
+   },
+   "size": 8
+  },
+  {
+   "id": "eccb",
+   "names": {
+    "it": "ECC B",
+    "en": "ECC B",
+    "fr": "ECC B",
+    "de": "ECC B"
+   },
+   "size": 8,
+   "playoff": {
+    "type": "playoff",
+    "entrants": "table#3-4",
+    "_note": "Lazio: 3v4, the winner v the 2nd",
+    "rounds": [
+     {
+      "ties": 1,
+      "legs": 1,
+      "home": "better_placed",
+      "pairing": "by_place",
+      "decider": [
+       "extra_time",
+       "penalties"
+      ]
+     },
+     {
+      "ties": 1,
+      "legs": 1,
+      "home": "better_placed",
+      "pairing": "by_place",
+      "decider": [
+       "extra_time",
+       "penalties"
+      ],
+      "joins": [
+       "table#2"
+      ]
+     }
+    ],
+    "direct_if": {
+     "points_gap_ge": 9
+    }
+   }
+  },
+  {
+   "id": "eccc",
+   "names": {
+    "it": "ECC C",
+    "en": "ECC C",
+    "fr": "ECC C",
+    "de": "ECC C"
+   },
+   "size": 8,
+   "playoff": {
+    "direct": "table#2",
+    "_note": "FVG: the 2nd goes straight"
+   }
+  },
+  {
+   "id": "eccd",
+   "names": {
+    "it": "ECC D",
+    "en": "ECC D",
+    "fr": "ECC D",
+    "de": "ECC D"
+   },
+   "size": 8,
+   "playoff": {
+    "type": "playoff",
+    "entrants": "table#2-5",
+    "_note": "Toscana: semis skipped 10+ apart, final neutral",
+    "rounds": [
+     {
+      "ties": 2,
+      "legs": 1,
+      "home": "better_placed",
+      "pairing": "by_place",
+      "decider": [
+       "extra_time",
+       "penalties"
+      ],
+      "skip_if": {
+       "points_gap_ge": 10
+      }
+     },
+     {
+      "ties": 1,
+      "legs": 1,
+      "home": "neutral",
+      "pairing": "by_place",
+      "decider": [
+       "extra_time",
+       "penalties"
+      ]
+     }
+    ],
+    "direct_if": {
+     "points_gap_ge": 10
+    }
+   }
+  }
+ ],
+ "clubs": [
+  {
+   "id": "club:ecc.a0",
+   "name": "ECC A0",
+   "division": "ecca",
+   "strength": 0.2
+  },
+  {
+   "id": "club:ecc.a1",
+   "name": "ECC A1",
+   "division": "ecca",
+   "strength": 0.3
+  },
+  {
+   "id": "club:ecc.a2",
+   "name": "ECC A2",
+   "division": "ecca",
+   "strength": 0.4
+  },
+  {
+   "id": "club:ecc.a3",
+   "name": "ECC A3",
+   "division": "ecca",
+   "strength": 0.5
+  },
+  {
+   "id": "club:ecc.a4",
+   "name": "ECC A4",
+   "division": "ecca",
+   "strength": 0.6
+  },
+  {
+   "id": "club:ecc.a5",
+   "name": "ECC A5",
+   "division": "ecca",
+   "strength": 0.7
+  },
+  {
+   "id": "club:ecc.a6",
+   "name": "ECC A6",
+   "division": "ecca",
+   "strength": 0.8
+  },
+  {
+   "id": "club:ecc.a7",
+   "name": "ECC A7",
+   "division": "ecca",
+   "strength": 0.9
+  },
+  {
+   "id": "club:ecc.b0",
+   "name": "ECC B0",
+   "division": "eccb",
+   "strength": 0.2
+  },
+  {
+   "id": "club:ecc.b1",
+   "name": "ECC B1",
+   "division": "eccb",
+   "strength": 0.3
+  },
+  {
+   "id": "club:ecc.b2",
+   "name": "ECC B2",
+   "division": "eccb",
+   "strength": 0.4
+  },
+  {
+   "id": "club:ecc.b3",
+   "name": "ECC B3",
+   "division": "eccb",
+   "strength": 0.5
+  },
+  {
+   "id": "club:ecc.b4",
+   "name": "ECC B4",
+   "division": "eccb",
+   "strength": 0.6
+  },
+  {
+   "id": "club:ecc.b5",
+   "name": "ECC B5",
+   "division": "eccb",
+   "strength": 0.7
+  },
+  {
+   "id": "club:ecc.b6",
+   "name": "ECC B6",
+   "division": "eccb",
+   "strength": 0.8
+  },
+  {
+   "id": "club:ecc.b7",
+   "name": "ECC B7",
+   "division": "eccb",
+   "strength": 0.9
+  },
+  {
+   "id": "club:ecc.c0",
+   "name": "ECC C0",
+   "division": "eccc",
+   "strength": 0.2
+  },
+  {
+   "id": "club:ecc.c1",
+   "name": "ECC C1",
+   "division": "eccc",
+   "strength": 0.3
+  },
+  {
+   "id": "club:ecc.c2",
+   "name": "ECC C2",
+   "division": "eccc",
+   "strength": 0.4
+  },
+  {
+   "id": "club:ecc.c3",
+   "name": "ECC C3",
+   "division": "eccc",
+   "strength": 0.5
+  },
+  {
+   "id": "club:ecc.c4",
+   "name": "ECC C4",
+   "division": "eccc",
+   "strength": 0.6
+  },
+  {
+   "id": "club:ecc.c5",
+   "name": "ECC C5",
+   "division": "eccc",
+   "strength": 0.7
+  },
+  {
+   "id": "club:ecc.c6",
+   "name": "ECC C6",
+   "division": "eccc",
+   "strength": 0.8
+  },
+  {
+   "id": "club:ecc.c7",
+   "name": "ECC C7",
+   "division": "eccc",
+   "strength": 0.9
+  },
+  {
+   "id": "club:ecc.d0",
+   "name": "ECC D0",
+   "division": "eccd",
+   "strength": 0.2
+  },
+  {
+   "id": "club:ecc.d1",
+   "name": "ECC D1",
+   "division": "eccd",
+   "strength": 0.3
+  },
+  {
+   "id": "club:ecc.d2",
+   "name": "ECC D2",
+   "division": "eccd",
+   "strength": 0.4
+  },
+  {
+   "id": "club:ecc.d3",
+   "name": "ECC D3",
+   "division": "eccd",
+   "strength": 0.5
+  },
+  {
+   "id": "club:ecc.d4",
+   "name": "ECC D4",
+   "division": "eccd",
+   "strength": 0.6
+  },
+  {
+   "id": "club:ecc.d5",
+   "name": "ECC D5",
+   "division": "eccd",
+   "strength": 0.7
+  },
+  {
+   "id": "club:ecc.d6",
+   "name": "ECC D6",
+   "division": "eccd",
+   "strength": 0.8
+  },
+  {
+   "id": "club:ecc.d7",
+   "name": "ECC D7",
+   "division": "eccd",
+   "strength": 0.9
+  }
+ ],
+ "up": {
+  "champion": 1,
+  "playoff": {
+   "type": "playoff",
+   "entrants": "table#2-5",
+   "rounds": [
+    {
+     "ties": 2,
+     "legs": 1,
+     "home": "better_placed",
+     "pairing": "by_place",
+     "decider": [
+      "extra_time",
+      "penalties"
+     ]
+    },
+    {
+     "ties": 1,
+     "legs": 1,
+     "home": "better_placed",
+     "pairing": "by_place",
+     "decider": [
+      "extra_time",
+      "penalties"
+     ]
+    }
+   ]
+  },
+  "cross": {
+   "urns": [
+    {
+     "id": "north",
+     "divisions": [
+      "ecca",
+      "eccb"
+     ]
+    },
+    {
+     "id": "south",
+     "divisions": [
+      "eccc"
+     ]
+    }
+   ],
+   "rounds": [
+    {
+     "ties": 2,
+     "legs": 2,
+     "home": "draw",
+     "pairing": "urn",
+     "decider": [
+      "aggregate",
+      "extra_time",
+      "penalties"
+     ]
+    },
+    {
+     "ties": 1,
+     "legs": 2,
+     "home": "draw",
+     "pairing": "urn_pairs",
+     "decider": [
+      "aggregate",
+      "extra_time",
+      "penalties"
+     ],
+     "urn_pairs": [
+      [
+       "north",
+       "south"
+      ]
+     ]
+    }
+   ],
+   "up": 1
+  },
+  "extra": {
+   "rule": "strongest_not_up",
+   "count": 1,
+   "override": [
+    "club:ecc.d0"
+   ]
+  }
+ },
+ "feeds": [
+  "tst.two"
+ ]
+}

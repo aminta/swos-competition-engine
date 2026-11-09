@@ -119,7 +119,7 @@ int32_t sr_lp_season(uint32_t seed, int32_t nd, const sr_lp_club *const *c, cons
     return 0;
 }
 
-/* ---- the national play-off pool (Italy's Eccellenza) ---- */
+/* ---- a pool with a cross play-off (Italy's Eccellenza) ---- */
 
 /* a regional tie, places a < b: the winner's place */
 static int rtie(rng *r, const sr_row *t, const sr_lp_club *c, const sr_lp_rpo *p, int a, int b, int gap, int neutral)
@@ -180,7 +180,7 @@ static void shuffle(rng *r, int32_t *v, int n)
     for (int i = n - 1; i > 0; i--) { const int j = (int)below(r, (u32)i + 1); const int32_t t = v[i]; v[i] = v[j]; v[j] = t; }
 }
 
-int32_t sr_lp_national(uint32_t seed, const sr_lp_club *e, int32_t ne, const uint8_t *urn, int32_t nu,
+int32_t sr_lp_cross(uint32_t seed, const sr_lp_club *e, int32_t ne, const uint8_t *urn, int32_t nu,
                        const uint8_t (*pair)[2], int32_t np, int32_t legs1, int32_t legs2, int32_t *up)
 {
     int32_t box[SR_LP_DIVS][SR_LP_DIVS], cnt[SR_LP_DIVS] = { 0 }, nup = 0;
@@ -228,7 +228,7 @@ int32_t sr_lp_extra(int32_t nd, const sr_lp_club *const *c, const int32_t *n, co
     return 0;
 }
 
-int32_t sr_lp_season_np(uint32_t seed, int32_t nd, const sr_lp_club *const *c, const int32_t *n,
+int32_t sr_lp_season_cross(uint32_t seed, int32_t nd, const sr_lp_club *const *c, const int32_t *n,
                         const sr_lp_shape *s, sr_lp_up *up)
 {
     sr_row t[SR_LP_CLUBS];
@@ -237,7 +237,8 @@ int32_t sr_lp_season_np(uint32_t seed, int32_t nd, const sr_lp_club *const *c, c
     sr_lp_club e[SR_LP_DIVS];
     int32_t ei[SR_LP_DIVS], w[SR_LP_DIVS];
     int nup = 0;
-    if (!c || !n || !s || !s->rpo || !s->urn || !up || nd < 1 || nd > SR_LP_DIVS || s->extra < 0) return -1;
+    if (!c || !n || !s || !s->rpo || !s->urn || !up || nd < 1 || nd > SR_LP_DIVS || s->extra < 0 || s->nov < 0
+        || (s->nov && !s->override)) return -1;
     for (int d = 0; d < nd; d++) {
         if (n[d] < 2 || sr_lp_table(seed, d, c[d], n[d], t) != 0) return -1;
         for (int k = 0; k < n[d]; k++) { place[d][t[k].team] = (uint8_t)k; isup[d][k] = 0; }
@@ -248,16 +249,24 @@ int32_t sr_lp_season_np(uint32_t seed, int32_t nd, const sr_lp_club *const *c, c
         e[d] = c[d][t[p].team]; ei[d] = t[p].team;
         pl[d] = place[d]; iu[d] = isup[d];
     }
-    const int nw = sr_lp_national(seed, e, nd, s->urn, s->nu, s->pair, s->np, s->legs1, s->legs2, w);
+    const int nw = sr_lp_cross(seed, e, nd, s->urn, s->nu, s->pair, s->np, s->legs1, s->legs2, w);
     if (nw < 0) return -1;
     for (int k = 0; k < nw; k++) {
-        up[nup++] = (sr_lp_up){ (int16_t)w[k], (int16_t)ei[w[k]], SR_LP_UP_NATIONAL };
+        up[nup++] = (sr_lp_up){ (int16_t)w[k], (int16_t)ei[w[k]], SR_LP_UP_CROSS };
         isup[w[k]][ei[w[k]]] = 1;
     }
-    for (int k = 0; k < s->extra; k++) {
+    int placed = 0;
+    for (int k = 0; k < s->nov && placed < s->extra; k++) {      /* the override clubs first */
         int32_t od, oi, ov;
-        if (sr_lp_extra(nd, c, n, pl, iu, k ? SR_LP_NONE : s->override, &od, &oi, &ov) != 0) return -1;
-        up[nup++] = (sr_lp_up){ (int16_t)od, (int16_t)oi, ov ? SR_LP_UP_CUP_OVERRIDE : SR_LP_UP_CUP_RULE };
+        if (sr_lp_extra(nd, c, n, pl, iu, s->override[k], &od, &oi, &ov) != 0) return -1;
+        if (!ov) continue;
+        up[nup++] = (sr_lp_up){ (int16_t)od, (int16_t)oi, SR_LP_UP_OVERRIDE };
+        isup[od][oi] = 1; placed++;
+    }
+    for (; placed < s->extra; placed++) {                         /* then the rule */
+        int32_t od, oi, ov;
+        if (sr_lp_extra(nd, c, n, pl, iu, SR_LP_NONE, &od, &oi, &ov) != 0) return -1;
+        up[nup++] = (sr_lp_up){ (int16_t)od, (int16_t)oi, SR_LP_UP_EXTRA };
         isup[od][oi] = 1;
     }
     return nup;

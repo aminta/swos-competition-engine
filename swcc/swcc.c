@@ -86,7 +86,7 @@ static void diag(C *c, JNode *at, int error, const char *path, const char *fmt, 
     bput(&c->diag, line, (size_t)(k < (int)sizeof line ? k : (int)sizeof line - 1));
     if (error) c->errors++; else c->warnings++;
 }
-#define SWC_MINOR 3         /* the schema's minor version: swc/1.3 */
+#define SWC_MINOR 4         /* the schema's minor version: swc/1.4 (1.4 = 1.3 + pool-file members) */
 #define ERR(at, path, ...)  diag(c, at, 1, path, __VA_ARGS__)
 #define WARN(at, path, ...) diag(c, at, 0, path, __VA_ARGS__)
 
@@ -491,7 +491,7 @@ static const char *const DECIS[] = { NULL, "aggregate", "away_goals", "extra_tim
 static const char *const TAGS[] = { NULL, "champion", "promoted", "relegated", "playoff", "playout", "continental", "qualified" };
 static const char *const ZONES[] = { NULL, "CL", "EL", "CONF", "PROM", "P.OFF", "P.OUT", "RETR" };
 static const char *const HOMES[] = { "draw", "better_placed", "better_placed_second_leg", "neutral", "fixed" };
-static const char *const PAIRS[] = { "draw", "seeded", "bracket", "fixed", "by_place" };
+static const char *const PAIRS[] = { "draw", "seeded", "bracket", "fixed", "by_place", "urn", "urn_pairs" };
 static const char *const MODES[] = { "career", "season", "preset", "friendly" };
 
 #define NE(a) ((int)(sizeof(a) / sizeof(a[0])))
@@ -892,6 +892,7 @@ static void do_comp(C *c, int ci, StageInfo *all_st, int *nall)
                     h = enum_member(c, need(c, r, "home", J_STR, rp), "home", rp, HOMES, NE(HOMES));
                     pr = enum_member(c, need(c, r, "pairing", J_STR, rp), "pairing", rp, PAIRS, NE(PAIRS));
                     if (pr == 4) need_minor(c, json_get(r, "pairing"), rp, 3, "the pairing \"by_place\"");
+                    if (pr == 5 || pr == 6) ERR(r, rp, "the pairing \"%s\" goes on a pool file's 'up.cross' (swc/1.4)", PAIRS[pr]);
                     dec = json_get(r, "decider");
                     if (!dec) ERR(r, rp, "missing 'decider': every round says how a level tie ends (e.g. [\"aggregate\", \"extra_time\", \"penalties\"])");
                     else if (dec->type != J_ARR) ERR(dec, rp, "'decider' must be an array");
@@ -1081,10 +1082,12 @@ void swcc_set_loader(swcc_loader f) { g_loader = f; }
 
 static const char *jstr(JNode *o, const char *k) { JNode *v = json_get(o, k); return v && v->type == J_STR ? v->str : NULL; }
 
-/* v1.3: a light pool's play-off to its national play-off (a division's 'playoff', else the pool's 'up.playoff'): the
-   library's shapes only (rules sr_lp_regional): "table#N" and no rounds (that place goes straight); "table#N-N+3" in two
-   rounds (2 ties by_place, then the final); "table#N+1-N+2" in one tie by_place, then a round of one tie that 'joins'
-   "table#N". One match a tie. 'skip_if' (the stage, or a round's own) and 'direct_if' {points_gap_ge}. */
+/* v1.4: a light pool's play-off to its cross play-off (a division's 'playoff', else the pool's 'up.playoff'): the
+   library's shapes only (rules sr_lp_regional): {"direct": "table#N"} (that place goes straight, no rounds);
+   "table#N-N+3" in two rounds (2 ties by_place, then the final); "table#N+1-N+2" in one tie by_place, then a round of
+   one tie that 'joins' "table#N". One match a tie; 'home' and 'decider' on every round (the v1 "better_placed" decider:
+   a draw sends the better placed through; all rounds or none). 'skip_if' (the stage, or a round's own) and
+   'direct_if' {points_gap_ge}: the first entrant that far ahead of the next goes straight. */
 static void gap_obj(C *c, JNode *o, const char *path)
 {
     long g = 0;
@@ -1105,23 +1108,39 @@ static int deciders_ok(C *c, JNode *r, const char *rp, int *better)
     return 1;
 }
 
+/* a "table#N" / "table#N-M" reference (places from the 2nd): 1 and a / b, else 0 */
+static int table_ref(const char *s, int *a, int *b)
+{
+    return !strncmp(s, "table#", 6) && positions(s + 6, a, b) && *a >= 2 && *a <= 127 && *b <= 127 && *b >= *a;
+}
+
 static void check_pool_playoff(C *c, JNode *po, const char *path, int size)
 {
-    JNode *rr, *r, *e, *o;
+    JNode *rr, *r, *e, *o, *dr = json_get(po, "direct");
     int a = 0, b = 0, ri = 0, shape_ok = 0, nb = -1;
     long ties[2] = { 0, 0 };
     int bypl[2] = { 0, 0 }, join[2] = { 0, 0 };
+    if (dr) {                                       /* the place goes straight */
+        if (dr->type != J_STR || !table_ref(dr->str, &a, &b) || a != b)
+            ERR(dr, path, "direct: one place, \"table#N\" (from the 2nd)");
+        else if (size && a > size) ERR(dr, path, "direct \"%s\": the division has %d clubs", dr->str, size);
+        if (json_get(po, "rounds")) ERR(po, path, "'direct' and 'rounds' together: a place goes straight or plays");
+        if (json_get(po, "entrants")) ERR(po, path, "'direct' and 'entrants' together: 'direct' names the place");
+        unknown_keys(c, po, path);
+        return;
+    }
     const char *ty = jstr(po, "type");
-    if (!ty || strcmp(ty, "playoff")) ERR(po, path, "a pool play-off is a stage with \"type\": \"playoff\"");
+    if (!ty || strcmp(ty, "playoff")) ERR(po, path, "a pool play-off is a stage with \"type\": \"playoff\" (or {\"direct\": \"table#N\"})");
     e = need(c, po, "entrants", J_STR, path);
-    if (e && (strncmp(e->str, "table#", 6) || !positions(e->str + 6, &a, &b) || a > 127 || b > 127 || a < 2 || b < a)) {
-        ERR(e, path, "entrants \"%s\": \"table#N\" or \"table#N-M\" (places from the 2nd)", e->str);
+    if (e && !table_ref(e->str, &a, &b)) {
+        ERR(e, path, "entrants \"%s\": \"table#N-M\" (places from the 2nd)", e->str);
         a = 0;
     }
     if (a && size && b > size) ERR(e, path, "entrants \"%s\": the division has %d clubs", e->str, size), a = 0;
     if ((o = opt(c, po, "skip_if", J_OBJ, path))) gap_obj(c, o, path);
     if ((o = opt(c, po, "direct_if", J_OBJ, path))) gap_obj(c, o, path);
-    rr = opt(c, po, "rounds", J_ARR, path);
+    rr = need(c, po, "rounds", J_ARR, path);
+    if (rr && !rr->n) ERR(rr, path, "no rounds: a place that goes straight is {\"direct\": \"table#N\"}");
     for (r = rr ? rr->child : NULL; r; r = r->next, ri++) {
         char rp[300];
         long legs = 1;
@@ -1130,6 +1149,7 @@ static void check_pool_playoff(C *c, JNode *po, const char *path, int size)
         pathf(rp, sizeof rp, "%s.rounds[%d]", path, ri);
         if (r->type != J_OBJ) { ERR(r, rp, "a round is an object"); continue; }
         if (ri < 2) int_in(c, need(c, r, "ties", J_NUM, rp), "ties", rp, 1, 2, &ties[ri]);
+        else json_get(r, "ties");
         int_in(c, need(c, r, "legs", J_NUM, rp), "legs", rp, 1, 1, &legs);
         enum_member(c, need(c, r, "home", J_STR, rp), "home", rp, HOMES, NE(HOMES));
         if (ri < 2) bypl[ri] = enum_member(c, need(c, r, "pairing", J_STR, rp), "pairing", rp, PAIRS, NE(PAIRS)) == 4;
@@ -1148,30 +1168,30 @@ static void check_pool_playoff(C *c, JNode *po, const char *path, int size)
         }
         unknown_keys(c, r, rp);
     }
-    if (a) {
+    if (a && rr && rr->n) {
         const int n = b - a + 1;
-        if (n == 1) shape_ok = ri == 0;                                                  /* direct */
-        else if (n == 4) shape_ok = ri == 2 && ties[0] == 2 && bypl[0] && !join[0] && ties[1] == 1 && !join[1];
+        if (n == 4) shape_ok = ri == 2 && ties[0] == 2 && bypl[0] && !join[0] && ties[1] == 1 && !join[1];
         else if (n == 2) shape_ok = ri == 2 && ties[0] == 1 && bypl[0] && !join[0] && ties[1] == 1 && join[1];   /* the ladder */
         if (!shape_ok)
-            ERR(po, path, "a light pool's play-off: \"table#N\" with no rounds, \"table#N-N+3\" in two rounds (2 ties "
+            ERR(po, path, "a light pool's play-off: {\"direct\": \"table#N\"}, \"table#N-N+3\" in two rounds (2 ties "
                 "by_place, the final), or \"table#N+1-N+2\" (1 tie by_place) then one tie that joins \"table#N\"");
     }
     unknown_keys(c, po, path);
 }
 
-/* v1.3: a pool's national play-off ('up.national'): urns of divisions; round 1 drawn within each urn, round 2 by the
-   urn pairs, each kind of pair as long as it can be used, in order (rules sr_lp_national). nd: the divisions. */
-static void check_national(C *c, JNode *na, const char *const *dname, int nd)
+/* v1.4: a play-off across the pool's divisions ('up.cross'; Italy's national play-off): urns of divisions, one entrant
+   each; round 1 pairing "urn" (drawn within each urn), round 2 pairing "urn_pairs" (the winners by the named urn
+   pairs, each kind of pair as long as it can be used, in order: rules sr_lp_cross); 'up' = round 2's winners. */
+static void check_cross(C *c, JNode *na, const char *const *dname, int nd)
 {
-    JNode *ur = need(c, na, "urns", J_ARR, "up.national"), *m, *rr, *r;
+    JNode *ur = need(c, na, "urns", J_ARR, "up.cross"), *m, *rr, *r;
     const char *uid[64];
     int nu = 0, cnt[64] = { 0 }, seen[256] = { 0 }, ri = 0;
-    long ties[2] = { 0, 0 };
+    long ties[2] = { 0, 0 }, nup = 0;
     for (m = ur ? ur->child : NULL; m && nu < 64; m = m->next, nu++) {
         char up_[120];
         JNode *id, *dv, *d;
-        pathf(up_, sizeof up_, "up.national.urns[%d]", nu);
+        pathf(up_, sizeof up_, "up.cross.urns[%d]", nu);
         uid[nu] = "";
         if (m->type != J_OBJ) { ERR(m, up_, "an urn is {\"id\", \"divisions\"}"); continue; }
         if ((id = need(c, m, "id", J_STR, up_))) {
@@ -1186,27 +1206,27 @@ static void check_national(C *c, JNode *na, const char *const *dname, int nd)
                 if (seen[j]++) ERR(d, up_, "division \"%s\" in two urns", d->str);
                 cnt[nu]++;
             }
-        if (cnt[nu] % 2) ERR(m, up_, "urn \"%s\": %d divisions, round 1 draws them in pairs", uid[nu], cnt[nu]);
+        if (cnt[nu] % 2) ERR(m, up_, "urn \"%s\": %d divisions, the pairing \"urn\" draws them in pairs", uid[nu], cnt[nu]);
         unknown_keys(c, m, up_);
     }
-    for (int j = 0; j < nd; j++) if (!seen[j]) ERR(ur, "up.national", "division \"%s\" is in no urn", dname[j]);
-    rr = need(c, na, "rounds", J_ARR, "up.national");
-    if (rr && rr->n != 2) ERR(rr, "up.national", "the national play-off has 2 rounds (within the urns, then by urn pairs)");
+    for (int j = 0; j < nd; j++) if (!seen[j]) ERR(ur, "up.cross", "division \"%s\" is in no urn", dname[j]);
+    rr = need(c, na, "rounds", J_ARR, "up.cross");
+    if (rr && rr->n != 2) ERR(rr, "up.cross", "the cross play-off has 2 rounds: pairing \"urn\", then \"urn_pairs\"");
     for (r = rr ? rr->child : NULL; r && ri < 2; r = r->next, ri++) {
         char rp[120];
         long legs = 1;
         int better = 0, pr;
         JNode *ps;
-        pathf(rp, sizeof rp, "up.national.rounds[%d]", ri);
+        pathf(rp, sizeof rp, "up.cross.rounds[%d]", ri);
         if (r->type != J_OBJ) { ERR(r, rp, "a round is an object"); continue; }
         int_in(c, need(c, r, "ties", J_NUM, rp), "ties", rp, 1, 1024, &ties[ri]);
         int_in(c, need(c, r, "legs", J_NUM, rp), "legs", rp, 1, 2, &legs);
         enum_member(c, need(c, r, "home", J_STR, rp), "home", rp, HOMES, NE(HOMES));
         pr = enum_member(c, need(c, r, "pairing", J_STR, rp), "pairing", rp, PAIRS, NE(PAIRS));
-        if (pr != 0) ERR(r, rp, "the national play-off's pairing is \"draw\" (round 1 within the urns, round 2 by 'urn_pairs')");
+        if (pr >= 0 && pr != 5 + ri) ERR(r, rp, "round %d of 'up.cross' has the pairing \"%s\"", ri + 1, PAIRS[5 + ri]);
         deciders_ok(c, r, rp, &better);
         ps = ri == 1 ? need(c, r, "urn_pairs", J_ARR, rp) : NULL;
-        if (ri == 1 && ps) {                    /* the winners per urn consumed as the library does */
+        if (ri == 1 && ps) {                    /* the winners per urn used as the library uses them */
             int left[64], made = 0;
             JNode *pp;
             for (int u = 0; u < nu; u++) left[u] = cnt[u] / 2;
@@ -1224,19 +1244,25 @@ static void check_national(C *c, JNode *na, const char *const *dname, int nd)
         }
         unknown_keys(c, r, rp);
     }
-    if (ties[0] && ties[0] * 2 != nd) ERR(rr, "up.national", "round 1: %ld ties for %d divisions (one entrant each)", ties[0], nd);
-    unknown_keys(c, na, "up.national");
+    if (ties[0] && ties[0] * 2 != nd) ERR(rr, "up.cross", "round 1: %ld ties x 2 != %d divisions (one entrant each)", ties[0], nd);
+    if (ties[0] && ties[1] && ties[1] * 2 != ties[0]) ERR(rr, "up.cross", "round 2: %ld ties x 2 != round 1's %ld winners", ties[1], ties[0]);
+    if (int_in(c, need(c, na, "up", J_NUM, "up.cross"), "up", "up.cross", 1, 128, &nup) && ties[1] && nup != ties[1])
+        ERR(json_get(na, "up"), "up.cross", "up %ld: the last round's winners are %ld", nup, ties[1]);
+    unknown_keys(c, na, "up.cross");
 }
 
 /* one pool file (root p) of the world's pool `pid`; ids: the pool clubs' ids seen so far (all pools) */
 static void check_pool_file(C *c, JNode *p, const char *pid, const char ***ids, int *nids)
 {
     JNode *v, *divs, *cls, *up, *m, *dpo[256] = { 0 };
-    int nd = 0, i, j, cnt[256] = { 0 }, size[256] = { 0 };
+    int pmin = 3, nd = 0, i, j, cnt[256] = { 0 }, size[256] = { 0 };
     const char *dname[256];
     char path[160];
     if (p->type != J_OBJ) { ERR(p, "", "a pool file is a JSON object"); return; }
-    if ((v = need(c, p, "schema", J_STR, "")) && strcmp(v->str, "swc/1.3")) ERR(v, "", "a pool file says \"schema\": \"swc/1.3\"");
+    if ((v = need(c, p, "schema", J_STR, ""))) {
+        if (!strcmp(v->str, "swc/1.4")) pmin = 4;
+        else if (strcmp(v->str, "swc/1.3")) ERR(v, "", "a pool file says \"schema\": \"swc/1.3\" or \"swc/1.4\"");
+    }
     if ((v = need(c, p, "id", J_STR, "")) && strcmp(v->str, pid)) ERR(v, "", "pool file id \"%s\", the world names it \"%s\"", v->str, pid);
     if ((v = need(c, p, "country", J_STR, "")) && (!c->countries || !json_get(c->countries, v->str)))
         ERR(v, "", "country \"%s\" is not in the world's 'countries'", v->str);
@@ -1262,8 +1288,9 @@ static void check_pool_file(C *c, JNode *p, const char *pid, const char ***ids, 
                 unknown_keys(c, nm, path);
             }
             if (int_in(c, need(c, m, "size", J_NUM, path), "size", path, 2, c->max_teams, &sz)) size[nd] = (int)sz;
-            if ((dpo[nd] = opt(c, m, "playoff", J_OBJ, path))) {    /* v1.3: its own regional play-off */
+            if ((dpo[nd] = opt(c, m, "playoff", J_OBJ, path))) {    /* v1.4: its own play-off (or 'direct') */
                 char pp[200];
+                if (pmin < 4) ERR(dpo[nd], path, "a division's 'playoff' is swc/1.4: this pool file says \"swc/1.3\"");
                 pathf(pp, sizeof pp, "%s.playoff", path);
                 check_pool_playoff(c, dpo[nd], pp, size[nd]);
             }
@@ -1318,8 +1345,10 @@ static void check_pool_file(C *c, JNode *p, const char *pid, const char ***ids, 
     }
     if ((up = need(c, p, "up", J_OBJ, ""))) {
         long ch = 0;
-        JNode *po = opt(c, up, "playoff", J_OBJ, "up"), *na = opt(c, up, "national", J_OBJ, "up"), *ex = opt(c, up, "extra", J_OBJ, "up");
+        JNode *po = opt(c, up, "playoff", J_OBJ, "up"), *na = opt(c, up, "cross", J_OBJ, "up"), *ex = opt(c, up, "extra", J_OBJ, "up");
         int_in(c, need(c, up, "champion", J_NUM, "up"), "champion", "up", 0, 8, &ch);
+        if (na && pmin < 4) ERR(na, "up", "'up.cross' is swc/1.4: this pool file says \"swc/1.3\"");
+        if (ex && pmin < 4) ERR(ex, "up", "'up.extra' is swc/1.4: this pool file says \"swc/1.3\"");
         if (po && !na) {                                /* a playoff stage's shape: the engine reads it (S3) */
             const char *ty = jstr(po, "type");
             JNode *rr = json_get(po, "rounds");
@@ -1327,28 +1356,30 @@ static void check_pool_file(C *c, JNode *p, const char *pid, const char ***ids, 
             if (!rr || rr->type != J_ARR || !rr->n) ERR(po, "up.playoff", "up.playoff needs its 'rounds'");
         }
         if (!na)
-            for (j = 0; j < nd; j++) if (dpo[j]) ERR(dpo[j], dname[j], "a division's own 'playoff' goes with 'up.national'");
-        if (na) {                                       /* v1.3: a national play-off (Italy's Eccellenza) */
+            for (j = 0; j < nd; j++) if (dpo[j]) ERR(dpo[j], dname[j], "a division's own 'playoff' goes with 'up.cross'");
+        if (na) {                                       /* v1.4: a play-off across the divisions (Italy's national one) */
             int small = 0;
             for (j = 0; j < nd; j++) if (size[j] && (!small || size[j] < small)) small = size[j];
             if (po) check_pool_playoff(c, po, "up.playoff", small);
             for (j = 0; j < nd; j++)
-                if (!dpo[j] && !po) ERR(na, "up.national", "division \"%s\": no 'playoff' of its own and no 'up.playoff'", dname[j]);
-            if (ch != 1) ERR(up, "up", "with 'national': champion 1 (each division's champion up, its play-off to the national one)");
-            check_national(c, na, dname, nd);
+                if (!dpo[j] && !po) ERR(na, "up.cross", "division \"%s\": no 'playoff' of its own and no 'up.playoff'", dname[j]);
+            if (ch != 1) ERR(up, "up", "with 'cross': champion 1 (each division's champion up, its play-off to the cross one)");
+            check_cross(c, na, dname, nd);
         }
-        if (ex) {                                       /* v1.3: places by a declared rule (the cup's, Italy's 5d) */
+        if (ex) {                                       /* v1.4: places by a declared rule (the cup's: italy42 5d) */
             long k = 0;
-            JNode *ru = need(c, ex, "rule", J_STR, "up.extra"), *ov = opt(c, ex, "override", J_STR, "up.extra");
+            JNode *ru = need(c, ex, "rule", J_STR, "up.extra"), *ov = opt(c, ex, "override", J_ARR, "up.extra"), *o;
             if (ru && strcmp(ru->str, "strongest_not_up")) ERR(ru, "up.extra", "rule \"%s\": the only rule is \"strongest_not_up\"", ru->str);
             int_in(c, need(c, ex, "count", J_NUM, "up.extra"), "count", "up.extra", 1, 8, &k);
-            if (ov) {
-                JNode *q;
+            for (o = ov ? ov->child : NULL; o; o = o->next) {
+                JNode *q, *o2;
                 int found = 0;
-                for (q = cls ? cls->child : NULL; q; q = q->next) { const char *qi = jstr(q, "id"); found |= qi && !strcmp(qi, ov->str); }
-                if (!found) ERR(ov, "up.extra", "override \"%s\" is not a club of this pool", ov->str);
+                if (o->type != J_STR) { ERR(o, "up.extra", "override: a list of club ids"); continue; }
+                for (q = cls ? cls->child : NULL; q; q = q->next) { const char *qi = jstr(q, "id"); found |= qi && !strcmp(qi, o->str); }
+                if (!found) ERR(o, "up.extra", "override \"%s\" is not a club of this pool", o->str);
+                for (o2 = ov->child; o2 != o; o2 = o2->next) if (o2->type == J_STR && !strcmp(o2->str, o->str)) ERR(o, "up.extra", "override \"%s\" listed twice", o->str);
             }
-            if (!na) ERR(ex, "up.extra", "'extra' goes with 'national'");
+            if (!na) ERR(ex, "up.extra", "'extra' goes with 'cross'");
             unknown_keys(c, ex, "up.extra");
         }
         unknown_keys(c, up, "up");
@@ -1624,14 +1655,15 @@ int swcc_compile(const char *spec, size_t len, const char *name, const char *pro
         if (c->root->type != J_OBJ) ERR(c->root, "", "the spec is a JSON object");
         else {
             c->minor = SWC_MINOR;
-            c->schema = "swc/1.3";
+            c->schema = "swc/1.4";
             if ((v = need(c, c->root, "schema", J_STR, ""))) {
                 c->schema = v->str;
                 if (!strcmp(v->str, "swc/1") || !strcmp(v->str, "swc/1.1")) c->minor = 1;
                 else if (!strcmp(v->str, "swc/1.2")) c->minor = 2;
                 else if (!strcmp(v->str, "swc/1.3")) c->minor = 3;
+                else if (!strcmp(v->str, "swc/1.4")) c->minor = 4;
                 else
-                    ERR(v, "", "schema \"%s\": this compiler reads \"swc/1\" (= 1.1, the M1 schema), \"swc/1.1\", \"swc/1.2\" and \"swc/1.3\"", v->str);
+                    ERR(v, "", "schema \"%s\": this compiler reads \"swc/1\" (= 1.1, the M1 schema), \"swc/1.1\", \"swc/1.2\", \"swc/1.3\" and \"swc/1.4\"", v->str);
             }
             if ((v = need(c, c->root, "id", J_STR, "")) && !id_ok(v->str, NULL)) ERR(v, "", "world id \"%s\": lower-case words joined by '.', '-' or '_'", v->str);
             int_in(c, opt(c, c->root, "host_world", J_NUM, ""), "host_world", "", 0, 65535, &world);

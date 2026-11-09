@@ -2,8 +2,8 @@
  "schema": "swc/1.3",
  "id": "test.pool-playoff-shape",
  "host_world": 9,
- "_note": "A national play-off pool, broken: a light pool's play-off: \"table#N\" with no rounds",
- "_expect": "a light pool's play-off: \"table#N\" with no rounds",
+ "_note": "A cross play-off pool (swc/1.4), broken: a light pool's play-off: {\"direct\": \"table#N\"}",
+ "_expect": "a light pool's play-off: {\"direct\": \"table#N\"}",
  "languages": [
   "it",
   "en",
