@@ -57,6 +57,20 @@ else
     diff "$OUT/k_mod.txt" "$OUT/k_ours.txt" | head -4
     exit 1
 fi
+# 42-s3shape: Serie B / C's play-offs as data (tests/rules/specs/ita_s3.spec: the Mod rule's cup place; ita_s3r: the
+# real C.U. 209/A rule, the finalist given) -- the codes gplay.c has from 4.2: kind | 40h, levels 6 / 7, entrant 9.
+if grep -q GP_CUPF "$MOD/tools/gplay.c"; then
+    $MC -DKO_S3=1 -DGPLAY_C="\"$MOD/tools/gplay.c\"" -c -o "$OUT/s3_gp.o" $T/knockouts_mod_gp.c
+    $C -DKO_S3=1 -o "$OUT/s3mod" $T/knockouts_mod.c "$OUT/kmod_dp.o" "$OUT/s3_gp.o"
+    for v in ita_s3 ita_s3r; do
+        KO_CUPF=1 "$OUT/s3mod" "$T/specs/$v.spec" "$N" > "$OUT/s3_mod.txt"
+        KO_CUPF=1 "$OUT/kours" "$T/specs/$v.spec" "$N" > "$OUT/s3_ours.txt"
+        cmp -s "$OUT/s3_mod.txt" "$OUT/s3_ours.txt" || { echo "FAIL: $v (Serie B / C play-offs as data)"; diff "$OUT/s3_mod.txt" "$OUT/s3_ours.txt" | head -4; exit 1; }
+    done
+    echo "PASS: Serie B / C play-offs as data (ita_s3, ita_s3r: the real cup rule), $N seasons each: every move and result the Mod's"
+else
+    echo "SKIP: Serie B / C play-offs as data (this Mod's gplay.c has no 4.2 s3shape codes)"
+fi
 PN=$((N / 10)); np=0; bad=""
 while read -r code shape; do
     "$OUT/kmod" "$T/specs/$code.spec" "$PN" "$shape" ko > "$OUT/p_mod.txt"

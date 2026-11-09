@@ -137,6 +137,7 @@ int main(int argc, char **argv)
         bt_place(it, t, n);
 #endif
         se.cup_winner = cup_winner(it, t, n);
+        se.cup_finalist = getenv("KO_CUPF") ? cup_finalist(it, t, n) : 0;
         st.t.nd = (uint8_t)ND;
         for (int d = 0; d < ND; d++) {
             st.t.n[d] = (uint8_t)n[d];

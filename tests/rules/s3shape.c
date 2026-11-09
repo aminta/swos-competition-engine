@@ -8,7 +8,8 @@
  * The real C.U. 209/A rule (cup_finalist known; sr_dplay has no such branch): forced cases against a hand-written
  * table (MC internal/handoff/mc-s3shape-answers.md (b)).
  *
- *   s3shape [SEASONS]      (default 100000) */
+ *   s3shape [SEASONS]      (default 100000)
+ *   s3shape -spec FILE R   the spec's bytes into FILE (R 1: the real rule) -- tests/rules/specs/ita_s3{,r}.spec */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -286,6 +287,12 @@ static int real_cases(void)
 
 int main(int argc, char **argv)
 {
+    if (argc > 3 && !strcmp(argv[1], "-spec")) {
+        FILE *f = fopen(argv[2], "wb");
+        build_spec(atoi(argv[3]));
+        if (!f || fwrite(SPEC, 1, SPEC_LEN, f) != SPEC_LEN || fclose(f)) return 2;
+        return 0;
+    }
     const unsigned N = argc > 1 ? (unsigned)atoi(argv[1]) : 100000;
     static struct trow t[16][32];
     int n[16];

@@ -148,6 +148,19 @@ static unsigned short cup_winner(unsigned it, struct trow t[16][32], const int n
     int d = 2 + (int)((h >> 4) % 3);
     return t[d][(h >> 8) % (unsigned)n[d]].team;
 }
+/* the cup's other finalist (KO_CUPF; 42-s3shape, the real C.U. 209/A rule): a club of Serie C's groups, not the
+ * winner, 0 when the winner is unknown or one season in five */
+static unsigned short cup_finalist(unsigned it, struct trow t[16][32], const int n[16])
+{
+    const unsigned short w = cup_winner(it, t, n);
+    unsigned h = it * 40503u + 7u;
+    h ^= h >> 13;
+    if (!w || h % 5 == 0 || ND < 5)
+        return 0;
+    int d = 2 + (int)((h >> 4) % 3), k = (int)((h >> 8) % (unsigned)n[d]);
+    if (t[d][k].team == w) k = (k + 1) % n[d];
+    return t[d][k].team;
+}
 
 static unsigned char spec[4096];
 static unsigned spec_size;              /* (its bytes: sr_league.spec_len) */

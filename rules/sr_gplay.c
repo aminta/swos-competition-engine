@@ -867,6 +867,9 @@ static void gp_season(sr_state *st, const sr_league *lg)
         s = r;
     }
     st->gp.wn_on = 0;
+    st->gp.scroll_from = 0;                     /* (the cup place's scroll: this season end's only -- a contest
+                                                   reads the places as they are) */
+    st->gp.lvl = 0;
     if (st->gp.ss_used && !st->gp.se->preview)
         st->gp.ssb->fresh = 0;                  /* (this league's stage tables used: next season's are new) */
 }
@@ -1010,7 +1013,7 @@ int32_t sr_group_shape_of(const uint8_t *s, sr_group_shape *o)
     if (!s) return 0;
     n = s[1]; nr = s[2]; r = ents_of(s) + 4 * n;
     if (s[0] != K_TITLE || nr < 2) return 0;
-    for (int i = 0; i < n; i++) if (s[6 + 4 * i] != 0 && s[6 + 4 * i] != 8) return 0;   /* ([div, place], a club: NZ) */
+    for (int i = 0; i < n; i++) if (ents_of(s)[4 * i] != 0 && ents_of(s)[4 * i] != 8) return 0;   /* ([div, place], a club: NZ) */
     x.g = 0; x.m = 0; x.meet = 0; x.nk = 0; x.q = 0;
     for (; k < nr && (r[1] & 0x80) && (r[1] & 0x7F); k++) {
         if (x.g && (r[0] != x.m || (r[1] & 0x7F) != x.meet)) return 0;

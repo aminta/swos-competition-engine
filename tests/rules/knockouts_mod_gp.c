@@ -46,7 +46,10 @@ void mod_stages(const unsigned short (*r)[32][6], const int *n, int nk, const un
         x->team = keep[i][0]; x->glob = keep[i][1]; x->won = 0; x->gf = 0; x->ga = 0; x->pts = keep[i][5];
     }
 }
-void mod_mgr(unsigned short team) { GP_IN.mgr = team; }   /* (the career club at the season end) */
+void mod_mgr(unsigned short team) { GP_IN.mgr = team; }
+#if KO_S3
+void mod_cup(unsigned short w, unsigned short f) { GP_CUPW = w; GP_CUPF = f; }   /* (4.2 s3shape: entrant type 9) */
+#endif   /* (the career club at the season end) */
 void mod_gp(const unsigned short (*rows)[32][6], const int *n, int nd, const u8 *sp, FILE *out);
 /* The season-end preview (GP_PRE, 4.0.5 rc19) over the same tables first: own = the career club's
    play-off (0xFF none); the SEASON WINNERS entries it appends (after an empty page here). */

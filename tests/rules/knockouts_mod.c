@@ -9,6 +9,7 @@
 void mod_dp(const unsigned short (*rows)[32][6], const int *n, unsigned short cupw, FILE *out);
 void mod_gp(const unsigned short (*rows)[32][6], const int *n, int nd, const unsigned char *sp, FILE *out);
 void mod_mgr(unsigned short team);
+void mod_cup(unsigned short w, unsigned short f);
 void mod_ko_all(FILE *out);
 void mod_pre(const unsigned short (*rows)[32][6], const int *n, int nd, const unsigned char *sp, int own, FILE *out);
 void mod_stages(const unsigned short (*r)[32][6], const int *n, int nk, const unsigned short (*keep)[6], int fresh);
@@ -57,6 +58,9 @@ int main(int argc, char **argv)
             const int d = (int)(it % ND);
             mod_mgr(ko_file ? ko_mgr : n[d] ? t[d][(it / ND) % n[d]].team : 0);
         }
+#if KO_S3                                       /* (4.2 s3shape: gplay.c's cup place, its winner and finalist) */
+        mod_cup(cup_winner(it, t, n), getenv("KO_CUPF") ? cup_finalist(it, t, n) : 0);
+#endif
         mod_gp((const unsigned short (*)[32][6])rows, n, ND, spec, stdout);
         mod_mgr(0);                             /* (the contests' checks below: as before) */
         if (argc > 4) mod_ko_all(stdout);
