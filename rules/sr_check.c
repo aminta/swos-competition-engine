@@ -43,8 +43,8 @@ int32_t sr_spec_check(const uint8_t *spec, uint32_t len, int32_t divisions, sr_c
         if (len - at < 6)
             return fail(err, SR_CHECK_TRUNCATED, pidx, at, "play-off header");
         const u8 *s = spec + at;
-        const int32_t kind = s[0], n = s[1], nr = s[2];
-        if (kind < 1 || kind > 8)
+        const int32_t kind = s[0] & 0x3F, n = s[1], nr = s[2], ext = s[0] & 0x40;
+        if (kind < 1 || kind > 8 || (s[0] & 0x80) || (ext && kind == 7))
             return fail(err, SR_CHECK_VALUE, pidx, at, "kind");
         if (kind == 7) {                        /* the promedio: matches, loser_div; no entrants, no rounds */
             if (n || nr || s[3] == 0 || s[4] == 0 || s[4] >= nd)
@@ -57,13 +57,40 @@ int32_t sr_spec_check(const uint8_t *spec, uint32_t len, int32_t divisions, sr_c
         if (nr < 1 || nr > 16)
             return fail(err, SR_CHECK_COUNT, pidx, at + 2, "rounds (1..16)");
         at += 6;
+        int32_t seeded[16], nbest = 0;
+        u8 best[8][3];
+        for (int32_t k = 0; k < 16; k++) seeded[k] = 0;
+        if (ext) {                              /* (42-s3shape: the extension block -- its length, then the ops) */
+            if (len - at < 1u || len - at - 1 < spec[at])
+                return fail(err, SR_CHECK_TRUNCATED, pidx, at, "extension block");
+            const uint32_t xe = at + 1 + spec[at];
+            for (uint32_t x = at + 1; x < xe;) {
+                const int32_t op = spec[x], sz = op == 1 ? 2 : op == 2 ? 1 : op == 3 ? 2 : op == 4 ? 4 : 0;
+                if (!sz || x + (uint32_t)sz > xe)
+                    return fail(err, SR_CHECK_VALUE, pidx, x, "extension op");
+                if (op == 1 && spec[x + 1] < 1)
+                    return fail(err, SR_CHECK_VALUE, pidx, x + 1, "direct gap (1..255)");
+                if ((op == 3 || op == 4) && spec[x + 1] >= nr)
+                    return fail(err, SR_CHECK_INDEX, pidx, x + 1, "extension round");
+                if (op == 3) seeded[spec[x + 1]] = 1;
+                if (op == 4) {
+                    if (nbest == 8 || spec[x + 2] >= spec[x + 3])
+                        return fail(err, SR_CHECK_VALUE, pidx, x + 2, "best-first members (i < j, at most 8)");
+                    best[nbest][0] = spec[x + 1]; best[nbest][1] = spec[x + 2]; best[nbest][2] = spec[x + 3]; nbest++;
+                }
+                x += (uint32_t)sz;
+            }
+            at = xe;
+        }
         if (len - at < 4u * (uint32_t)n)
             return fail(err, SR_CHECK_TRUNCATED, pidx, at, "entrants");
         for (int32_t i = 0; i < n; i++, at += 4) {
             const u8 *e = spec + at;
             const int32_t ty = e[0];
-            if (ty > 8)
+            if (ty > 9)
                 return fail(err, SR_CHECK_VALUE, pidx, at, "entrant type");
+            if (ty == 9 && (e[2] < 1 || e[2] > 4 || e[1] + e[2] > nd))
+                return fail(err, SR_CHECK_INDEX, pidx, at + 1, "cup place groups");
             if ((ty == 0 || ty == 3 || ty == 5 || ty == 6 || ty == 7) && e[1] >= nd)
                 return fail(err, SR_CHECK_INDEX, pidx, at + 1, "entrant division");
             if (ty == 0 && e[2] < 1)
@@ -84,8 +111,13 @@ int32_t sr_spec_check(const uint8_t *spec, uint32_t len, int32_t divisions, sr_c
                 return fail(err, SR_CHECK_VALUE, pidx, at + 1, group ? "meetings (0..8)" : "legs (1..3)");
             if (host > 3)
                 return fail(err, SR_CHECK_VALUE, pidx, at + 2, "host");
-            if (level > 5)
+            if (level > 7)
                 return fail(err, SR_CHECK_VALUE, pidx, at + 3, "level");
+            if (seeded[k] && (group || r[4]))
+                return fail(err, SR_CHECK_VALUE, pidx, at + 4, "a seeded round (no group, no pairing)");
+            for (int32_t b = 0; b < nbest; b++)
+                if (best[b][0] == k && (group || best[b][2] > members))
+                    return fail(err, SR_CHECK_INDEX, pidx, at, "best-first members");
             if (!group && (r[4] & 0x7F) > 2 * ties)
                 return fail(err, SR_CHECK_COUNT, pidx, at + 4, "pairing (at most the round's clubs)");
             at += 6;

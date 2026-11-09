@@ -89,7 +89,7 @@ int main(int argc, char **argv)
         if (s[0] != 7) {
             const struct { uint32_t at; uint8_t v; int code; } T[] = {
                 { 0, 9, SR_CHECK_VALUE },  { 1, 65, SR_CHECK_COUNT }, { 2, 0, SR_CHECK_COUNT },
-                { 6, 9, SR_CHECK_VALUE },
+                { 6, 10, SR_CHECK_VALUE },     /* (entrant type: 9 is the cup place, 42-s3shape) */
             };
             for (unsigned i = 0; i < sizeof T / sizeof T[0]; i++) {
                 memcpy(m, s, len);
@@ -98,12 +98,12 @@ int main(int argc, char **argv)
                 if (r != T[i].code) { printf("FAIL: %s byte %u = %u: code %d, not %d\n", argv[a], T[i].at, T[i].v, r, T[i].code); bad++; }
                 faults++;
             }
-            {   /* the first round: 65 ties / 33 group members; legs 4; host 4; level 6; a member past the entrants */
+            {   /* the first round: 65 ties / 33 group members; legs 4; host 4; level 8 (6, 7: 42-s3shape); a member past the entrants */
                 const uint32_t r0 = 6 + 4u * s[1];
                 const int grp = s[r0 + 1] & 0x80;
                 const struct { uint32_t at; uint8_t v; int code; } R[] = {
                     { r0, (uint8_t)(grp ? 33 : 65), SR_CHECK_COUNT }, { r0 + 1, (uint8_t)(grp ? 0x89 : 4), SR_CHECK_VALUE },
-                    { r0 + 2, 4, SR_CHECK_VALUE }, { r0 + 3, 6, SR_CHECK_VALUE }, { r0 + 6, (uint8_t)s[1], SR_CHECK_INDEX },
+                    { r0 + 2, 4, SR_CHECK_VALUE }, { r0 + 3, 8, SR_CHECK_VALUE }, { r0 + 6, (uint8_t)s[1], SR_CHECK_INDEX },
                 };
                 for (unsigned i = 0; i < sizeof R / sizeof R[0]; i++) {
                     memcpy(m, s, len);

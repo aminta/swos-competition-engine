@@ -24,7 +24,16 @@ typedef uint32_t u32;
 
 enum { GT = SR_CLUBS, GD = SR_DIVS, GN = 64, RESERVE = 0xFE, BEST_LOSER = 0x3F };
 enum { HOST_LISTED, HOST_BETTER, HOST_DRAWN, HOST_NEUTRAL, HOST_SKIP_SAME = 0x80 };
-enum { LV_BETTER, LV_ET_PENS, LV_ET_BETTER, LV_PENS, LV_AWAY_PENS, LV_AWAY_BETTER };
+enum { LV_BETTER, LV_ET_PENS, LV_ET_BETTER, LV_PENS, LV_AWAY_PENS, LV_AWAY_BETTER,
+       LV_BETTER_PTS, LV_SECOND };      /* (42-s3shape: the better placed unless level on points, then e.t. + penalties;
+                                           the listed second -- a seeded round's seed) */
+enum { PO_EXT = 0x40 };                 /* (42-s3shape: kind | 0x40 -- an extension block after the header: its length,
+                                           then ops: 1 g direct (entrant 0 wins if g+ points ahead of entrant 1), 2 a
+                                           level of groups' ranking, 3 k round k seeded, 4 k i j round k: the best of
+                                           members i .. j-1 first) */
+enum { E_DIRECT = 1, E_LEVEL, E_SEEDED, E_BEST };
+static const u8 *ents_of(const u8 *s) { return s + 6 + (s[0] & PO_EXT ? 1 + s[6] : 0); }
+#define FORCE(st) ((st)->gp.se ? (st)->gp.se->force : 0)
 enum { K_TITLE = SR_KIND_TITLE, K_CONT = SR_KIND_CONTINENTAL, K_PROM = SR_KIND_PROMEDIO, K_STAGE = SR_KIND_STAGE };
 enum { GS = 2, SS_BASE = 4, SS_N = SR_STAGE_TABLES };
 enum { PO_SUPER = 4, PO_SKIP2 = 0x80 };    /* (a play-off's flags: the next season's supercup, not played at the
@@ -56,8 +65,24 @@ static u32 gp_below(sr_state *st, u32 n)
 static const sr_row *gp_row(const sr_state *st, int c) { return &st->t.t[DV(c)][PL(c)]; }
 
 /* spec flag 2 'host_by_record' (st->gp.by_rec): in one division the better record */
+static u8 gp_lot(const sr_state *st, int c)
+{
+    const u16 g = gp_row(st, c)->glob;
+    const sr_force *f = FORCE(st);
+    return f && f->lot ? f->lot(f->ctx, g) : (u8)((g * 2654435761u + st->gp.lot0) >> 24);
+}
+
 static int gp_better(const sr_state *st, int a, int b)     /* the higher tier, then the better place */
 {
+    if (DV(a) != DV(b) && st->gp.lvl) {     /* (a level of groups: the place, then points, wins, goals, the lot --
+                                               dplay.c dp_better) */
+        const sr_row *x = gp_row(st, a), *y = gp_row(st, b);
+        if (PL(a) != PL(b)) return PL(a) < PL(b);
+        if (x->pts != y->pts) return x->pts > y->pts;
+        if (x->won != y->won) return x->won > y->won;
+        if (x->gf != y->gf) return x->gf > y->gf;
+        return gp_lot(st, a) < gp_lot(st, b);
+    }
     if (DV(a) != DV(b)) return DV(a) < DV(b);
     if (st->gp.by_rec) {                /* (points, wins, goal difference, goals; then the place) */
         const sr_row *x = gp_row(st, a), *y = gp_row(st, b);
@@ -83,6 +108,7 @@ static u32 gp_str2(const sr_state *st, int c, int home)    /* strength: the plac
 static int gp_tie(sr_state *st, int a, int b, int legs, int host, int level)
 {
     int h = a, o = b, w;
+    const sr_force *f = FORCE(st);
     if (host == HOST_BETTER || host == HOST_NEUTRAL) {      /* the better placed hosts the single match / return */
         if (gp_better(st, b, a)) { h = b; o = a; }
         else { h = a; o = b; }
@@ -90,10 +116,16 @@ static int gp_tie(sr_state *st, int a, int b, int legs, int host, int level)
     } else if (host == HOST_DRAWN && gp_below(st, 2)) { h = b; o = a; }
     /* the club with home advantage: a single match's host, the return leg's home club */
     int adv = (legs == 1) ? (host == HOST_NEUTRAL ? -1 : h) : o;
+    if (f && f->win) {                      /* (a test: the winner forced) */
+        const int x = adv == o ? o : h, y = x == h ? o : h;
+        return f->win(f->ctx, gp_row(st, x)->glob, gp_row(st, y)->glob, legs) == gp_row(st, y)->glob ? y : x;
+    }
     u32 sh = gp_str2(st, h, adv == h), so = gp_str2(st, o, adv == o);
     if (gp_below(st, 100) < (legs == 1 ? 22u : 12u)) {      /* level after the regulation time */
         int bp = gp_better(st, h, o) ? h : o;
         if (level == LV_BETTER || level == LV_ET_BETTER || level == LV_AWAY_BETTER) return bp;
+        if (level == LV_SECOND) return b;
+        if (level == LV_BETTER_PTS && gp_row(st, h)->pts != gp_row(st, o)->pts) return bp;
         u32 x = gp_str2(st, h, 0), y = gp_str2(st, o, 0);     /* e.t. + penalties: close to a coin toss */
         sh = 2 * x + y; so = x + 2 * y;
     }
@@ -110,6 +142,22 @@ static int gp_series(sr_state *st, int a, int b, int level)    /* best of three:
 }
 
 static void gp_move(sr_state *st, int c, int delta) { add_move(st, gp_row(st, c)->glob, delta); }
+
+/* a draw: c[0 .. n) shuffled (a test: in the forced order) */
+static void draw(sr_state *st, int *c, int n)
+{
+    const sr_force *f = FORCE(st);
+    if (f && f->draw && n <= GN) {
+        u16 g[GN];
+        int tmp[GN];
+        for (int i = 0; i < n; i++) g[i] = gp_row(st, c[i])->glob, tmp[i] = c[i];
+        f->draw(f->ctx, n, g);
+        for (int i = 0; i < n; i++)
+            for (int j = 0; j < n; j++) if (tmp[j] >= 0 && gp_row(st, tmp[j])->glob == g[i]) { c[i] = tmp[j]; tmp[j] = -1; break; }
+        return;
+    }
+    for (int i = n - 1; i > 0; i--) { int j = (int)gp_below(st, (u32)(i + 1)), x = c[i]; c[i] = c[j]; c[j] = x; }
+}
 
 /* A tie the career club played (the caller's): its two clubs and its winner (team numbers) --
  * the Mod's GP_IN.pl_w; applied after the tie is simulated, so the random numbers drawn are the
@@ -338,9 +386,52 @@ static void pot_perm(sr_state *st, const u8 *s, int *pm)
     int n = s[1], h = 0;
     for (int i = 0; i < n; i++) pm[i] = i;
     if (!(s[5] & 8)) return;
-    const u8 *r = s + 6 + 4 * n;
+    const u8 *r = ents_of(s) + 4 * n;
     for (int k = 0; k < s[2] && (r[1] & 0x80); k++) { h++; r += 6 + 2 * r[0]; }
     for (int i = n - 1; i > h; i--) { int j = h + (int)gp_below(st, (u32)(i - h + 1)), x = pm[i]; pm[i] = pm[j]; pm[j] = x; }
+}
+
+/* 42-s3shape: the Coppa Italia Serie C's play-off place (entrant type 9: e[1] the first group's division, e[2] the
+ * groups, e[3] the play-out gap | 0x80 the real rule when the finalist is known). A winner in the play-out places
+ * (n-3 / n-2 always, n-5 / n-4 when their tie is under the gap apart) or relegated is precluded, as one in 1st-3rd.
+ * The Mod 4.1's (dplay.c 353984f): the winner from 11th down unless precluded, else the 11th of its group; unknown:
+ * the best 11th of the groups. The real rule (FIGC C.U. 209/A, NOIF art. 49 II-III; MC 09/11): a precluded winner's
+ * place to the other finalist (the same preclusions); both precluded, the 4th of the winner's group; the club taking
+ * it from 4th-10th leaves its group's play-off and that group scrolls (the places below move up one, the 11th
+ * comes in): st->gp.scroll_div / scroll_from. */
+static int cup_out(const sr_state *st, int d, int k, int gap)  /* place k (from 0) precluded */
+{
+    const sr_row *t = st->t.t[d];
+    const int n = st->t.n[d];
+    if (k <= 2) return 1;
+    if (n < 6 || k < n - 5) return 0;
+    if (k == n - 5) return t[n - 5].pts - t[n - 2].pts < gap;
+    if (k == n - 4) return t[n - 4].pts - t[n - 3].pts < gap;
+    return 1;
+}
+static int cup_find(const sr_state *st, int d0, int ng, u16 team, int *d, int *k)
+{
+    for (*d = d0; team && *d < d0 + ng && *d < st->t.nd; (*d)++)
+        for (*k = 0; *k < st->t.n[*d]; (*k)++) if (st->t.t[*d][*k].team == team) return 1;
+    return 0;
+}
+static int cup_code(sr_state *st, const u8 *e)
+{
+    const int d0 = e[1], ng = e[2], gap = e[3] & 0x7F;
+    int dw, kw, df, kf, b = -1;
+    const int w = cup_find(st, d0, ng, st->gp.se->cup_winner, &dw, &kw);
+    if ((e[3] & 0x80) && st->gp.se->cup_finalist && w) {
+        int d = -1, k = -1;
+        if (!cup_out(st, dw, kw, gap)) d = dw, k = kw;
+        else if (cup_find(st, d0, ng, st->gp.se->cup_finalist, &df, &kf) && !cup_out(st, df, kf, gap)) d = df, k = kf;
+        if (d < 0) { d = dw; k = 3; }       /* (both precluded: the 4th of the winner's group) */
+        if (k <= 9) { st->gp.scroll_div = d; st->gp.scroll_from = k + 1; }
+        return d * GT + k;
+    }
+    if (w) return dw * GT + (kw >= 10 && !cup_out(st, dw, kw, gap) ? kw : 10);
+    for (int d = d0; d < d0 + ng && d < st->t.nd; d++)
+        if (st->t.n[d] > 10 && (b < 0 || gp_better(st, d * GT + 10, b))) b = d * GT + 10;
+    return b;
 }
 
 /* A play-off's entrants -> clubs (division * GT + place), as gp_season resolves them; the
@@ -367,9 +458,12 @@ static int ent_code(sr_state *st, const sr_league *lg, const u8 *e, int prev_los
 static int resolve_entrants(sr_state *st, const sr_league *lg, const u8 *s, int prev_loser, int *club, int absent)
 {
     int n = s[1], ok = 1;
-    const u8 *e = s + 6;
+    const u8 *e = ents_of(s);
+    st->gp.scroll_from = 0;
+    for (int i = 0; i < n && i < GN; i++)   /* (the cup place first: its scroll moves the places) */
+        if (e[4 * i] == 9) club[i] = cup_code(st, e + 4 * i);
     for (int i = 0; i < n && i < GN; i++) {
-        club[i] = ent_code(st, lg, e + 4 * i, prev_loser, s[0]);
+        if (e[4 * i] != 9) club[i] = ent_code(st, lg, e + 4 * i, prev_loser, s[0] & 0x3F);
         if (club[i] < 0 && absent && e[4 * i] == 8) club[i] = ABSENT;
         else if (club[i] < 0) ok = 0;
     }
@@ -527,6 +621,8 @@ static int b_inelig(const sr_state *st, const sr_league *lg, int c)
 /* [div, place] -> its row, B teams passed over (gplay.c place_club) but in a play-out (kind 4) */
 static int place_code(const sr_state *st, const sr_league *lg, int d, int p, int kind)
 {
+    if (st->gp.scroll_from && d == st->gp.scroll_div && p >= st->gp.scroll_from)
+        p++;                                /* (the cup place's scroll) */
     if (d >= st->t.nd || d >= GD || p < 1 || p > st->t.n[d])
         return -1;
     if (kind == 4 || !lg || !lg->seconds)
@@ -590,9 +686,17 @@ static void gp_season(sr_state *st, const sr_league *lg)
                                                                                     : st->t.t[d][0].team);
     }
     for (int pidx = 0; s && *s; pidx++) {
-        int kind = s[0], n = s[1], nr = s[2], wdiv = s[3], ldiv = s[4];
-        const u8 *e = s + 6, *r = e + 4 * n;
+        int kind = s[0] & 0x3F, n = s[1], nr = s[2], wdiv = s[3], ldiv = s[4];
+        const u8 *e = ents_of(s), *r = e + 4 * n;
         st->gp.by_rec = s[5] & 2;
+        st->gp.lvl = st->gp.direct = 0; st->gp.seeded = 0;    /* (42-s3shape: its ops -- in the state, not on the
+                                                                    stack: the DOS build's frames) */
+        st->gp.xb = s + 7; st->gp.xe = s[0] & PO_EXT ? s + 7 + s[6] : st->gp.xb;
+        for (const u8 *x = st->gp.xb; x < st->gp.xe; x += x[0] == E_LEVEL ? 1 : x[0] == E_BEST ? 4 : 2) {
+            if (x[0] == E_DIRECT) st->gp.direct = x[1];
+            if (x[0] == E_LEVEL) st->gp.lvl = 1;
+            if (x[0] == E_SEEDED) st->gp.seeded |= 1u << (x[1] & 31);
+        }
         if (kind == K_PROM) {                   /* (no entrants, no rounds) */
             if (!st->gp.se->preview)            /* (the preview: no promedio -- its history is written) */
                 promedio(st, lg, 0, wdiv, ldiv);
@@ -610,6 +714,7 @@ static void gp_season(sr_state *st, const sr_league *lg)
         int W[GN], L[GN], nt = 0, last = -1, lastr = 0, nlast = 0, played_t2 = 0;
         int P[GN], np = 0, glast = -1, kog = 0, winners = s[5] >> 4 & 7 ? s[5] >> 4 & 7 : 1;
         /* (kog: a knockout round after a group -- its last tie decides: NZ's Grand Final, the Poule) */
+        st->gp.lot0 = 0x9E3779B9u * (u32)(pidx + 1);
         if (!resolve_entrants(st, lg, s, prev_loser, club, 1))
             ok = 0;
         {   /* each play-off's own random stream, from its entrants' rows (4.0.5 rc19: the preview at the
@@ -624,6 +729,11 @@ static void gp_season(sr_state *st, const sr_league *lg)
             pot_perm(st, s, pm);
             for (int i = 0; i < n && i < GN; i++) tmp[i] = club[pm[i]];
             for (int i = 0; i < n && i < GN; i++) club[i] = tmp[i];
+        }
+        if (st->gp.direct && ok && n >= 2 && (int)gp_row(st, club[0])->pts - (int)gp_row(st, club[1])->pts >= st->gp.direct) {
+            W[0] = club[0]; L[0] = club[1];     /* (42-s3shape: entrant 0 far enough ahead -- no round played) */
+            nt = 1; last = 0; lastr = 0; nlast = 1;
+            for (; nr; nr--) r += 6 + 2 * r[0];     /* (its rounds passed over) */
         }
         for (int k = 0; k < nr; k++) {
             int ties = r[0], legs = r[1], host = r[2] & 0x7F, skip = r[2] & HOST_SKIP_SAME, level = r[3];
@@ -661,9 +771,20 @@ static void gp_season(sr_state *st, const sr_league *lg)
                 r = m + 2 * ties;
                 continue;
             }
-            if (ok && (pairing & 0x80)) {   /* a draw: the first p members shuffled, paired */
+            for (const u8 *x = st->gp.xb; x < st->gp.xe && ok; x += x[0] == E_LEVEL ? 1 : x[0] == E_BEST ? 4 : 2)
+                if (x[0] == E_BEST && x[1] == k && x[3] <= 2 * ties) {  /* (42-s3shape: the best of i .. j-1 first) */
+                    int at = x[2];
+                    for (int i = x[2] + 1; i < x[3]; i++) if (gp_better(st, mem[i], mem[at])) at = i;
+                    for (int c = mem[at]; at > x[2]; at--) mem[at] = mem[at - 1], mem[at - 1] = c;
+                }
+            int tmp[2 * GN];
+            if (ok && (st->gp.seeded >> k & 1)) {      /* (42-s3shape: seeds mem[0 .. ties) v the others drawn, the seed second) */
+                draw(st, mem + ties, ties);
+                for (int i = 0; i < ties; i++) { tmp[2 * i] = mem[ties + i]; tmp[2 * i + 1] = mem[i]; }
+                for (int i = 0; i < 2 * ties; i++) mem[i] = tmp[i];
+            } else if (ok && (pairing & 0x80)) {   /* a draw: the first p members shuffled, paired */
                 int pn = (pairing & 0x7F) <= 2 * ties ? pairing & 0x7F : 2 * ties;
-                for (int i = pn - 1; i > 0; i--) { int j = (int)gp_below(st, (u32)(i + 1)), x = mem[i]; mem[i] = mem[j]; mem[j] = x; }
+                draw(st, mem, pn);
             } else if (ok && pairing) {     /* best v worst: sorted, then 1st v last, 2nd v second last ... */
                 int pn = pairing <= 2 * ties ? pairing : 2 * ties;
                 for (int i = 1; i < pn; i++) {
@@ -671,7 +792,7 @@ static void gp_season(sr_state *st, const sr_league *lg)
                     while (j > 0 && gp_better(st, x, mem[j - 1])) { mem[j] = mem[j - 1]; j--; }
                     mem[j] = x;
                 }
-                int tmp[2 * GN];
+                
                 for (int i = 0; i < pn / 2; i++) { tmp[2 * i] = mem[pn - 1 - i]; tmp[2 * i + 1] = mem[i]; }
                 for (int i = 0; i < pn; i++) mem[i] = tmp[i];
             }
@@ -782,7 +903,7 @@ const uint8_t *sr_spec_at(const sr_league *lg, int32_t pidx)
         return 0;
     const u8 *s = lg->spec;
     for (int32_t i = 0; i < pidx && *s; i++) {
-        const u8 *r = s + 6 + 4 * s[1];
+        const u8 *r = ents_of(s) + 4 * s[1];
         if (s[0] != K_PROM)
             for (int k = 0; k < s[2]; k++) r += 6 + 2 * r[0];
         s = r;
@@ -841,7 +962,7 @@ int32_t sr_contest_entrants(sr_state *st, const sr_league *lg, const sr_season *
     st->gp.ssb->fresh = fresh;                  /* (read only: the season end uses them again) */
     if (!ok)
         return 0;
-    const u8 *e = s + 6;
+    const u8 *e = ents_of(s);
     for (int32_t i = 0; i < s[1]; i++) {
         team[i] = gp_row(st, club[i])->team;
         glob[i] = gp_row(st, club[i])->glob;
@@ -865,7 +986,7 @@ int32_t sr_contest_entrants(sr_state *st, const sr_league *lg, const sr_season *
 static int gp_playable(const u8 *s)
 {
     int n = s[1], nr = s[2], nt = 0;
-    const u8 *e = s + 6, *r = e + 4 * n;
+    const u8 *e = ents_of(s), *r = e + 4 * n;
     if ((s[0] < 1 || (s[0] > 6 && s[0] != K_STAGE) || s[0] == 2) || n > 24 || nr > 8 || nr < 1)
         return 0;
     if (s[5] & PO_SUPER) return 0;      /* (played as the next season's national supercup) */
@@ -887,7 +1008,7 @@ int32_t sr_group_shape_of(const uint8_t *s, sr_group_shape *o)
     int n, nr, k = 0, ent = 0;
     const u8 *r;
     if (!s) return 0;
-    n = s[1]; nr = s[2]; r = s + 6 + 4 * n;
+    n = s[1]; nr = s[2]; r = ents_of(s) + 4 * n;
     if (s[0] != K_TITLE || nr < 2) return 0;
     for (int i = 0; i < n; i++) if (s[6 + 4 * i] != 0 && s[6 + 4 * i] != 8) return 0;   /* ([div, place], a club: NZ) */
     x.g = 0; x.m = 0; x.meet = 0; x.nk = 0; x.q = 0;
@@ -930,7 +1051,7 @@ int32_t sr_club_playoff(sr_state *st, const sr_league *lg, const sr_season *se, 
     const u8 fresh = st->gp.ssb->fresh;
     int32_t found = -1;
     for (int32_t pidx = 0; found < 0; pidx++) {
-        const u8 *s = sr_spec_at(lg, pidx), *e = s ? s + 6 : 0;
+        const u8 *s = sr_spec_at(lg, pidx), *e = s ? ents_of(s) : 0;
         if (!s)
             break;
         const int t2 = sr_group_shape_of(s, 0);
@@ -939,7 +1060,7 @@ int32_t sr_club_playoff(sr_state *st, const sr_league *lg, const sr_season *se, 
         int in = 0, ok = 1, no = 0;
         st->gp.by_rec = s[5] & 2;
         for (int i = 0; i < s[1]; i++) {
-            const int c = ent_code(st, lg, e + 4 * i, -1, s[0]);
+            const int c = ent_code(st, lg, e + 4 * i, -1, s[0] & 0x3F);
             if (c == d * GT + m) in = 1;
         }
         if (!in)

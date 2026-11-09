@@ -124,6 +124,17 @@ typedef struct {
     void    (*log)(void *ctx, const char *fmt, ...);
 } sr_host;
 
+/* Tests only (NULL in a game): every tie's winner, every draw's order and every lot forced the same way in both
+ * the Italian rules (sr_dplay) and the knockouts (sr_gplay), for the structural differential of 42-s3shape. */
+typedef struct {
+    void     *ctx;
+    /* a tie's winner, one of the two: home = the club with home advantage (a single match's host, the return
+     * leg's home club), legs 1..3 */
+    uint16_t (*win)(void *ctx, uint16_t home, uint16_t away, int32_t legs);
+    void     (*draw)(void *ctx, int32_t n, uint16_t *glob);        /* a draw: glob[0 .. n) put in its order */
+    uint8_t  (*lot)(void *ctx, uint16_t glob);                     /* a club's lot (the last tie-break) */
+} sr_force;
+
 /* The season: what the career club played itself (0: simulated) and the results the rules use. */
 typedef struct {
     uint16_t po_win, out_win;       /* its Serie B play-off, play-out: the winner's team word */
@@ -155,6 +166,10 @@ typedef struct {
     uint8_t        b_in_ko;
     uint16_t       base;
     const sr_levels *levels;
+    /* 42-s3shape: the Coppa Italia Serie C's other finalist (team word, 0 unknown: the Mod 4.1's rule, the 11th) --
+     * with it a knockout's cup place (entrant type 9, flag 0x80) plays the real C.U. 209/A rule; and the test hook */
+    uint16_t       cup_finalist;
+    const sr_force *force;
 } sr_season;
 
 /* A result the knockouts decide beside the moves: a title's champion and runner-up, a continental
@@ -179,6 +194,7 @@ typedef struct sr_state {
         uint32_t rng;
         uint8_t  lot[5 * 24];
         uint8_t  test_held;
+        const sr_force *force;      /* (tests: sr_season.force) */
     } dp;
     /* gplay.c */
     struct {
@@ -194,6 +210,12 @@ typedef struct sr_state {
         sr_gs    ps[64], ms[SR_CLUBS];
         sr_promedio_club nx[SR_PROMEDIO_CLUBS];
         int32_t  ce_club[64], ce_n; /* the last contest's entrants (sr_contest_entrants) */
+        int32_t  lvl;               /* 42-s3shape: this play-off ranks a level of groups (place, then the record) */
+        int32_t  scroll_div, scroll_from;   /* its cup place's scroll: that division's places from it move up one */
+        uint32_t lot0;              /* its lots' seed */
+        const uint8_t *xb, *xe;     /* its extension ops */
+        uint32_t seeded;            /* its seeded rounds */
+        int32_t  direct;            /* its direct gap, 0 none */
     } gp;
     int8_t    want[SR_DIVS][SR_CLUBS];      /* each club's move, a level: -1 up, 1 down (sr_final_moves) */
     /* The B teams that leave the league this season end by the B-team rules (sr_b_teams, second_floor >= 1): their

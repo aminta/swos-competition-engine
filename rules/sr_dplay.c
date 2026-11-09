@@ -83,6 +83,9 @@ static int dp_tie(sr_state *st, int kind, int host, int other, int legs, int lev
 {
     u32 sh = dp_str2(st, host, 1), so = dp_str2(st, other, 0), w;
     (void)kind;
+    if (st->dp.force && st->dp.force->win)  /* (a test: the winner forced) */
+        return st->dp.force->win(st->dp.force->ctx, dp_row_of(st, host)->glob, dp_row_of(st, other)->glob, legs) ==
+               dp_row_of(st, other)->glob ? other : host;
     if (dp_below(st, 100) < (legs == 1 ? 22u : 12u)) {
         if (level >= 0) return level;
         u32 a = dp_str2(st, host, 0);   /* penalties: close to a coin toss */
@@ -113,6 +116,15 @@ static void sort_better(const sr_state *st, int *c, int n)
 
 static void shuffle(sr_state *st, int *c, int n)
 {
+    if (st->dp.force && st->dp.force->draw && n <= 8) {     /* (a test: the order forced) */
+        u16 g[8];
+        int tmp[8];
+        for (int i = 0; i < n; i++) g[i] = dp_row_of(st, c[i])->glob, tmp[i] = c[i];
+        st->dp.force->draw(st->dp.force->ctx, n, g);
+        for (int i = 0; i < n; i++)
+            for (int j = 0; j < n; j++) if (tmp[j] >= 0 && dp_row_of(st, tmp[j])->glob == g[i]) { c[i] = tmp[j]; tmp[j] = -1; break; }
+        return;
+    }
     for (int i = n - 1; i > 0; i--) { int j = (int)dp_below(st, (u32)(i + 1)), x = c[i]; c[i] = c[j]; c[j] = x; }
 }
 
@@ -233,7 +245,9 @@ static void dp_season(sr_state *st)
             h = h * 31 + r->pts + (r->gf << 8);
         }
     st->dp.rng = h;
-    for (int i = 0; i < NDIV * NT; i++) st->dp.lot[i] = (u8)dp_below(st, 256);
+    for (int i = 0; i < NDIV * NT; i++)
+        st->dp.lot[i] = st->dp.force && st->dp.force->lot && i % NT < st->dp.n[i / NT]
+                      ? st->dp.force->lot(st->dp.force->ctx, st->dp.t[i / NT][i % NT].glob) : (u8)dp_below(st, 256);
     serie_b(st);
     serie_c(st);
 }
@@ -251,6 +265,7 @@ int32_t sr_italy(sr_state *st, const sr_league *lg, const sr_season *se)
     st->dp.cpo_win = se->cpo_win;
     st->dp.cupw = se->cup_winner;
     st->dp.test_held = se->test_held;
+    st->dp.force = se->force;
     for (int32_t d = 0; d < NDIV; d++) {    /* Serie B, then Serie C's groups */
         const int32_t src = d == 0 ? lg->serie_b : lg->group_first + d - 1;
         st->dp.n[d] = 0;
