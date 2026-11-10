@@ -246,6 +246,26 @@ static void t_stage(void)
                     for (int j = 0; j < i; j++)
                         CHECK(grp[i] != grp[j] || assoc[i] != assoc[j], "group_draw: clubs %d and %d of one association in group %u", j, i, grp[i]);
         }
+        {                                                       /* swc/1.5: with protect pairs (chains too) */
+            uint8_t pr[2 * SR_PROT_PAIRS];
+            const int32_t np = (int32_t)(U8() % 9);
+            for (int i = 0; i < 2 * np; i++) pr[i] = assoc[U8() % (n > 0 ? n : 1)];
+            const clock_t t1 = clock();
+            const int32_t r2 = sr_group_draw_p(n, g, assoc, pr, np, seed, grp);
+            CHECK((double)(clock() - t1) / CLOCKS_PER_SEC < 1.0, "group_draw_p %d clubs in %d groups: slow", n, g);
+            CHECK(r2 == g || r2 == -2 || r2 == -3, "group_draw_p %d", r2);
+            if (r2 == g) {
+                ok[3]++;
+                for (int i = 0; i < n; i++)
+                    for (int j = 0; j < i; j++) {
+                        if (grp[i] != grp[j]) continue;
+                        CHECK(assoc[i] != assoc[j], "group_draw_p: one association twice in group %u", grp[i]);
+                        for (int k = 0; k < np; k++)
+                            CHECK(!((pr[2 * k] == assoc[i] && pr[2 * k + 1] == assoc[j]) || (pr[2 * k] == assoc[j] && pr[2 * k + 1] == assoc[i])),
+                                  "group_draw_p: protect pair %u-%u in group %u", pr[2 * k], pr[2 * k + 1], grp[i]);
+                    }
+            }
+        }
         return;
     }
     case 5: {                                   /* best placed */
@@ -273,6 +293,20 @@ static void t_stage(void)
         BYTES(assoc, sizeof assoc);
         const int32_t r = sr_ko_pairs(mode, n, U8() & 1 ? assoc : NULL, seed, out);
         CHECK(r >= -3, "ko_pairs %d", r);
+        {                                                       /* swc/1.5: two keys + protect pairs */
+            uint8_t av2[SR_STAGE_CLUBS], pr[2 * SR_PROT_PAIRS], o2[SR_STAGE_CLUBS];
+            const int32_t np = (int32_t)(U8() % 5);
+            BYTES(av2, sizeof av2);
+            for (int i = 0; i < 2 * np; i++) pr[i] = U8();
+            const int32_t r2 = sr_ko_pairs_x(mode, n, U8() & 1 ? av2 : NULL, assoc, pr, np, seed, o2);
+            CHECK(r2 >= -3, "ko_pairs_x %d", r2);
+            if (r2 > 0) {
+                uint64_t s2 = 0;
+                CHECK(r2 == n / 2 && n <= SR_STAGE_CLUBS, "ko_pairs_x %d of %d", r2, n);
+                for (int i = 0; i < n; i++) { CHECK(o2[i] < n && !(s2 >> o2[i] & 1), "ko_pairs_x out[%d] %u", i, o2[i]); s2 |= 1ull << o2[i]; }
+                for (int i = 0; i < n; i += 2) CHECK(assoc[o2[i]] != assoc[o2[i + 1]], "ko_pairs_x: one association paired");
+            }
+        }
         if (r < 0) return;
         ok[3]++;
         CHECK(r == n / 2 && n <= SR_STAGE_CLUBS, "ko_pairs %d of %d", r, n);

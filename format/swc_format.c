@@ -100,6 +100,9 @@ const char *swc_layout(uint32_t tag)
     case SWC_S_PRNT: return "22";
     case SWC_S_SECT: return "22";
     case SWC_S_SECF: return "22";
+    case SWC_S_GDRW: return "21122";
+    case SWC_S_PROT: return "22";
+    case SWC_S_KENT: return "221111";
     default:         return 0;
     }
 }
@@ -202,6 +205,9 @@ SwcStatus swc_spec_open(SwcSpec *s, const void *bin, uint32_t len, SwcArena *a)
     SEC(SWC_S_PRNT, SwcParent, prnt, nprnt, 0)
     SEC(SWC_S_SECT, SwcSecondTeams, sect, nsect, 0)
     SEC(SWC_S_SECF, SwcSecondTeams, secf, nsecf, 0)
+    SEC(SWC_S_GDRW, SwcDraw, gdrw, ngdrw, 0)
+    SEC(SWC_S_PROT, SwcProtect, prot, nprot, 0)
+    SEC(SWC_S_KENT, SwcKoEntrant, kent, nkent, 0)
 #undef SEC
     if (!s->nstrs || s->strs[s->nstrs - 1]) return SWC_E_TRUNC;       /* the string table ends with a NUL */
     for (i = 0; i < s->ncomps; i++) {                                  /* cross-references in range */
@@ -230,6 +236,11 @@ SwcStatus swc_spec_open(SwcSpec *s, const void *bin, uint32_t len, SwcArena *a)
         if (s->prnt[i].club >= s->nclubs || s->prnt[i].parent >= s->nclubs) return SWC_E_TRUNC;
     for (i = 0; i < s->nsect; i++)
         if (s->sect[i].country >= s->nstrs) return SWC_E_TRUNC;
+    for (i = 0; i < s->ngdrw; i++)
+        if (s->gdrw[i].stage >= s->nstages || (uint32_t)s->gdrw[i].protect + s->gdrw[i].nprotect > s->nprot)
+            return SWC_E_TRUNC;
+    for (i = 0; i < s->nkent; i++)
+        if (s->kent[i].stage >= s->nstages || s->kent[i].src >= s->nstages) return SWC_E_TRUNC;
     return SWC_OK;
 }
 

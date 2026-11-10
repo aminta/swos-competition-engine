@@ -1,0 +1,229 @@
+{
+ "schema": "swc/1.5",
+ "id": "test.v15-cup",
+ "host_world": 9,
+ "_note": "",
+ "languages": [
+  "it",
+  "en",
+  "fr",
+  "de"
+ ],
+ "countries": {
+  "ARM": {
+   "names": {
+    "it": "ARMENIA",
+    "en": "ARMENIA",
+    "fr": "ARMENIA",
+    "de": "ARMENIA"
+   }
+  },
+  "AZE": {
+   "names": {
+    "it": "AZERBAIGIAN",
+    "en": "AZERBAIGIAN",
+    "fr": "AZERBAIGIAN",
+    "de": "AZERBAIGIAN"
+   }
+  },
+  "BEL": {
+   "names": {
+    "it": "BELGIO",
+    "en": "BELGIO",
+    "fr": "BELGIO",
+    "de": "BELGIO"
+   }
+  },
+  "SCO": {
+   "names": {
+    "it": "SCOZIA",
+    "en": "SCOZIA",
+    "fr": "SCOZIA",
+    "de": "SCOZIA"
+   }
+  }
+ },
+ "clubs": [
+  {
+   "id": "club:arm.alfa",
+   "name": "ARM ALFA",
+   "country": "ARM",
+   "host": {
+    "file": 60,
+    "ordinal": 0
+   }
+  },
+  {
+   "id": "club:arm.beta",
+   "name": "ARM BETA",
+   "country": "ARM",
+   "host": {
+    "file": 60,
+    "ordinal": 1
+   }
+  },
+  {
+   "id": "club:aze.alfa",
+   "name": "AZE ALFA",
+   "country": "AZE",
+   "host": {
+    "file": 61,
+    "ordinal": 0
+   }
+  },
+  {
+   "id": "club:bel.alfa",
+   "name": "BEL ALFA",
+   "country": "BEL",
+   "host": {
+    "file": 62,
+    "ordinal": 0
+   }
+  },
+  {
+   "id": "club:sco.alfa",
+   "name": "SCO ALFA",
+   "country": "SCO",
+   "host": {
+    "file": 63,
+    "ordinal": 0
+   }
+  },
+  {
+   "id": "club:sco.beta",
+   "name": "SCO BETA",
+   "country": "SCO",
+   "host": {
+    "file": 63,
+    "ordinal": 1
+   }
+  },
+  {
+   "id": "club:sco.gamma",
+   "name": "SCO GAMMA",
+   "country": "SCO",
+   "host": {
+    "file": 63,
+    "ordinal": 2
+   }
+  },
+  {
+   "id": "club:sco.delta",
+   "name": "SCO DELTA",
+   "country": "SCO",
+   "host": {
+    "file": 63,
+    "ordinal": 3
+   }
+  }
+ ],
+ "competitions": [
+  {
+   "id": "tst.cup",
+   "kind": "continental",
+   "country": "ARM",
+   "names": {
+    "it": [
+     "COPPA",
+     "COPPA"
+    ],
+    "en": [
+     "CUP",
+     "CUP"
+    ],
+    "fr": [
+     "CUP",
+     "CUP"
+    ],
+    "de": [
+     "CUP",
+     "CUP"
+    ]
+   },
+   "participants": {
+    "count": 8,
+    "clubs": [
+     "club:arm.alfa",
+     "club:arm.beta",
+     "club:aze.alfa",
+     "club:bel.alfa",
+     "club:sco.alfa",
+     "club:sco.beta",
+     "club:sco.gamma",
+     "club:sco.delta"
+    ]
+   },
+   "stages": [
+    {
+     "id": "groups",
+     "type": "groups",
+     "groups": 2,
+     "legs": 2,
+     "tiebreakers": [
+      "points",
+      "goal_difference",
+      "goals_for",
+      "draw_lots"
+     ],
+     "draw": {
+      "pots": "access_order",
+      "separate": [
+       "association"
+      ],
+      "protect": [
+       [
+        "ARM",
+        "AZE"
+       ]
+      ]
+     }
+    },
+    {
+     "id": "ko",
+     "type": "knockout",
+     "entrants": [
+      "groups#1",
+      "groups#2"
+     ],
+     "rounds": [
+      {
+       "ties": 2,
+       "legs": 2,
+       "home": "better_placed_second_leg",
+       "pairing": "seeded",
+       "decider": [
+        "aggregate",
+        "extra_time",
+        "penalties"
+       ]
+      },
+      {
+       "ties": 1,
+       "legs": 1,
+       "home": "neutral",
+       "pairing": "draw",
+       "decider": [
+        "extra_time",
+        "penalties"
+       ]
+      }
+     ]
+    }
+   ],
+   "outcomes": [
+    {
+     "stage": "ko",
+     "positions": "1",
+     "tag": "champion"
+    }
+   ],
+   "modes": [
+    "career",
+    "season",
+    "preset",
+    "friendly"
+   ]
+  }
+ ],
+ "_expect": "protect: ARM and the countries kept apart from it have 3 clubs for 2 groups"
+}

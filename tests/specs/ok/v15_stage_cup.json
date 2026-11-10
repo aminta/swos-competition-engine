@@ -1,0 +1,574 @@
+{
+ "schema": "swc/1.5",
+ "id": "test.v15-cup",
+ "host_world": 9,
+ "_note": "swc/1.5 (synthetic): 32 clubs drawn into 8 groups of 4 by access order, associations apart, RUS-UKR / KOS-BIH / KOS-SRB never together; the top two to a seeded last 16 avoiding group rematches and associations.",
+ "languages": [
+  "it",
+  "en",
+  "fr",
+  "de"
+ ],
+ "countries": {
+  "ESP": {
+   "names": {
+    "it": "SPAGNA",
+    "en": "SPAGNA",
+    "fr": "SPAGNA",
+    "de": "SPAGNA"
+   }
+  },
+  "ENG": {
+   "names": {
+    "it": "INGHILTERRA",
+    "en": "INGHILTERRA",
+    "fr": "INGHILTERRA",
+    "de": "INGHILTERRA"
+   }
+  },
+  "ITA": {
+   "names": {
+    "it": "ITALIA",
+    "en": "ITALIA",
+    "fr": "ITALIA",
+    "de": "ITALIA"
+   }
+  },
+  "GER": {
+   "names": {
+    "it": "GERMANIA",
+    "en": "GERMANIA",
+    "fr": "GERMANIA",
+    "de": "GERMANIA"
+   }
+  },
+  "FRA": {
+   "names": {
+    "it": "FRANCIA",
+    "en": "FRANCIA",
+    "fr": "FRANCIA",
+    "de": "FRANCIA"
+   }
+  },
+  "POR": {
+   "names": {
+    "it": "PORTOGALLO",
+    "en": "PORTOGALLO",
+    "fr": "PORTOGALLO",
+    "de": "PORTOGALLO"
+   }
+  },
+  "RUS": {
+   "names": {
+    "it": "RUSSIA",
+    "en": "RUSSIA",
+    "fr": "RUSSIA",
+    "de": "RUSSIA"
+   }
+  },
+  "UKR": {
+   "names": {
+    "it": "UCRAINA",
+    "en": "UCRAINA",
+    "fr": "UCRAINA",
+    "de": "UCRAINA"
+   }
+  },
+  "NED": {
+   "names": {
+    "it": "OLANDA",
+    "en": "OLANDA",
+    "fr": "OLANDA",
+    "de": "OLANDA"
+   }
+  },
+  "KOS": {
+   "names": {
+    "it": "KOSOVO",
+    "en": "KOSOVO",
+    "fr": "KOSOVO",
+    "de": "KOSOVO"
+   }
+  },
+  "BIH": {
+   "names": {
+    "it": "BOSNIA",
+    "en": "BOSNIA",
+    "fr": "BOSNIA",
+    "de": "BOSNIA"
+   }
+  },
+  "SRB": {
+   "names": {
+    "it": "SERBIA",
+    "en": "SERBIA",
+    "fr": "SERBIA",
+    "de": "SERBIA"
+   }
+  },
+  "SCO": {
+   "names": {
+    "it": "SCOZIA",
+    "en": "SCOZIA",
+    "fr": "SCOZIA",
+    "de": "SCOZIA"
+   }
+  }
+ },
+ "clubs": [
+  {
+   "id": "club:esp.alfa",
+   "name": "ESP ALFA",
+   "country": "ESP",
+   "host": {
+    "file": 60,
+    "ordinal": 0
+   }
+  },
+  {
+   "id": "club:esp.beta",
+   "name": "ESP BETA",
+   "country": "ESP",
+   "host": {
+    "file": 60,
+    "ordinal": 1
+   }
+  },
+  {
+   "id": "club:esp.gamma",
+   "name": "ESP GAMMA",
+   "country": "ESP",
+   "host": {
+    "file": 60,
+    "ordinal": 2
+   }
+  },
+  {
+   "id": "club:esp.delta",
+   "name": "ESP DELTA",
+   "country": "ESP",
+   "host": {
+    "file": 60,
+    "ordinal": 3
+   }
+  },
+  {
+   "id": "club:eng.alfa",
+   "name": "ENG ALFA",
+   "country": "ENG",
+   "host": {
+    "file": 61,
+    "ordinal": 0
+   }
+  },
+  {
+   "id": "club:eng.beta",
+   "name": "ENG BETA",
+   "country": "ENG",
+   "host": {
+    "file": 61,
+    "ordinal": 1
+   }
+  },
+  {
+   "id": "club:eng.gamma",
+   "name": "ENG GAMMA",
+   "country": "ENG",
+   "host": {
+    "file": 61,
+    "ordinal": 2
+   }
+  },
+  {
+   "id": "club:eng.delta",
+   "name": "ENG DELTA",
+   "country": "ENG",
+   "host": {
+    "file": 61,
+    "ordinal": 3
+   }
+  },
+  {
+   "id": "club:ita.alfa",
+   "name": "ITA ALFA",
+   "country": "ITA",
+   "host": {
+    "file": 62,
+    "ordinal": 0
+   }
+  },
+  {
+   "id": "club:ita.beta",
+   "name": "ITA BETA",
+   "country": "ITA",
+   "host": {
+    "file": 62,
+    "ordinal": 1
+   }
+  },
+  {
+   "id": "club:ita.gamma",
+   "name": "ITA GAMMA",
+   "country": "ITA",
+   "host": {
+    "file": 62,
+    "ordinal": 2
+   }
+  },
+  {
+   "id": "club:ita.delta",
+   "name": "ITA DELTA",
+   "country": "ITA",
+   "host": {
+    "file": 62,
+    "ordinal": 3
+   }
+  },
+  {
+   "id": "club:ger.alfa",
+   "name": "GER ALFA",
+   "country": "GER",
+   "host": {
+    "file": 63,
+    "ordinal": 0
+   }
+  },
+  {
+   "id": "club:ger.beta",
+   "name": "GER BETA",
+   "country": "GER",
+   "host": {
+    "file": 63,
+    "ordinal": 1
+   }
+  },
+  {
+   "id": "club:ger.gamma",
+   "name": "GER GAMMA",
+   "country": "GER",
+   "host": {
+    "file": 63,
+    "ordinal": 2
+   }
+  },
+  {
+   "id": "club:ger.delta",
+   "name": "GER DELTA",
+   "country": "GER",
+   "host": {
+    "file": 63,
+    "ordinal": 3
+   }
+  },
+  {
+   "id": "club:fra.alfa",
+   "name": "FRA ALFA",
+   "country": "FRA",
+   "host": {
+    "file": 64,
+    "ordinal": 0
+   }
+  },
+  {
+   "id": "club:fra.beta",
+   "name": "FRA BETA",
+   "country": "FRA",
+   "host": {
+    "file": 64,
+    "ordinal": 1
+   }
+  },
+  {
+   "id": "club:fra.gamma",
+   "name": "FRA GAMMA",
+   "country": "FRA",
+   "host": {
+    "file": 64,
+    "ordinal": 2
+   }
+  },
+  {
+   "id": "club:por.alfa",
+   "name": "POR ALFA",
+   "country": "POR",
+   "host": {
+    "file": 65,
+    "ordinal": 0
+   }
+  },
+  {
+   "id": "club:por.beta",
+   "name": "POR BETA",
+   "country": "POR",
+   "host": {
+    "file": 65,
+    "ordinal": 1
+   }
+  },
+  {
+   "id": "club:por.gamma",
+   "name": "POR GAMMA",
+   "country": "POR",
+   "host": {
+    "file": 65,
+    "ordinal": 2
+   }
+  },
+  {
+   "id": "club:rus.alfa",
+   "name": "RUS ALFA",
+   "country": "RUS",
+   "host": {
+    "file": 66,
+    "ordinal": 0
+   }
+  },
+  {
+   "id": "club:rus.beta",
+   "name": "RUS BETA",
+   "country": "RUS",
+   "host": {
+    "file": 66,
+    "ordinal": 1
+   }
+  },
+  {
+   "id": "club:ukr.alfa",
+   "name": "UKR ALFA",
+   "country": "UKR",
+   "host": {
+    "file": 67,
+    "ordinal": 0
+   }
+  },
+  {
+   "id": "club:ukr.beta",
+   "name": "UKR BETA",
+   "country": "UKR",
+   "host": {
+    "file": 67,
+    "ordinal": 1
+   }
+  },
+  {
+   "id": "club:ned.alfa",
+   "name": "NED ALFA",
+   "country": "NED",
+   "host": {
+    "file": 68,
+    "ordinal": 0
+   }
+  },
+  {
+   "id": "club:ned.beta",
+   "name": "NED BETA",
+   "country": "NED",
+   "host": {
+    "file": 68,
+    "ordinal": 1
+   }
+  },
+  {
+   "id": "club:kos.alfa",
+   "name": "KOS ALFA",
+   "country": "KOS",
+   "host": {
+    "file": 69,
+    "ordinal": 0
+   }
+  },
+  {
+   "id": "club:bih.alfa",
+   "name": "BIH ALFA",
+   "country": "BIH",
+   "host": {
+    "file": 70,
+    "ordinal": 0
+   }
+  },
+  {
+   "id": "club:srb.alfa",
+   "name": "SRB ALFA",
+   "country": "SRB",
+   "host": {
+    "file": 71,
+    "ordinal": 0
+   }
+  },
+  {
+   "id": "club:sco.alfa",
+   "name": "SCO ALFA",
+   "country": "SCO",
+   "host": {
+    "file": 72,
+    "ordinal": 0
+   }
+  }
+ ],
+ "competitions": [
+  {
+   "id": "tst.cup",
+   "kind": "continental",
+   "country": "ESP",
+   "names": {
+    "it": [
+     "COPPA",
+     "COPPA"
+    ],
+    "en": [
+     "CUP",
+     "CUP"
+    ],
+    "fr": [
+     "CUP",
+     "CUP"
+    ],
+    "de": [
+     "CUP",
+     "CUP"
+    ]
+   },
+   "participants": {
+    "count": 32,
+    "clubs": [
+     "club:esp.alfa",
+     "club:esp.beta",
+     "club:esp.gamma",
+     "club:esp.delta",
+     "club:eng.alfa",
+     "club:eng.beta",
+     "club:eng.gamma",
+     "club:eng.delta",
+     "club:ita.alfa",
+     "club:ita.beta",
+     "club:ita.gamma",
+     "club:ita.delta",
+     "club:ger.alfa",
+     "club:ger.beta",
+     "club:ger.gamma",
+     "club:ger.delta",
+     "club:fra.alfa",
+     "club:fra.beta",
+     "club:fra.gamma",
+     "club:por.alfa",
+     "club:por.beta",
+     "club:por.gamma",
+     "club:rus.alfa",
+     "club:rus.beta",
+     "club:ukr.alfa",
+     "club:ukr.beta",
+     "club:ned.alfa",
+     "club:ned.beta",
+     "club:kos.alfa",
+     "club:bih.alfa",
+     "club:srb.alfa",
+     "club:sco.alfa"
+    ]
+   },
+   "stages": [
+    {
+     "id": "groups",
+     "type": "groups",
+     "groups": 8,
+     "legs": 2,
+     "tiebreakers": [
+      "points",
+      "goal_difference",
+      "goals_for",
+      "draw_lots"
+     ],
+     "draw": {
+      "pots": "access_order",
+      "separate": [
+       "association"
+      ],
+      "protect": [
+       [
+        "RUS",
+        "UKR"
+       ],
+       [
+        "KOS",
+        "BIH"
+       ],
+       [
+        "KOS",
+        "SRB"
+       ]
+      ]
+     }
+    },
+    {
+     "id": "ko",
+     "type": "knockout",
+     "entrants": [
+      "groups#1",
+      "groups#2"
+     ],
+     "rounds": [
+      {
+       "ties": 8,
+       "legs": 2,
+       "home": "better_placed_second_leg",
+       "pairing": "seeded",
+       "decider": [
+        "aggregate",
+        "extra_time",
+        "penalties"
+       ],
+       "avoid": [
+        "same_group",
+        "association"
+       ]
+      },
+      {
+       "ties": 4,
+       "legs": 2,
+       "home": "better_placed_second_leg",
+       "pairing": "draw",
+       "decider": [
+        "aggregate",
+        "extra_time",
+        "penalties"
+       ]
+      },
+      {
+       "ties": 2,
+       "legs": 2,
+       "home": "better_placed_second_leg",
+       "pairing": "draw",
+       "decider": [
+        "aggregate",
+        "extra_time",
+        "penalties"
+       ]
+      },
+      {
+       "ties": 1,
+       "legs": 1,
+       "home": "neutral",
+       "pairing": "draw",
+       "decider": [
+        "extra_time",
+        "penalties"
+       ]
+      }
+     ]
+    }
+   ],
+   "outcomes": [
+    {
+     "stage": "ko",
+     "positions": "1",
+     "tag": "champion"
+    }
+   ],
+   "modes": [
+    "career",
+    "season",
+    "preset",
+    "friendly"
+   ]
+  }
+ ]
+}

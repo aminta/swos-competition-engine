@@ -12,5 +12,6 @@
   "table_rows": 24,
   "long_table_rows": 30,
   "max_teams_per_stage": 255,
-  "arena_max": 65536
+  "arena_max": 65536,
+  "supplies": []
 }

@@ -1,0 +1,489 @@
+{
+ "schema": "swc/1.5",
+ "id": "test.v15-cup",
+ "host_world": 9,
+ "_note": "",
+ "languages": [
+  "it",
+  "en",
+  "fr",
+  "de"
+ ],
+ "countries": {
+  "ESP": {
+   "names": {
+    "it": "SPAGNA",
+    "en": "SPAGNA",
+    "fr": "SPAGNA",
+    "de": "SPAGNA"
+   }
+  },
+  "ENG": {
+   "names": {
+    "it": "INGHILTERRA",
+    "en": "INGHILTERRA",
+    "fr": "INGHILTERRA",
+    "de": "INGHILTERRA"
+   }
+  },
+  "ITA": {
+   "names": {
+    "it": "ITALIA",
+    "en": "ITALIA",
+    "fr": "ITALIA",
+    "de": "ITALIA"
+   }
+  },
+  "GER": {
+   "names": {
+    "it": "GERMANIA",
+    "en": "GERMANIA",
+    "fr": "GERMANIA",
+    "de": "GERMANIA"
+   }
+  }
+ },
+ "clubs": [
+  {
+   "id": "club:esp.alfa",
+   "name": "ESP ALFA",
+   "country": "ESP",
+   "host": {
+    "file": 60,
+    "ordinal": 0
+   }
+  },
+  {
+   "id": "club:esp.beta",
+   "name": "ESP BETA",
+   "country": "ESP",
+   "host": {
+    "file": 60,
+    "ordinal": 1
+   }
+  },
+  {
+   "id": "club:esp.gamma",
+   "name": "ESP GAMMA",
+   "country": "ESP",
+   "host": {
+    "file": 60,
+    "ordinal": 2
+   }
+  },
+  {
+   "id": "club:esp.delta",
+   "name": "ESP DELTA",
+   "country": "ESP",
+   "host": {
+    "file": 60,
+    "ordinal": 3
+   }
+  },
+  {
+   "id": "club:esp.epsilon",
+   "name": "ESP EPSILON",
+   "country": "ESP",
+   "host": {
+    "file": 60,
+    "ordinal": 4
+   }
+  },
+  {
+   "id": "club:esp.zeta",
+   "name": "ESP ZETA",
+   "country": "ESP",
+   "host": {
+    "file": 60,
+    "ordinal": 5
+   }
+  },
+  {
+   "id": "club:esp.eta",
+   "name": "ESP ETA",
+   "country": "ESP",
+   "host": {
+    "file": 60,
+    "ordinal": 6
+   }
+  },
+  {
+   "id": "club:esp.theta",
+   "name": "ESP THETA",
+   "country": "ESP",
+   "host": {
+    "file": 60,
+    "ordinal": 7
+   }
+  },
+  {
+   "id": "club:esp.iota",
+   "name": "ESP IOTA",
+   "country": "ESP",
+   "host": {
+    "file": 60,
+    "ordinal": 8
+   }
+  },
+  {
+   "id": "club:eng.alfa",
+   "name": "ENG ALFA",
+   "country": "ENG",
+   "host": {
+    "file": 61,
+    "ordinal": 0
+   }
+  },
+  {
+   "id": "club:eng.beta",
+   "name": "ENG BETA",
+   "country": "ENG",
+   "host": {
+    "file": 61,
+    "ordinal": 1
+   }
+  },
+  {
+   "id": "club:eng.gamma",
+   "name": "ENG GAMMA",
+   "country": "ENG",
+   "host": {
+    "file": 61,
+    "ordinal": 2
+   }
+  },
+  {
+   "id": "club:eng.delta",
+   "name": "ENG DELTA",
+   "country": "ENG",
+   "host": {
+    "file": 61,
+    "ordinal": 3
+   }
+  },
+  {
+   "id": "club:eng.epsilon",
+   "name": "ENG EPSILON",
+   "country": "ENG",
+   "host": {
+    "file": 61,
+    "ordinal": 4
+   }
+  },
+  {
+   "id": "club:eng.zeta",
+   "name": "ENG ZETA",
+   "country": "ENG",
+   "host": {
+    "file": 61,
+    "ordinal": 5
+   }
+  },
+  {
+   "id": "club:eng.eta",
+   "name": "ENG ETA",
+   "country": "ENG",
+   "host": {
+    "file": 61,
+    "ordinal": 6
+   }
+  },
+  {
+   "id": "club:ita.alfa",
+   "name": "ITA ALFA",
+   "country": "ITA",
+   "host": {
+    "file": 62,
+    "ordinal": 0
+   }
+  },
+  {
+   "id": "club:ita.beta",
+   "name": "ITA BETA",
+   "country": "ITA",
+   "host": {
+    "file": 62,
+    "ordinal": 1
+   }
+  },
+  {
+   "id": "club:ita.gamma",
+   "name": "ITA GAMMA",
+   "country": "ITA",
+   "host": {
+    "file": 62,
+    "ordinal": 2
+   }
+  },
+  {
+   "id": "club:ita.delta",
+   "name": "ITA DELTA",
+   "country": "ITA",
+   "host": {
+    "file": 62,
+    "ordinal": 3
+   }
+  },
+  {
+   "id": "club:ita.epsilon",
+   "name": "ITA EPSILON",
+   "country": "ITA",
+   "host": {
+    "file": 62,
+    "ordinal": 4
+   }
+  },
+  {
+   "id": "club:ita.zeta",
+   "name": "ITA ZETA",
+   "country": "ITA",
+   "host": {
+    "file": 62,
+    "ordinal": 5
+   }
+  },
+  {
+   "id": "club:ita.eta",
+   "name": "ITA ETA",
+   "country": "ITA",
+   "host": {
+    "file": 62,
+    "ordinal": 6
+   }
+  },
+  {
+   "id": "club:ita.theta",
+   "name": "ITA THETA",
+   "country": "ITA",
+   "host": {
+    "file": 62,
+    "ordinal": 7
+   }
+  },
+  {
+   "id": "club:ger.alfa",
+   "name": "GER ALFA",
+   "country": "GER",
+   "host": {
+    "file": 63,
+    "ordinal": 0
+   }
+  },
+  {
+   "id": "club:ger.beta",
+   "name": "GER BETA",
+   "country": "GER",
+   "host": {
+    "file": 63,
+    "ordinal": 1
+   }
+  },
+  {
+   "id": "club:ger.gamma",
+   "name": "GER GAMMA",
+   "country": "GER",
+   "host": {
+    "file": 63,
+    "ordinal": 2
+   }
+  },
+  {
+   "id": "club:ger.delta",
+   "name": "GER DELTA",
+   "country": "GER",
+   "host": {
+    "file": 63,
+    "ordinal": 3
+   }
+  },
+  {
+   "id": "club:ger.epsilon",
+   "name": "GER EPSILON",
+   "country": "GER",
+   "host": {
+    "file": 63,
+    "ordinal": 4
+   }
+  },
+  {
+   "id": "club:ger.zeta",
+   "name": "GER ZETA",
+   "country": "GER",
+   "host": {
+    "file": 63,
+    "ordinal": 5
+   }
+  },
+  {
+   "id": "club:ger.eta",
+   "name": "GER ETA",
+   "country": "GER",
+   "host": {
+    "file": 63,
+    "ordinal": 6
+   }
+  },
+  {
+   "id": "club:ger.theta",
+   "name": "GER THETA",
+   "country": "GER",
+   "host": {
+    "file": 63,
+    "ordinal": 7
+   }
+  }
+ ],
+ "competitions": [
+  {
+   "id": "tst.cup",
+   "kind": "continental",
+   "country": "ESP",
+   "names": {
+    "it": [
+     "COPPA",
+     "COPPA"
+    ],
+    "en": [
+     "CUP",
+     "CUP"
+    ],
+    "fr": [
+     "CUP",
+     "CUP"
+    ],
+    "de": [
+     "CUP",
+     "CUP"
+    ]
+   },
+   "participants": {
+    "count": 32,
+    "clubs": [
+     "club:esp.alfa",
+     "club:esp.beta",
+     "club:esp.gamma",
+     "club:esp.delta",
+     "club:esp.epsilon",
+     "club:esp.zeta",
+     "club:esp.eta",
+     "club:esp.theta",
+     "club:esp.iota",
+     "club:eng.alfa",
+     "club:eng.beta",
+     "club:eng.gamma",
+     "club:eng.delta",
+     "club:eng.epsilon",
+     "club:eng.zeta",
+     "club:eng.eta",
+     "club:ita.alfa",
+     "club:ita.beta",
+     "club:ita.gamma",
+     "club:ita.delta",
+     "club:ita.epsilon",
+     "club:ita.zeta",
+     "club:ita.eta",
+     "club:ita.theta",
+     "club:ger.alfa",
+     "club:ger.beta",
+     "club:ger.gamma",
+     "club:ger.delta",
+     "club:ger.epsilon",
+     "club:ger.zeta",
+     "club:ger.eta",
+     "club:ger.theta"
+    ]
+   },
+   "stages": [
+    {
+     "id": "groups",
+     "type": "groups",
+     "groups": 8,
+     "legs": 2,
+     "tiebreakers": [
+      "points",
+      "goal_difference",
+      "goals_for",
+      "draw_lots"
+     ],
+     "draw": {
+      "pots": "access_order",
+      "separate": [
+       "association"
+      ]
+     }
+    },
+    {
+     "id": "ko",
+     "type": "knockout",
+     "entrants": [
+      "groups#1",
+      "groups#2"
+     ],
+     "rounds": [
+      {
+       "ties": 8,
+       "legs": 2,
+       "home": "better_placed_second_leg",
+       "pairing": "seeded",
+       "decider": [
+        "aggregate",
+        "extra_time",
+        "penalties"
+       ],
+       "avoid": [
+        "same_group",
+        "association"
+       ]
+      },
+      {
+       "ties": 4,
+       "legs": 2,
+       "home": "better_placed_second_leg",
+       "pairing": "draw",
+       "decider": [
+        "aggregate",
+        "extra_time",
+        "penalties"
+       ]
+      },
+      {
+       "ties": 2,
+       "legs": 2,
+       "home": "better_placed_second_leg",
+       "pairing": "draw",
+       "decider": [
+        "aggregate",
+        "extra_time",
+        "penalties"
+       ]
+      },
+      {
+       "ties": 1,
+       "legs": 1,
+       "home": "neutral",
+       "pairing": "draw",
+       "decider": [
+        "extra_time",
+        "penalties"
+       ]
+      }
+     ]
+    }
+   ],
+   "outcomes": [
+    {
+     "stage": "ko",
+     "positions": "1",
+     "tag": "champion"
+    }
+   ],
+   "modes": [
+    "career",
+    "season",
+    "preset",
+    "friendly"
+   ]
+  }
+ ],
+ "_expect": "association ESP has 9 clubs for 8 groups"
+}

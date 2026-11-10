@@ -59,6 +59,8 @@ typedef struct {
     int width[256];
     int title_max, title_px, short_px, club_name_max, clubs_per_file, table_rows, long_table_rows, max_teams;
     uint32_t arena_max;
+    const char *profile_id;
+    int supplies;               /* v1.5: the game-data criteria the host ranks (bit 0 fair_play, bit 1 coefficient) */
     /* spec */
     JNode *root;
     int minor;                  /* the spec's "schema": "swc/1" = the M1 schema (1.0 + 1.1), "swc/1.1", "swc/1.2", "swc/1.3" */
@@ -70,7 +72,9 @@ typedef struct {
     int nstinfo;
     /* output */
     Buf strs, names, club, comp, stag, entr, tieb, deci, roun, outc, reg, meta, fixt, grps, srce, tols, prnt, sect, secf;
+    Buf gdrw, prot, kent;       /* v1.5 */
     uint32_t arena;
+    int engine_min;             /* 2 when a v1.5 draw construct is compiled (GDRW, KENT, a round's avoid), else 1 */
 } C;
 
 static void diag(C *c, JNode *at, int error, const char *path, const char *fmt, ...)
@@ -86,7 +90,7 @@ static void diag(C *c, JNode *at, int error, const char *path, const char *fmt, 
     bput(&c->diag, line, (size_t)(k < (int)sizeof line ? k : (int)sizeof line - 1));
     if (error) c->errors++; else c->warnings++;
 }
-#define SWC_MINOR 4         /* the schema's minor version: swc/1.4 (1.4 = 1.3 + pool-file members) */
+#define SWC_MINOR 5         /* the schema's minor version: swc/1.5 (1.5 = 1.4 + draws, compiled entrants, round avoid) */
 #define ERR(at, path, ...)  diag(c, at, 1, path, __VA_ARGS__)
 #define WARN(at, path, ...) diag(c, at, 0, path, __VA_ARGS__)
 
@@ -188,6 +192,8 @@ static uint32_t str_add(C *c, const char *s)
     return (uint32_t)i;
 }
 
+static const char *swc_strs_at(C *c, uint32_t off) { return off < c->strs.n ? (const char *)c->strs.p + off : "?"; }
+
 /* UTF-8 -> the host's bytes (profile "encoding": ascii, or latin1 + "overrides"). Returns 0 and the first codepoint
    that has no host byte in *bad; out holds at most 255 bytes + NUL. */
 static int host_conv(C *c, const char *s, char *out, size_t room, uint32_t *bad)
@@ -251,7 +257,13 @@ static int load_profile(C *c, JNode *p)
     int i;
     const char *path = "profile";
     if (!p || p->type != J_OBJ) { ERR(p, path, "the profile must be an object"); return 0; }
-    json_get(p, "id");
+    c->profile_id = (v = json_get(p, "id")) && v->type == J_STR ? v->str : "?";
+    if ((v = opt(c, p, "supplies", J_ARR, path))) {     /* v1.5: absent = none */
+        for (m = v->child; m; m = m->next)
+            if (m->type == J_STR && !strcmp(m->str, "fair_play")) c->supplies |= 1;
+            else if (m->type == J_STR && !strcmp(m->str, "coefficient")) c->supplies |= 2;
+            else ERR(m, path, "supplies: \"fair_play\" or \"coefficient\"");
+    }
     if ((v = need(c, p, "languages", J_ARR, path))) {
         for (m = v->child; m; m = m->next) {
             if (m->type != J_STR || strlen(m->str) > 3 || c->nlangs == SWC_LANGS) { ERR(m, path, "bad language"); continue; }
@@ -826,6 +838,7 @@ static int numbers_of(C *c, JNode *st, const char *sp, JNode *parts)
    (the Coppa Italia Serie C's geographic groups: each club to its nearest centre with room, the clubs split evenly);
    every club of the competition's source leagues needs a 'geo'. The zones (2 .. 16), 0 none or after an error. */
 static int cur_zones;
+static int ent_stage;                   /* (v1.5: the stage being read takes all its entrants from this earlier stage, -1 none) */
 /* every club of the competition's source leagues has a town ('geo'): 1, or 0 after an error */
 static int geo_needed(C *c, JNode *at, const char *path, JNode *parts, const char *why)
 {
@@ -963,10 +976,133 @@ static int ko_ref(C *c, JNode *it, const char *rp, int ri, const long *rties, St
     return 0;
 }
 
+/* v1.5: a criterion that needs game data the profile must supply (bit: 1 fair_play, 2 coefficient). */
+static void supplied(C *c, JNode *at, const char *path, const char *what, int bit)
+{
+    if (!(c->supplies & bit))
+        ERR(at, path, "%s needs game data the profile '%s' does not supply", what, c->profile_id);
+}
+
+/* v1.5: a groups stage's 'draw' {pots, separate, protect} -> one GDRW record and its PROT pairs. The protect pairs
+   stay pairs (UEFA's clashes are chains: KOS-BIH and KOS-SRB do not forbid BIH v SRB; MC 2026-11-10). With fixed
+   participants and the stage the competition's first, the clubs are counted: a country with more clubs than groups
+   is refused (the engine's -2), and so is a protect component that is a clique (each of its pairs listed: one class
+   then, König's bound) with more clubs than groups. A chain component is not bounded here: a draw with no solution
+   returns -2 at run time and the stage is not drawn (a harness FAIL, no silent relaxation). */
+static void draw_of(C *c, JNode *st, const char *sp, int stage, int g, int first, const SwcComp *rec)
+{
+    JNode *dr = opt(c, st, "draw", J_OBJ, sp), *v, *q;
+    SwcDraw d = { 0 };
+    char dp[360];
+    const char *code[129];
+    uint16_t pr[64][2], cty[128];
+    int np = 0, nc = 0, cnt[128] = { 0 }, comp[128], i, j, k;
+    if (!dr) return;
+    pathf(dp, sizeof dp, "%s.draw", sp);
+    need_minor(c, dr, sp, 5, "'draw'");
+    d.stage = (uint16_t)stage;
+    if ((v = need(c, dr, "pots", J_STR, dp))) {
+        if (!strcmp(v->str, "access_order")) d.pots = SWC_POTS_ACCESS_ORDER;
+        else if (!strcmp(v->str, "coefficient")) { d.pots = SWC_POTS_COEFFICIENT; supplied(c, v, dp, "pots \"coefficient\"", 2); }
+        else ERR(v, dp, "pots: \"access_order\" (the entrant order) or \"coefficient\"");
+    }
+    if ((v = opt(c, dr, "separate", J_ARR, dp))) {
+        for (q = v->child; q; q = q->next)
+            if (q->type == J_STR && !strcmp(q->str, "association")) d.separate |= SWC_SEP_ASSOCIATION;
+            else ERR(q, dp, "separate: [\"association\"] (two clubs of one association never in one group)");
+    }
+    d.protect = (uint16_t)(c->prot.n / sizeof(SwcProtect));
+    if ((v = opt(c, dr, "protect", J_ARR, dp))) {
+        if (!(d.separate & SWC_SEP_ASSOCIATION)) ERR(v, dp, "'protect' needs \"separate\": [\"association\"]");
+        for (q = v->child; q; q = q->next) {
+            const char *x, *y;
+            uint16_t p2[2];
+            if (q->type != J_ARR || q->n != 2 || q->child->type != J_STR || q->child->next->type != J_STR) {
+                ERR(q, dp, "protect: pairs of country codes, e.g. [\"RUS\", \"UKR\"]");
+                continue;
+            }
+            x = q->child->str;
+            y = q->child->next->str;
+            if (!c->countries || !json_get(c->countries, x) || !json_get(c->countries, y)) {
+                ERR(q, dp, "protect [\"%s\", \"%s\"]: a country not in 'countries'", x, y);
+                continue;
+            }
+            if (!strcmp(x, y)) { ERR(q, dp, "protect [\"%s\", \"%s\"]: a country with itself", x, y); continue; }
+            p2[0] = (uint16_t)str_add(c, x);
+            p2[1] = (uint16_t)str_add(c, y);
+            if (p2[0] > p2[1]) { uint16_t t = p2[0]; p2[0] = p2[1]; p2[1] = t; }
+            for (i = 0; i < np && (pr[i][0] != p2[0] || pr[i][1] != p2[1]); i++)
+                ;
+            if (i < np) { ERR(q, dp, "protect [\"%s\", \"%s\"]: listed twice", x, y); continue; }
+            if (np == 64) { ERR(q, dp, "protect: at most 64 pairs"); break; }
+            pr[np][0] = p2[0];
+            pr[np][1] = p2[1];
+            np++;
+            bput(&c->prot, p2, sizeof p2);
+        }
+    }
+    d.nprotect = (uint16_t)np;
+    unknown_keys(c, dr, dp);
+    bput(&c->gdrw, &d, sizeof d);
+    c->engine_min = 2;
+    if (!first || !rec->nentr || !d.separate || g < 1) return;
+    for (i = 0; i < rec->nentr; i++) {          /* the clubs per country (fixed participants: exact) */
+        uint16_t ix, ct;
+        SwcClub cl;
+        memcpy(&ix, c->entr.p + 2u * (rec->entr + (unsigned)i), 2);
+        if ((size_t)ix * sizeof cl >= c->club.n) continue;
+        memcpy(&cl, c->club.p + (size_t)ix * sizeof cl, sizeof cl);
+        ct = cl.country;
+        for (j = 0; j < nc && cty[j] != ct; j++)
+            ;
+        if (j == nc) {
+            if (nc == 128) continue;
+            cty[nc] = ct;
+            code[nc] = swc_strs_at(c, ct);
+            nc++;
+        }
+        cnt[j]++;
+    }
+    for (j = 0; j < nc; j++)
+        if (cnt[j] > g) ERR(dr, dp, "association %s has %d clubs for %d groups (separate: never two in one group)", code[j], cnt[j], g);
+    for (j = 0; j < nc; j++) comp[j] = j;           /* protect components (union-find over the countries in it) */
+    for (i = 0; i < np; i++) {
+        int a = -1, b = -1;
+        for (j = 0; j < nc; j++) { if (cty[j] == pr[i][0]) a = j; if (cty[j] == pr[i][1]) b = j; }
+        if (a < 0 || b < 0) continue;               /* (a country without clubs here) */
+        while (comp[a] != a) a = comp[a];
+        while (comp[b] != b) b = comp[b];
+        if (a != b) comp[b] = a;
+    }
+    for (j = 0; j < nc; j++) {
+        int r = j, sum = 0, m = 0, pairs = 0, clique;
+        while (comp[r] != r) r = comp[r];
+        if (r != j) continue;                       /* (once per component, at its root) */
+        for (k = 0; k < nc; k++) {
+            int r2 = k;
+            while (comp[r2] != r2) r2 = comp[r2];
+            if (r2 == j) { sum += cnt[k]; m++; }
+        }
+        if (m < 2) continue;
+        for (i = 0; i < np; i++) {
+            int a = -1, r2;
+            for (k = 0; k < nc; k++) if (cty[k] == pr[i][0]) a = k;
+            if (a < 0) continue;
+            for (r2 = a; comp[r2] != r2; r2 = comp[r2])
+                ;
+            pairs += r2 == j;
+        }
+        clique = pairs == m * (m - 1) / 2;
+        if (clique && sum > g)
+            ERR(dr, dp, "protect: %s and the countries kept apart from it have %d clubs for %d groups (never two in one group)", code[j], sum, g);
+    }
+}
+
 /* One item of a stage's 'entrants': "stage#N-M", the places N..M of every table of an earlier stage (*per = 1: the
    count is per table), or (v1.2) {"best_of": "stage#P", "count": K}, the K best clubs placed P across the groups of a
    groups stage, ranked by that stage's tie-breakers (*per = 0). Returns the clubs, -1 after an error; *src = the
    source stage (all_st index), *pa..*pb = the places taken (for the overlap check). */
+static int ent_raw[2];                  /* (entr_item's last stage ref: its places as written, 128 + N from the bottom) */
 static int entr_item(C *c, JNode *it, const char *sp, StageInfo *all_st, int first_stage, int nall, int *src, int *per,
                      int *pa, int *pb)
 {
@@ -1016,6 +1152,8 @@ static int entr_item(C *c, JNode *it, const char *sp, StageInfo *all_st, int fir
         int lo = s->gmin ? s->gmin : s->teams, hi = s->gmax ? s->gmax : s->teams;
         int n1 = pos_res(b, lo) - pos_res(a, lo) + 1, n2 = pos_res(b, hi) - pos_res(a, hi) + 1;
         *src = first_stage + ix;
+        ent_raw[0] = a;
+        ent_raw[1] = b;
         *pa = pos_res(a, lo);
         *pb = pos_res(b, lo);
         if (lo && (pos_res(a, lo) < 1 || pos_res(b, lo) > lo || n1 < 1))
@@ -1253,13 +1391,21 @@ static void do_comp(C *c, int ci, StageInfo *all_st, int *nall)
             }
             if (entrants && entrants->type == J_ARR && !entrants->n) ERR(entrants, sp, "entrants: an empty list");
             if (entrants && entrants->type == J_ARR) need_minor(c, entrants, sp, 2, "'entrants' as a list");
+            ent_stage = -1;
             if (entrants) {                     /* v1.2: a list of places ["table#3", "table#6"] and best_of items */
                 JNode *pg = opt(c, st, "per_group", J_BOOL, sp), *it;
-                int total = 0, pgn = 0, gsrc = -1, same = 1, best = 0, ok = 1, nr = 0, i2, ncup = 0;
+                int total = 0, pgn = 0, gsrc = -1, same = 1, best = 0, ok = 1, nr = 0, i2, ncup = 0, nke = 0, kebad = 0;
                 struct { int src, a, b; } rg[64];
+                SwcKoEntrant ke[64];
                 for (it = entrants->type == J_STR ? entrants : entrants->child; it; it = entrants->type == J_STR ? NULL : it->next) {
                     int src = -1, per = 0, a = 0, b = 0, n = entr_item(c, it, sp, all_st, first_stage, *nall, &src, &per, &a, &b);
                     if (n < 0) { ok = 0; continue; }
+                    if (src < 0 || (it->type == J_OBJ && json_get(it, "cup_place")) || nke == 64) kebad = 1;
+                    else {                          /* v1.5: KENT, the seeding order (item, place, group) */
+                        SwcKoEntrant e = { (uint16_t)*nall, (uint16_t)src, (uint8_t)(per ? SWC_KE_PLACES : SWC_KE_BEST_OF),
+                                           SWC_KE_ALL, (uint8_t)ent_raw[0], (uint8_t)(per ? ent_raw[1] : n) };
+                        ke[nke++] = e;
+                    }
                     if (per) { total += n * all_st[src].groups; pgn += n; } else { total += n; best = 1; }
                     if (it->type == J_OBJ && json_get(it, "cup_place") && ncup++)
                         ERR(it, sp, "cup_place: one per stage");
@@ -1269,6 +1415,11 @@ static void do_comp(C *c, int ci, StageInfo *all_st, int *nall)
                             ERR(it, sp, "entrants: place %d of %s \"%s\" is taken twice", a > rg[i2].a ? a : rg[i2].a,
                                 src >= 0 ? "stage" : "league", src >= 0 ? all_st[src].id : json_get(c->comps[-2 - src], "id")->str);
                     if (nr < 64) { rg[nr].src = src; rg[nr].a = a; rg[nr].b = b; nr++; }
+                }
+                if (ok && !kebad && same && gsrc >= 0) ent_stage = gsrc;
+                if (ok && !kebad && nke && c->minor >= 5 && (t == SWC_ST_KNOCKOUT || t == SWC_ST_PLAYOFF)) {
+                    bput(&c->kent, ke, (size_t)nke * sizeof ke[0]);
+                    c->engine_min = 2;
                 }
                 if (!ok) s.teams = 0;              /* (unknown: no round counts) */
                 else if (gsrc >= 0) {
@@ -1316,6 +1467,14 @@ static void do_comp(C *c, int ci, StageInfo *all_st, int *nall)
                 tb = need(c, st, "tiebreakers", J_ARR, sp);
                 s.tieb = code_list(c, &c->tieb, tb, "tie-breaker", sp, TIEBS, NE(TIEBS), &ntb);
                 if (tb && !ntb) ERR(tb, sp, "tiebreakers: at least one criterion");
+                for (const uint8_t *q = c->tieb.p + s.tieb; tb && *q; q++) {    /* v1.5: game data, earlier stages */
+                    if (*q == SWC_TB_FAIR_PLAY) supplied(c, tb, sp, "the tie-breaker 'fair_play'", 1);
+                    if (*q == SWC_TB_COEFFICIENT) supplied(c, tb, sp, "the tie-breaker 'coefficient'", 2);
+                    if (*q == SWC_TB_PREVIOUS_STAGE_RANK && ent_stage < 0)
+                        ERR(tb, sp, "the tie-breaker 'previous_stage_rank' needs the stage's entrants from one earlier stage of this competition");
+                }
+                if (t == SWC_ST_GROUPS)
+                    draw_of(c, st, sp, *nall, s.groups ? s.groups : 1, rec.nstages == 0, &rec);
                 per = all_st[*nall].gmax;
                 if (per > c->long_table_rows)
                     ERR(st, sp, "%d clubs in one table: the host shows at most %d", per, c->long_table_rows);
@@ -1323,7 +1482,7 @@ static void do_comp(C *c, int ci, StageInfo *all_st, int *nall)
                     ERR(st, sp, "%d clubs in one table: over %d needs \"long_table\": true (scrolling table)", per, c->table_rows);
                 if (s.teams && s.teams < 2) ERR(st, sp, "a table needs at least 2 clubs");
             } else if (t == SWC_ST_KNOCKOUT || t == SWC_ST_PLAYOFF) {
-                JNode *r, *sk;
+                JNode *r, *sk, *av;
                 int ri = 0, left = s.teams, joined = 0, jbad = 0, jn[256] = { 0 };
                 s.first_round = (uint16_t)(c->roun.n / sizeof(SwcRound));
                 rounds = need(c, st, "rounds", J_ARR, sp);
@@ -1580,6 +1739,21 @@ static void do_comp(C *c, int ci, StageInfo *all_st, int *nall)
                     rr.legs = (uint8_t)rl;
                     rr.home = (uint8_t)(h < 0 ? 0 : h);
                     rr.pairing = (uint8_t)(pr < 0 ? 0 : pr);
+                    if ((av = opt(c, r, "avoid", J_ARR, rp))) {       /* v1.5: pairs this round's draw never makes */
+                        JNode *q;
+                        int nk = 0;
+                        need_minor(c, av, rp, 5, "a round's 'avoid'");
+                        for (q = av->child; q; q = q->next, nk++)
+                            if (q->type == J_STR && !strcmp(q->str, "same_group")) rr.avoid |= SWC_AV_SAME_GROUP;
+                            else if (q->type == J_STR && !strcmp(q->str, "association")) rr.avoid |= SWC_AV_ASSOCIATION;
+                            else ERR(q, rp, "avoid: \"same_group\" or \"association\"");
+                        if (pr != 0 && pr != 1) ERR(av, rp, "'avoid' goes with the pairing \"draw\" or \"seeded\"");
+                        else if (rr.avoid == (SWC_AV_SAME_GROUP | SWC_AV_ASSOCIATION) && pr != 1)
+                            ERR(av, rp, "avoid with two keys needs the pairing \"seeded\" (seeded v unseeded: an exact matching)");
+                        if ((rr.avoid & SWC_AV_SAME_GROUP) && (ent_stage < 0 || all_st[ent_stage].type != SWC_ST_GROUPS || all_st[ent_stage].groups < 2))
+                            ERR(av, rp, "avoid \"same_group\": the stage's entrants must come from one groups stage of 2 or more groups");
+                        if (rr.avoid) c->engine_min = 2;
+                    }
                     unknown_keys(c, r, rp);
                     bput(&c->roun, &rr, sizeof rr);
                     s.nrounds++;
@@ -1615,6 +1789,7 @@ static void do_comp(C *c, int ci, StageInfo *all_st, int *nall)
             }
             json_get(st, "long_table");
             json_get(st, "per_group");
+            if (t != SWC_ST_GROUPS && json_get(st, "draw")) ERR(json_get(st, "draw"), sp, "'draw' goes on a groups stage");
             unknown_keys(c, st, sp);
             bput(&c->stag, &s, sizeof s);
             all_st[*nall].id = sid ? sid->str : "";
@@ -2346,7 +2521,8 @@ static uint8_t *write_bin(C *c, int world, size_t *len)
         { SWC_S_STAG, &c->stag }, { SWC_S_ENTR, &c->entr }, { SWC_S_TIEB, &c->tieb }, { SWC_S_DECI, &c->deci },
         { SWC_S_ROUN, &c->roun }, { SWC_S_OUTC, &c->outc }, { SWC_S_REG, &c->reg }, { SWC_S_META, &c->meta },
         { SWC_S_FIXT, &c->fixt }, { SWC_S_GRPS, &c->grps }, { SWC_S_SRCE, &c->srce }, { SWC_S_TOLS, &c->tols },
-        { SWC_S_PRNT, &c->prnt }, { SWC_S_SECT, &c->sect }, { SWC_S_SECF, &c->secf } };
+        { SWC_S_PRNT, &c->prnt }, { SWC_S_SECT, &c->sect }, { SWC_S_SECF, &c->secf }, { SWC_S_GDRW, &c->gdrw },
+        { SWC_S_PROT, &c->prot }, { SWC_S_KENT, &c->kent } };
     int ns = (int)(sizeof sec / sizeof sec[0]), i;
     while (ns > 13 && !sec[ns - 1].b->n) ns--;           /* sections added after the first release: only when used */
     Buf out = { 0 };
@@ -2374,7 +2550,7 @@ static uint8_t *write_bin(C *c, int world, size_t *len)
     h = out.p;
     SWC_BE_WRITE_U32(h, SWC_MAGIC);
     SWC_BE_WRITE_U16(h + 4, SWC_FORMAT);
-    SWC_BE_WRITE_U16(h + 6, SWC_VERSION);
+    SWC_BE_WRITE_U16(h + 6, c->engine_min > 1 ? c->engine_min : 1);   /* (v1.5: 2 only for a spec that needs it) */
     SWC_BE_WRITE_U32(h + 8, 0);
     SWC_BE_WRITE_U16(h + 12, world);
     SWC_BE_WRITE_U16(h + 14, ns);
@@ -2420,15 +2596,16 @@ int swcc_compile(const char *spec, size_t len, const char *name, const char *pro
         if (c->root->type != J_OBJ) ERR(c->root, "", "the spec is a JSON object");
         else {
             c->minor = SWC_MINOR;
-            c->schema = "swc/1.4";
+            c->schema = "swc/1.5";
             if ((v = need(c, c->root, "schema", J_STR, ""))) {
                 c->schema = v->str;
                 if (!strcmp(v->str, "swc/1") || !strcmp(v->str, "swc/1.1")) c->minor = 1;
                 else if (!strcmp(v->str, "swc/1.2")) c->minor = 2;
                 else if (!strcmp(v->str, "swc/1.3")) c->minor = 3;
                 else if (!strcmp(v->str, "swc/1.4")) c->minor = 4;
+                else if (!strcmp(v->str, "swc/1.5")) c->minor = 5;
                 else
-                    ERR(v, "", "schema \"%s\": this compiler reads \"swc/1\" (= 1.1, the M1 schema), \"swc/1.1\", \"swc/1.2\", \"swc/1.3\" and \"swc/1.4\"", v->str);
+                    ERR(v, "", "schema \"%s\": this compiler reads \"swc/1\" (= 1.1, the M1 schema), \"swc/1.1\", \"swc/1.2\", \"swc/1.3\", \"swc/1.4\" and \"swc/1.5\"", v->str);
             }
             if ((v = need(c, c->root, "id", J_STR, "")) && !id_ok(v->str, NULL)) ERR(v, "", "world id \"%s\": lower-case words joined by '.', '-' or '_'", v->str);
             int_in(c, opt(c, c->root, "host_world", J_NUM, ""), "host_world", "", 0, 65535, &world);

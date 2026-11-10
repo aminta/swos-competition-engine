@@ -1,0 +1,153 @@
+{
+ "schema": "swc/1.5",
+ "id": "test.v15-cup",
+ "host_world": 9,
+ "_note": "",
+ "languages": [
+  "it",
+  "en",
+  "fr",
+  "de"
+ ],
+ "countries": {
+  "ESP": {
+   "names": {
+    "it": "SPAGNA",
+    "en": "SPAGNA",
+    "fr": "SPAGNA",
+    "de": "SPAGNA"
+   }
+  },
+  "ENG": {
+   "names": {
+    "it": "INGHILTERRA",
+    "en": "INGHILTERRA",
+    "fr": "INGHILTERRA",
+    "de": "INGHILTERRA"
+   }
+  }
+ },
+ "clubs": [
+  {
+   "id": "club:esp.alfa",
+   "name": "ESP ALFA",
+   "country": "ESP",
+   "host": {
+    "file": 60,
+    "ordinal": 0
+   }
+  },
+  {
+   "id": "club:esp.beta",
+   "name": "ESP BETA",
+   "country": "ESP",
+   "host": {
+    "file": 60,
+    "ordinal": 1
+   }
+  },
+  {
+   "id": "club:eng.alfa",
+   "name": "ENG ALFA",
+   "country": "ENG",
+   "host": {
+    "file": 61,
+    "ordinal": 0
+   }
+  },
+  {
+   "id": "club:eng.beta",
+   "name": "ENG BETA",
+   "country": "ENG",
+   "host": {
+    "file": 61,
+    "ordinal": 1
+   }
+  }
+ ],
+ "competitions": [
+  {
+   "id": "tst.cup",
+   "kind": "continental",
+   "country": "ESP",
+   "names": {
+    "it": [
+     "COPPA",
+     "COPPA"
+    ],
+    "en": [
+     "CUP",
+     "CUP"
+    ],
+    "fr": [
+     "CUP",
+     "CUP"
+    ],
+    "de": [
+     "CUP",
+     "CUP"
+    ]
+   },
+   "participants": {
+    "count": 4,
+    "clubs": [
+     "club:esp.alfa",
+     "club:esp.beta",
+     "club:eng.alfa",
+     "club:eng.beta"
+    ]
+   },
+   "stages": [
+    {
+     "id": "groups",
+     "type": "groups",
+     "groups": 1,
+     "legs": 2,
+     "tiebreakers": [
+      "points",
+      "goal_difference",
+      "goals_for",
+      "draw_lots"
+     ]
+    },
+    {
+     "id": "ko",
+     "type": "knockout",
+     "entrants": [
+      "groups#1-2"
+     ],
+     "rounds": [
+      {
+       "ties": 1,
+       "legs": 2,
+       "home": "better_placed_second_leg",
+       "pairing": "seeded",
+       "decider": [
+        "aggregate",
+        "extra_time",
+        "penalties"
+       ],
+       "avoid": [
+        "same_group"
+       ]
+      }
+     ]
+    }
+   ],
+   "outcomes": [
+    {
+     "stage": "ko",
+     "positions": "1",
+     "tag": "champion"
+    }
+   ],
+   "modes": [
+    "career",
+    "season",
+    "preset",
+    "friendly"
+   ]
+  }
+ ],
+ "_expect": "avoid \"same_group\": the stage's entrants must come from one groups stage of 2 or more groups"
+}
