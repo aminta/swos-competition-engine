@@ -5,11 +5,15 @@
            the reader (swc_spec_open SWC_OK), every string reachable.
      odd:  the bytes of a .SWC for swc_spec_open, the header's length and hash set to fit (so the fuzzer reaches the
            sections, not just the hash check).
+   T5 (the sr_stage host plan): every groups stage of a spec that opens goes through the ledger item 'ST' as the
+   glue would take it (rules/sr_stled.c: its shape, its comp's entrants as the key and CLUB.country apart, a result
+   a group); a shape the item takes must begin (or refuse the draw: -2), check 1 and give every club one group.
    libFuzzer: make fuzz-swcc. Without -DFUZZ: a seeded driver (make test) over the repo's specs and their compiled
    bytes, 0 .. 4 changes each; any .fz given (a fuzzer's find) run as it was. A find in swcc becomes a spec of
    tests/specs/bad (run_specs: refused with its message). */
 #include "../swcc/swcc.h"
 #include "../format/swc_format.h"
+#include "swosrules.h"
 
 #include <stdint.h>
 #include <stdio.h>
@@ -52,7 +56,52 @@ static char *load_pool(const char *path, const char *from, size_t *n)
 
 static void put32(uint8_t *p, uint32_t v) { p[0] = (uint8_t)(v >> 24); p[1] = (uint8_t)(v >> 16); p[2] = (uint8_t)(v >> 8); p[3] = (uint8_t)v; }
 
-static uint64_t compiled, opened;
+static uint64_t compiled, opened, gstages, stled;
+
+/* T5: a groups stage through 'ST' (the glue's inputs: the stage record, the comp's ENTR, CLUB.country) */
+static void st_stage(const SwcSpec *s, const SwcStage *st)
+{
+    static uint8_t blk[16 + SR_STAGE_CLUBS + 4 * SR_STAGE_CLUBS * (SR_STAGE_CLUBS - 1) / 2], assoc[SR_STAGE_CLUBS];
+    static uint16_t word[SR_STAGE_CLUBS];
+    static sr_match m[4 * SR_STAGE_CLUBS * SR_STAGE_CLUBS / 2];
+    uint8_t club[SR_STAGE_CLUBS];
+    gstages++;
+    const int32_t n = st->teams, g = st->groups, legs = st->legs, size = sr_st_size(n, g, legs);
+    if (size < 0) return;
+    if (size > (int32_t)sizeof blk) { fprintf(stderr, "fuzz_swcc: st_size %d past the largest block\n", (int)size); abort(); }
+    const SwcComp *c = st->comp < s->ncomps ? &s->comps[st->comp] : NULL;
+    for (int32_t k = 0; k < n; k++) {
+        const uint32_t e = c && (uint32_t)k < c->nentr && c->entr + (uint32_t)k < s->nentr ? s->entr[c->entr + k] : 0xFFFFu;
+        word[k] = (uint16_t)(e < s->nclubs ? e : 0xFF00u + (uint32_t)k);
+        assoc[k] = (uint8_t)(e < s->nclubs ? s->clubs[e].country : 0xFF - k % 64);
+    }
+    const int32_t r = sr_st_begin(blk, (int32_t)sizeof blk, n, g, legs, 1, st->purpose, word, assoc, st->purpose ^ 0x5EED);
+    if (r == -2) return;                        /* (an association with more clubs than groups: the draw refused) */
+    if (r != size || sr_st_check(blk, r, n, g, legs, 1, st->purpose, word) != 1) {
+        fprintf(stderr, "fuzz_swcc: stage %u (%d clubs, %d groups, %d legs): st_begin %d / size %d, not checked\n",
+                (unsigned)st->id, (int)n, (int)g, (int)legs, (int)r, (int)size);
+        abort();
+    }
+    int32_t total = 0, at = 0;                  /* (at: the group's first result, sr_st_record's index) */
+    for (int32_t k = 0; k < g; k++) {
+        const int32_t nm = sr_st_group(blk, k, club, m, (int32_t)(sizeof m / sizeof m[0]));
+        if (nm < 0) { fprintf(stderr, "fuzz_swcc: st_group %d refused\n", (int)k); abort(); }
+        int32_t sz = 0;
+        while (sz < SR_STAGE_CLUBS && legs * sz * (sz - 1) / 2 < nm) sz++;
+        total += sz;
+        const int32_t rx = nm ? sr_st_record(blk, club[m[0].home], club[m[0].away], 2, 1, m, (int32_t)(sizeof m / sizeof m[0])) : at;
+        if (rx != at) {
+            fprintf(stderr, "fuzz_swcc: st_record, group %d's first match (n %d g %d legs %d, nm %d, home %d away %d)\n", (int)k, (int)n, (int)g, (int)legs, (int)nm, m[0].home, m[0].away);
+            abort();
+        }
+        at += nm;
+    }
+    if (total != n || sr_st_check(blk, r, n, g, legs, 1, st->purpose, word) != 1) {
+        fprintf(stderr, "fuzz_swcc: %d clubs in the groups of %d\n", (int)total, (int)n);
+        abort();
+    }
+    stled++;
+}
 
 /* the reader on bin; returns its status. A host walks the strings through swc_str: every one is read to its NUL. */
 static SwcStatus reader(const uint8_t *bin, size_t n)
@@ -72,6 +121,7 @@ static SwcStatus reader(const uint8_t *bin, size_t n)
         for (i = 0; i < s.nclubs; i++) sink += strlen(swc_str(&s, s.clubs[i].id)) + strlen(swc_str(&s, s.clubs[i].name));
         for (i = 0; i < s.ncomps; i++) sink += strlen(swc_str(&s, s.comps[i].id));
         for (i = 0; i < s.nstages; i++) sink += strlen(swc_str(&s, s.stages[i].id));
+        for (i = 0; i < s.nstages; i++) if (s.stages[i].type == SWC_ST_GROUPS) st_stage(&s, &s.stages[i]);
         for (i = 0; i < s.nmeta; i++) sink += strlen(swc_str(&s, s.meta[i].id)) + strlen(swc_str(&s, s.meta[i].version));
         for (i = 0; i < s.nnames; i++)
             for (int l = 0; l < 4; l++)
@@ -183,8 +233,9 @@ int main(int argc, char **argv)
         }
         LLVMFuzzerTestOneInput(m, n);
     }
-    printf("PASS: fuzz_swcc, %d finds of the fuzzer replayed; %d changed specs / .SWC files (%d seeds, 0 .. 4 changes each): %llu compiled (all open in the reader), %llu .SWC opened, no sanitizer report\n",
-           nreg, it, ns, (unsigned long long)compiled, (unsigned long long)opened);
+    printf("PASS: fuzz_swcc, %d finds of the fuzzer replayed; %d changed specs / .SWC files (%d seeds, 0 .. 4 changes each): %llu compiled (all open in the reader), %llu .SWC opened, %llu groups stages (%llu through 'ST'), no sanitizer report\n",
+           nreg, it, ns, (unsigned long long)compiled, (unsigned long long)opened, (unsigned long long)gstages,
+           (unsigned long long)stled);
     return 0;
 }
 #endif

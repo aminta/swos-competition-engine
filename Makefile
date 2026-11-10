@@ -143,13 +143,13 @@ fuzz-lib: tests/rules/fuzz_lib.c $(RULES) rules/swosrules.h | $(OUT)
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/fuzz_lib_lf $(OUT)/fuzz_lib_corpus -max_len=16384 -max_total_time=$(FUZZTIME) \
 	    -artifact_prefix=$(OUT)/lib-
 # swcc and the .SWC reader on anything: what swcc accepts must open in the reader (ASan / UBSan); libFuzzer: make fuzz-swcc
-FUZZSWCC = tests/fuzz_swcc.c $(SWCC) $(FORMAT) swcc/swcc.h swcc/json.h format/swc_format.h
+FUZZSWCC = tests/fuzz_swcc.c $(SWCC) $(FORMAT) swcc/swcc.h swcc/json.h format/swc_format.h rules/sr_stled.c rules/sr_stage.c rules/swosrules.h
 $(OUT)/fuzz_swcc: $(FUZZSWCC) | $(OUT)
 	$(CC) -std=c11 -O1 -g -Wall -Wextra -Wno-missing-field-initializers -ftrivial-auto-var-init=pattern $(SANITIZE) \
-	    -DFUZZ_PROFILES='"$(CURDIR)/profiles"' -o $@ tests/fuzz_swcc.c $(SWCC) $(FORMAT)
+	    -DFUZZ_PROFILES='"$(CURDIR)/profiles"' -Irules -o $@ tests/fuzz_swcc.c $(SWCC) $(FORMAT) rules/sr_stled.c rules/sr_stage.c
 fuzz-swcc: $(FUZZSWCC) $(OUT)/swcc | $(OUT)
 	$(FUZZCC) -std=c11 -O1 -g -DFUZZ -ftrivial-auto-var-init=pattern -fsanitize=fuzzer,address,undefined -fno-sanitize-recover=all \
-	    -DFUZZ_PROFILES='"$(CURDIR)/profiles"' -o $(OUT)/fuzz_swcc_lf tests/fuzz_swcc.c $(SWCC) $(FORMAT)
+	    -DFUZZ_PROFILES='"$(CURDIR)/profiles"' -Irules -o $(OUT)/fuzz_swcc_lf tests/fuzz_swcc.c $(SWCC) $(FORMAT) rules/sr_stled.c rules/sr_stage.c
 	@mkdir -p $(OUT)/fuzz_swcc_corpus
 	python3 -I tests/fuzz_swcc_corpus.py $(OUT)/swcc $(OUT)/fuzz_swcc_corpus $(OUT)/fuzz_swcc.dict $$(find tests/specs examples packs -name '*.json')
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/fuzz_swcc_lf $(OUT)/fuzz_swcc_corpus -dict=$(OUT)/fuzz_swcc.dict -max_len=65536 \
