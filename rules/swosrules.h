@@ -762,6 +762,31 @@ uint32_t sr_reg_work_size(void);
 /* The invariants: every row holds one club, each club at most one row, words and rows agree. 0; -1. */
 int32_t sr_reg_check(const sr_registry *r);
 
+/* ---- sr_regsave.c: the registry in a save (N7: the Mod's SWC1 section 'IT'). The identity map only, 10 bits a
+ * row (Italy 4.2: 298 rows, 12 + 373 B); word[] is its inverse, a row's division stays as built (the exe's default
+ * sets it from the records). Idents are the pack's order, append-only: another layout reads as absent. ---- */
+#define SR_REGSAVE_VERSION  1
+#define SR_REGSAVE_HDR      12
+#define SR_REGSAVE_FLAGS    8          /* u16 at +8, the caller's: */
+#define SR_REGSAVE_IMPORTED 1          /*   written by an old save's import */
+#define SR_REGSAVE_PENDING  2          /*   clubs with an ident and no row yet (they come on at the next season end) */
+/* FNV-1a 32 over the shape: nfiles, each file's number, divisions and sizes, pool rows; nclub */
+uint32_t sr_reg_layout(int32_t nfiles, const sr_reg_file *f, int32_t nclub);
+int32_t  sr_reg_save_size(const sr_registry *r);                   /* bytes; -1 no registry */
+/* The bytes written (flags 0); -1 room short or a registry that fails sr_reg_check. */
+int32_t  sr_reg_save(const sr_registry *r, uint32_t layout, uint16_t season, uint8_t *out, int32_t room);
+/* r built from the spec first (sr_reg_build: the files' shape, nclub). 1 loaded; 0 absent (len 0), another
+ * version, file count or layout: r unchanged, the caller imports or keeps the built one; -1 corrupt (short, rows
+ * not the files', an ident >= nclub or twice): r unchanged. */
+int32_t  sr_reg_load(sr_registry *r, uint32_t layout, const uint8_t *in, int32_t len);
+/* The word map: an old team word -> its club's word now (SR_REG_NONE: off the files), sorted by the old word;
+ * a word not in it is unchanged. The count; -1 bad input (a word twice, a swap of a word with itself), -2 room short. */
+typedef struct { uint16_t from, to; } sr_wpair;
+int32_t  sr_wmap_build(const sr_reg_swap *sw, int32_t n, sr_wpair *out, int32_t max);   /* sr_reg_season's swaps */
+/* old_word[ident] = the club's word in the old layout (SR_REG_NONE: it was off the files), idents 0 .. n-1 */
+int32_t  sr_wmap_import(const sr_registry *r, const uint16_t *old_word, int32_t n, sr_wpair *out, int32_t max);
+uint16_t sr_wmap_get(const sr_wpair *m, int32_t n, uint16_t w);
+
 /* 42-s2ko: a knockout's bracket numbers and its fixed bracket (sr_kn.c; Lega Serie A C.U. 253 and its Allegato 1).
  * The caller resolves each 'numbers' item (swc: "<league>#N-M", "<league>:up", "<cup>:winner" ...) into a list of
  * last season's clubs in order; club codes are the caller's (< SR_KN_CLUBS), rec / eligible indexed by them. */

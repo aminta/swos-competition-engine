@@ -94,6 +94,10 @@ $(OUT)/bteams42: tests/rules/bteams42.c $(RULES) rules/swosrules.h | $(OUT)
 $(OUT)/reg: tests/rules/reg.c tests/rules/italy42_map.h $(RULES) rules/swosrules.h | $(OUT)
 	$(CC) -std=c99 -O1 -g -Wall -Wextra -Wno-missing-field-initializers $(SANITIZE) -Irules -o $@ \
 	    tests/rules/reg.c rules/sr_reg.c
+# The registry in a save and the word map (N7: the save side of 42-s7reg)
+$(OUT)/reg_save: tests/rules/reg_save.c tests/rules/italy42_map.h $(RULES) rules/swosrules.h | $(OUT)
+	$(CC) -std=c99 -O1 -g -Wall -Wextra -Wno-missing-field-initializers $(SANITIZE) -Irules -o $@ \
+	    tests/rules/reg_save.c rules/sr_reg.c rules/sr_regsave.c
 # The Coppa Italia Serie C winner's play-off place (F1: the Mod's dplay.c 353984f, one case per place)
 $(OUT)/cupplace: tests/rules/cupplace.c $(RULES) rules/swosrules.h | $(OUT)
 	$(CC) -std=c99 -O1 -g -Wall -Wextra -Wno-missing-field-initializers $(SANITIZE) -Irules -o $@ \
@@ -193,7 +197,7 @@ sim: $(OUT)/masssim $(OUT)/italysim $(OUT)/italyfull
 	@for b in drop bteam updown regdrop regdup regdiv; do if ITALYFULL_BREAK=$$b $(OUT)/italyfull 2 3 >/dev/null; then echo "italyfull control $$b NOT caught"; exit 1; fi; done
 	@echo "italyfull controls: a club dropped, a B team in its first team's division, one too many up, a swap dropped, a slot twice, a wrong division byte -> caught"
 
-test: $(OUT)/test_format $(OUT)/swcc $(OUT)/swc_i486.o $(RULES_I486) $(OUT)/spec_check $(OUT)/team_order $(OUT)/groups_guard $(OUT)/nonleague $(OUT)/step3real $(OUT)/nlplayoff $(OUT)/ecclp $(OUT)/stage $(OUT)/stage_swc $(OUT)/stage_st $(OUT)/bteams42 $(OUT)/cupplace $(OUT)/reg $(OUT)/s3shape $(OUT)/league_rank $(OUT)/uefa_final $(OUT)/s2ko $(OUT)/s2ko_edge $(OUT)/s2ko_glue $(OUT)/fuzz_rules $(OUT)/fuzz_swcc $(OUT)/fuzz_lib
+test: $(OUT)/test_format $(OUT)/swcc $(OUT)/swc_i486.o $(RULES_I486) $(OUT)/spec_check $(OUT)/team_order $(OUT)/groups_guard $(OUT)/nonleague $(OUT)/step3real $(OUT)/nlplayoff $(OUT)/ecclp $(OUT)/stage $(OUT)/stage_swc $(OUT)/stage_st $(OUT)/bteams42 $(OUT)/cupplace $(OUT)/reg $(OUT)/reg_save $(OUT)/s3shape $(OUT)/league_rank $(OUT)/uefa_final $(OUT)/s2ko $(OUT)/s2ko_edge $(OUT)/s2ko_glue $(OUT)/fuzz_rules $(OUT)/fuzz_swcc $(OUT)/fuzz_lib
 	$(OUT)/swcc compile packs/sample/world.json -o $(OUT)/sample.swc >/dev/null
 	$(OUT)/test_format $(OUT)/sample.swc
 	sh tests/run_specs.sh $(OUT)/swcc
@@ -222,6 +226,7 @@ test: $(OUT)/test_format $(OUT)/swcc $(OUT)/swc_i486.o $(RULES_I486) $(OUT)/spec
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/fuzz_swcc 20000 $$(find tests/specs examples packs -name '*.json')
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/fuzz_lib 30000 tests/rules/fuzz_regress_lib/*.fz
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/reg
+	ASAN_OPTIONS=detect_leaks=0 $(OUT)/reg_save
 	sh tests/rules/frames.sh $(CC) $(I486) -Wno-error=frame-larger-than
 	$(OUT)/swcc compile tests/specs/ok/v14_files_one.json -o $(OUT)/files_one.swc >/dev/null
 	$(OUT)/swcc compile tests/specs/ok/v14_second_floor.json -o $(OUT)/files_none.swc >/dev/null
