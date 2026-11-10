@@ -6,10 +6,12 @@
  * read or write past a buffer or hit undefined behaviour (ASan / UBSan, -fno-sanitize-recover).
  *
  * The input: 16 bytes of league / season / tables, then the spec. Built two ways:
- * - libFuzzer (FUZZ=1, Homebrew clang: make fuzz): build/fuzz_rules CORPUS -max_total_time=S; the corpus seeded by
- *   tests/rules/specs (make fuzz-corpus).
- * - A seeded random driver (make test): fuzz_rules [ITERATIONS] SPEC... -- each real spec under random headers and
- *   0 .. 4 random byte changes, insertions or cuts.
+ * - libFuzzer (Homebrew clang: make fuzz [FUZZTIME=seconds]): the corpus each real spec of tests/rules/specs behind
+ *   random headers (tests/rules/fuzz_corpus.py).
+ * - A seeded random driver (make test): fuzz_rules [ITERATIONS] SPEC... FIND.fz... -- each real spec under random
+ *   headers and 0 .. 4 random byte changes, insertions or cuts; each .fz file of tests/rules/fuzz_regress (the
+ *   fuzzer's finds, fixed 10/11) replayed as is. Built with -ftrivial-auto-var-init=pattern: a local read before it
+ *   is written is a fault.
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -168,9 +170,19 @@ int main(int argc, char **argv)
     static uint32_t len[64];
     int ns = 0;
     const int it = argc > 1 ? atoi(argv[1]) : 20000;
+    int nreg = 0;
     for (int a = 2; a < argc && ns < 64; a++) {
+        const size_t al = strlen(argv[a]);
         FILE *f = fopen(argv[a], "rb");
         if (!f) continue;
+        if (al > 3 && !strcmp(argv[a] + al - 3, ".fz")) {   /* (a fuzzer's find, header + spec as it was: run as is) */
+            static uint8_t raw[4200 + 16];
+            const size_t n = fread(raw, 1, sizeof raw, f);
+            fclose(f);
+            LLVMFuzzerTestOneInput(raw, n);
+            nreg++;
+            continue;
+        }
         len[ns] = (uint32_t)fread(s[ns], 1, sizeof s[ns], f);
         fclose(f);
         ns += len[ns] > 0;
@@ -217,8 +229,8 @@ int main(int argc, char **argv)
         }
         LLVMFuzzerTestOneInput(m, 16 + n);
     }
-    printf("PASS: fuzz_rules, %d random leagues / seasons / specs (%d specs, 0 .. 4 changes each): %d accepted by the checks, all played through the season end (knockouts, contests, club play-offs, Italy, final moves, B teams) without a sanitizer report\n",
-           it, ns, (int)accepted);
+    printf("PASS: fuzz_rules, %d finds of the fuzzer replayed; %d random leagues / seasons / specs (%d specs, 0 .. 4 changes each): %d accepted by the checks, all played through the season end (knockouts, contests, club play-offs, Italy, final moves, B teams) without a sanitizer report\n",
+           nreg, it, ns, (int)accepted);
     return 0;
 }
 #endif

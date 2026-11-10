@@ -120,6 +120,9 @@ int32_t sr_spec_check(const uint8_t *spec, uint32_t len, int32_t divisions, sr_c
                     return fail(err, SR_CHECK_INDEX, pidx, at, "best-first members");
             if (!group && (r[4] & 0x7F) > 2 * ties)
                 return fail(err, SR_CHECK_COUNT, pidx, at + 4, "pairing (at most the round's clubs)");
+            if (!group && r[4] && !(r[4] & 0x80) && (r[4] & 1))    /* (best v worst pairs them: an odd one left over
+                                                                     -- the fuzzer, 10/11) */
+                return fail(err, SR_CHECK_VALUE, pidx, at + 4, "pairing best v worst (an even number of clubs)");
             at += 6;
             if (len - at < 2u * (uint32_t)ties)
                 return fail(err, SR_CHECK_TRUNCATED, pidx, at, "members");

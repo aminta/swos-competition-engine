@@ -111,12 +111,12 @@ $(OUT)/s2ko_edge: tests/rules/s2ko_edge.c rules/sr_kn.c rules/sr_pool.c rules/sw
 	    tests/rules/s2ko_edge.c rules/sr_kn.c rules/sr_pool.c rules/sr_groups.c -lm
 # the rules library on anything its checks accept (random leagues, seasons, specs; ASan / UBSan); libFuzzer: make fuzz
 $(OUT)/fuzz_rules: tests/rules/fuzz_rules.c $(RULES) rules/swosrules.h | $(OUT)
-	$(CC) -std=c11 -O1 -g -Wall -Wextra -Wno-missing-field-initializers $(SANITIZE) -Irules -o $@ \
-	    tests/rules/fuzz_rules.c $(RULES) -lm
+	$(CC) -std=c11 -O1 -g -Wall -Wextra -Wno-missing-field-initializers -ftrivial-auto-var-init=pattern $(SANITIZE) \
+	    -Irules -o $@ tests/rules/fuzz_rules.c $(RULES) -lm
 FUZZCC   ?= /opt/homebrew/opt/llvm/bin/clang
 FUZZTIME ?= 1800
 fuzz: tests/rules/fuzz_rules.c $(RULES) rules/swosrules.h | $(OUT)
-	$(FUZZCC) -std=c11 -O1 -g -DFUZZ -fsanitize=fuzzer,address,undefined -fno-sanitize-recover=all -Irules \
+	$(FUZZCC) -std=c11 -O1 -g -DFUZZ -ftrivial-auto-var-init=pattern -fsanitize=fuzzer,address,undefined -fno-sanitize-recover=all -Irules \
 	    -o $(OUT)/fuzz_rules_lf tests/rules/fuzz_rules.c $(RULES) -lm
 	@mkdir -p $(OUT)/fuzz_corpus
 	python3 -I tests/rules/fuzz_corpus.py tests/rules/specs $(OUT)/fuzz_corpus
@@ -186,7 +186,7 @@ test: $(OUT)/test_format $(OUT)/swcc $(OUT)/swc_i486.o $(RULES_I486) $(OUT)/spec
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/s2ko
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/s2ko_edge
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/s2ko_glue
-	ASAN_OPTIONS=detect_leaks=0 $(OUT)/fuzz_rules 50000 tests/rules/specs/*.spec
+	ASAN_OPTIONS=detect_leaks=0 $(OUT)/fuzz_rules 50000 tests/rules/specs/*.spec tests/rules/fuzz_regress/*.fz
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/reg
 	sh tests/rules/frames.sh $(CC) $(I486) -Wno-error=frame-larger-than
 	$(OUT)/swcc compile tests/specs/ok/v14_files_one.json -o $(OUT)/files_one.swc >/dev/null
