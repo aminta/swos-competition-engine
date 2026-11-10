@@ -1,0 +1,504 @@
+{
+ "schema": "swc/1.4",
+ "id": "test.v14-stage-cup",
+ "host_world": 9,
+ "_note": "T3 (sr_stage host plan): 32 clubs of 8 associations, 8 groups of 4 (2 legs), the top two to a seeded last 16, drawn rounds, a one-match final; read from the .SWC by tests/rules/stage_swc.c",
+ "languages": [
+  "it",
+  "en",
+  "fr",
+  "de"
+ ],
+ "countries": {
+  "ALF": {
+   "names": {
+    "it": "LAND ALF",
+    "en": "LAND ALF",
+    "fr": "LAND ALF",
+    "de": "LAND ALF"
+   }
+  },
+  "BRV": {
+   "names": {
+    "it": "LAND BRV",
+    "en": "LAND BRV",
+    "fr": "LAND BRV",
+    "de": "LAND BRV"
+   }
+  },
+  "CHL": {
+   "names": {
+    "it": "LAND CHL",
+    "en": "LAND CHL",
+    "fr": "LAND CHL",
+    "de": "LAND CHL"
+   }
+  },
+  "DLT": {
+   "names": {
+    "it": "LAND DLT",
+    "en": "LAND DLT",
+    "fr": "LAND DLT",
+    "de": "LAND DLT"
+   }
+  },
+  "ECH": {
+   "names": {
+    "it": "LAND ECH",
+    "en": "LAND ECH",
+    "fr": "LAND ECH",
+    "de": "LAND ECH"
+   }
+  },
+  "FXT": {
+   "names": {
+    "it": "LAND FXT",
+    "en": "LAND FXT",
+    "fr": "LAND FXT",
+    "de": "LAND FXT"
+   }
+  },
+  "GLF": {
+   "names": {
+    "it": "LAND GLF",
+    "en": "LAND GLF",
+    "fr": "LAND GLF",
+    "de": "LAND GLF"
+   }
+  },
+  "HTL": {
+   "names": {
+    "it": "LAND HTL",
+    "en": "LAND HTL",
+    "fr": "LAND HTL",
+    "de": "LAND HTL"
+   }
+  }
+ },
+ "clubs": [
+  {
+   "id": "club:alf.c00",
+   "name": "CLUB 00",
+   "country": "ALF",
+   "host": {
+    "file": 91,
+    "ordinal": 0
+   }
+  },
+  {
+   "id": "club:fxt.c01",
+   "name": "CLUB 01",
+   "country": "FXT",
+   "host": {
+    "file": 91,
+    "ordinal": 1
+   }
+  },
+  {
+   "id": "club:chl.c02",
+   "name": "CLUB 02",
+   "country": "CHL",
+   "host": {
+    "file": 91,
+    "ordinal": 2
+   }
+  },
+  {
+   "id": "club:htl.c03",
+   "name": "CLUB 03",
+   "country": "HTL",
+   "host": {
+    "file": 91,
+    "ordinal": 3
+   }
+  },
+  {
+   "id": "club:ech.c04",
+   "name": "CLUB 04",
+   "country": "ECH",
+   "host": {
+    "file": 91,
+    "ordinal": 4
+   }
+  },
+  {
+   "id": "club:brv.c05",
+   "name": "CLUB 05",
+   "country": "BRV",
+   "host": {
+    "file": 91,
+    "ordinal": 5
+   }
+  },
+  {
+   "id": "club:glf.c06",
+   "name": "CLUB 06",
+   "country": "GLF",
+   "host": {
+    "file": 91,
+    "ordinal": 6
+   }
+  },
+  {
+   "id": "club:dlt.c07",
+   "name": "CLUB 07",
+   "country": "DLT",
+   "host": {
+    "file": 91,
+    "ordinal": 7
+   }
+  },
+  {
+   "id": "club:alf.c08",
+   "name": "CLUB 08",
+   "country": "ALF",
+   "host": {
+    "file": 91,
+    "ordinal": 8
+   }
+  },
+  {
+   "id": "club:fxt.c09",
+   "name": "CLUB 09",
+   "country": "FXT",
+   "host": {
+    "file": 91,
+    "ordinal": 9
+   }
+  },
+  {
+   "id": "club:chl.c10",
+   "name": "CLUB 10",
+   "country": "CHL",
+   "host": {
+    "file": 91,
+    "ordinal": 10
+   }
+  },
+  {
+   "id": "club:htl.c11",
+   "name": "CLUB 11",
+   "country": "HTL",
+   "host": {
+    "file": 91,
+    "ordinal": 11
+   }
+  },
+  {
+   "id": "club:ech.c12",
+   "name": "CLUB 12",
+   "country": "ECH",
+   "host": {
+    "file": 91,
+    "ordinal": 12
+   }
+  },
+  {
+   "id": "club:brv.c13",
+   "name": "CLUB 13",
+   "country": "BRV",
+   "host": {
+    "file": 91,
+    "ordinal": 13
+   }
+  },
+  {
+   "id": "club:glf.c14",
+   "name": "CLUB 14",
+   "country": "GLF",
+   "host": {
+    "file": 91,
+    "ordinal": 14
+   }
+  },
+  {
+   "id": "club:dlt.c15",
+   "name": "CLUB 15",
+   "country": "DLT",
+   "host": {
+    "file": 91,
+    "ordinal": 15
+   }
+  },
+  {
+   "id": "club:alf.c16",
+   "name": "CLUB 16",
+   "country": "ALF",
+   "host": {
+    "file": 91,
+    "ordinal": 16
+   }
+  },
+  {
+   "id": "club:fxt.c17",
+   "name": "CLUB 17",
+   "country": "FXT",
+   "host": {
+    "file": 91,
+    "ordinal": 17
+   }
+  },
+  {
+   "id": "club:chl.c18",
+   "name": "CLUB 18",
+   "country": "CHL",
+   "host": {
+    "file": 91,
+    "ordinal": 18
+   }
+  },
+  {
+   "id": "club:htl.c19",
+   "name": "CLUB 19",
+   "country": "HTL",
+   "host": {
+    "file": 91,
+    "ordinal": 19
+   }
+  },
+  {
+   "id": "club:ech.c20",
+   "name": "CLUB 20",
+   "country": "ECH",
+   "host": {
+    "file": 91,
+    "ordinal": 20
+   }
+  },
+  {
+   "id": "club:brv.c21",
+   "name": "CLUB 21",
+   "country": "BRV",
+   "host": {
+    "file": 91,
+    "ordinal": 21
+   }
+  },
+  {
+   "id": "club:glf.c22",
+   "name": "CLUB 22",
+   "country": "GLF",
+   "host": {
+    "file": 91,
+    "ordinal": 22
+   }
+  },
+  {
+   "id": "club:dlt.c23",
+   "name": "CLUB 23",
+   "country": "DLT",
+   "host": {
+    "file": 91,
+    "ordinal": 23
+   }
+  },
+  {
+   "id": "club:alf.c24",
+   "name": "CLUB 24",
+   "country": "ALF",
+   "host": {
+    "file": 91,
+    "ordinal": 24
+   }
+  },
+  {
+   "id": "club:fxt.c25",
+   "name": "CLUB 25",
+   "country": "FXT",
+   "host": {
+    "file": 91,
+    "ordinal": 25
+   }
+  },
+  {
+   "id": "club:chl.c26",
+   "name": "CLUB 26",
+   "country": "CHL",
+   "host": {
+    "file": 91,
+    "ordinal": 26
+   }
+  },
+  {
+   "id": "club:htl.c27",
+   "name": "CLUB 27",
+   "country": "HTL",
+   "host": {
+    "file": 91,
+    "ordinal": 27
+   }
+  },
+  {
+   "id": "club:ech.c28",
+   "name": "CLUB 28",
+   "country": "ECH",
+   "host": {
+    "file": 91,
+    "ordinal": 28
+   }
+  },
+  {
+   "id": "club:brv.c29",
+   "name": "CLUB 29",
+   "country": "BRV",
+   "host": {
+    "file": 91,
+    "ordinal": 29
+   }
+  },
+  {
+   "id": "club:glf.c30",
+   "name": "CLUB 30",
+   "country": "GLF",
+   "host": {
+    "file": 91,
+    "ordinal": 30
+   }
+  },
+  {
+   "id": "club:dlt.c31",
+   "name": "CLUB 31",
+   "country": "DLT",
+   "host": {
+    "file": 91,
+    "ordinal": 31
+   }
+  }
+ ],
+ "competitions": [
+  {
+   "id": "tst.stagecup",
+   "kind": "tournament",
+   "country": "ALF",
+   "names": {
+    "it": [
+     "STAGE CUP",
+     "STAGE CUP"
+    ],
+    "en": [
+     "STAGE CUP",
+     "STAGE CUP"
+    ],
+    "fr": [
+     "STAGE CUP",
+     "STAGE CUP"
+    ],
+    "de": [
+     "STAGE CUP",
+     "STAGE CUP"
+    ]
+   },
+   "participants": {
+    "count": 32,
+    "clubs": [
+     "club:alf.c00",
+     "club:fxt.c01",
+     "club:chl.c02",
+     "club:htl.c03",
+     "club:ech.c04",
+     "club:brv.c05",
+     "club:glf.c06",
+     "club:dlt.c07",
+     "club:alf.c08",
+     "club:fxt.c09",
+     "club:chl.c10",
+     "club:htl.c11",
+     "club:ech.c12",
+     "club:brv.c13",
+     "club:glf.c14",
+     "club:dlt.c15",
+     "club:alf.c16",
+     "club:fxt.c17",
+     "club:chl.c18",
+     "club:htl.c19",
+     "club:ech.c20",
+     "club:brv.c21",
+     "club:glf.c22",
+     "club:dlt.c23",
+     "club:alf.c24",
+     "club:fxt.c25",
+     "club:chl.c26",
+     "club:htl.c27",
+     "club:ech.c28",
+     "club:brv.c29",
+     "club:glf.c30",
+     "club:dlt.c31"
+    ]
+   },
+   "stages": [
+    {
+     "id": "groups",
+     "type": "groups",
+     "groups": 8,
+     "legs": 2,
+     "tiebreakers": [
+      "points",
+      "head_to_head_points",
+      "head_to_head_goal_difference",
+      "head_to_head_goals_for",
+      "goal_difference",
+      "goals_for",
+      "draw_lots"
+     ]
+    },
+    {
+     "id": "ko",
+     "type": "knockout",
+     "entrants": [
+      "groups#1",
+      "groups#2"
+     ],
+     "rounds": [
+      {
+       "ties": 8,
+       "legs": 2,
+       "home": "better_placed_second_leg",
+       "pairing": "seeded",
+       "decider": [
+        "aggregate",
+        "extra_time",
+        "penalties"
+       ]
+      },
+      {
+       "ties": 4,
+       "legs": 2,
+       "home": "draw",
+       "pairing": "draw",
+       "decider": [
+        "aggregate",
+        "extra_time",
+        "penalties"
+       ]
+      },
+      {
+       "ties": 2,
+       "legs": 2,
+       "home": "draw",
+       "pairing": "draw",
+       "decider": [
+        "aggregate",
+        "extra_time",
+        "penalties"
+       ]
+      },
+      {
+       "ties": 1,
+       "legs": 1,
+       "home": "neutral",
+       "pairing": "draw",
+       "decider": [
+        "extra_time",
+        "penalties"
+       ]
+      }
+     ]
+    }
+   ],
+   "modes": [
+    "season",
+    "preset"
+   ]
+  }
+ ]
+}

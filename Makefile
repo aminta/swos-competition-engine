@@ -58,6 +58,16 @@ $(OUT)/stage: tests/rules/stage.c $(RULES) rules/swosrules.h format/swc_format.h
 	$(CC) -std=c99 -O1 -g -Wall -Wextra -Wno-missing-field-initializers $(SANITIZE) -Irules -o $@ \
 	    tests/rules/stage.c rules/sr_stage.c
 
+# T3 (the sr_stage host plan): a groups-then-knockout cup from spec to .SWC, played by sr_stage (seeds by purpose, P4)
+$(OUT)/stage_swc: tests/rules/stage_swc.c rules/sr_stage.c rules/swosrules.h $(FORMAT) format/swc_format.h | $(OUT)
+	$(CC) -std=c99 -O1 -g -Wall -Wextra -Wno-missing-field-initializers $(SANITIZE) -Irules -o $@ \
+	    tests/rules/stage_swc.c rules/sr_stage.c $(FORMAT)
+
+# T4 / P6 (the sr_stage host plan): the ledger item 'ST' (rules/sr_stled.c) saved mid-stage, loaded, finished; old saves
+$(OUT)/stage_st: tests/rules/stage_st.c rules/sr_stled.c rules/sr_stage.c rules/swosrules.h $(FORMAT) format/swc_format.h | $(OUT)
+	$(CC) -std=c99 -O1 -g -Wall -Wextra -Wno-missing-field-initializers $(SANITIZE) -Irules -o $@ \
+	    tests/rules/stage_st.c rules/sr_stled.c rules/sr_stage.c $(FORMAT)
+
 # 4.2 S1: a league table ranked by its tie-breaker list (faithful_1996 = the game's sort, head to head from results)
 $(OUT)/league_rank: tests/rules/league_rank.c rules/sr_stage.c rules/swosrules.h | $(OUT)
 	$(CC) -std=c99 -O1 -g -Wall -Wextra -Wno-missing-field-initializers $(SANITIZE) -Irules -o $@ \
@@ -84,6 +94,10 @@ $(OUT)/bteams42: tests/rules/bteams42.c $(RULES) rules/swosrules.h | $(OUT)
 $(OUT)/reg: tests/rules/reg.c tests/rules/italy42_map.h $(RULES) rules/swosrules.h | $(OUT)
 	$(CC) -std=c99 -O1 -g -Wall -Wextra -Wno-missing-field-initializers $(SANITIZE) -Irules -o $@ \
 	    tests/rules/reg.c rules/sr_reg.c
+# The registry in a save and the word map (N7: the save side of 42-s7reg)
+$(OUT)/reg_save: tests/rules/reg_save.c tests/rules/italy42_map.h $(RULES) rules/swosrules.h | $(OUT)
+	$(CC) -std=c99 -O1 -g -Wall -Wextra -Wno-missing-field-initializers $(SANITIZE) -Irules -o $@ \
+	    tests/rules/reg_save.c rules/sr_reg.c rules/sr_regsave.c
 # The Coppa Italia Serie C winner's play-off place (F1: the Mod's dplay.c 353984f, one case per place)
 $(OUT)/cupplace: tests/rules/cupplace.c $(RULES) rules/swosrules.h | $(OUT)
 	$(CC) -std=c99 -O1 -g -Wall -Wextra -Wno-missing-field-initializers $(SANITIZE) -Irules -o $@ \
@@ -133,13 +147,13 @@ fuzz-lib: tests/rules/fuzz_lib.c $(RULES) rules/swosrules.h | $(OUT)
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/fuzz_lib_lf $(OUT)/fuzz_lib_corpus -max_len=16384 -max_total_time=$(FUZZTIME) \
 	    -artifact_prefix=$(OUT)/lib-
 # swcc and the .SWC reader on anything: what swcc accepts must open in the reader (ASan / UBSan); libFuzzer: make fuzz-swcc
-FUZZSWCC = tests/fuzz_swcc.c $(SWCC) $(FORMAT) swcc/swcc.h swcc/json.h format/swc_format.h
+FUZZSWCC = tests/fuzz_swcc.c $(SWCC) $(FORMAT) swcc/swcc.h swcc/json.h format/swc_format.h rules/sr_stled.c rules/sr_stage.c rules/swosrules.h
 $(OUT)/fuzz_swcc: $(FUZZSWCC) | $(OUT)
 	$(CC) -std=c11 -O1 -g -Wall -Wextra -Wno-missing-field-initializers -ftrivial-auto-var-init=pattern $(SANITIZE) \
-	    -DFUZZ_PROFILES='"$(CURDIR)/profiles"' -o $@ tests/fuzz_swcc.c $(SWCC) $(FORMAT)
+	    -DFUZZ_PROFILES='"$(CURDIR)/profiles"' -Irules -o $@ tests/fuzz_swcc.c $(SWCC) $(FORMAT) rules/sr_stled.c rules/sr_stage.c
 fuzz-swcc: $(FUZZSWCC) $(OUT)/swcc | $(OUT)
 	$(FUZZCC) -std=c11 -O1 -g -DFUZZ -ftrivial-auto-var-init=pattern -fsanitize=fuzzer,address,undefined -fno-sanitize-recover=all \
-	    -DFUZZ_PROFILES='"$(CURDIR)/profiles"' -o $(OUT)/fuzz_swcc_lf tests/fuzz_swcc.c $(SWCC) $(FORMAT)
+	    -DFUZZ_PROFILES='"$(CURDIR)/profiles"' -Irules -o $(OUT)/fuzz_swcc_lf tests/fuzz_swcc.c $(SWCC) $(FORMAT) rules/sr_stled.c rules/sr_stage.c
 	@mkdir -p $(OUT)/fuzz_swcc_corpus
 	python3 -I tests/fuzz_swcc_corpus.py $(OUT)/swcc $(OUT)/fuzz_swcc_corpus $(OUT)/fuzz_swcc.dict $$(find tests/specs examples packs -name '*.json')
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/fuzz_swcc_lf $(OUT)/fuzz_swcc_corpus -dict=$(OUT)/fuzz_swcc.dict -max_len=65536 \
@@ -185,7 +199,7 @@ sim: $(OUT)/masssim $(OUT)/italysim $(OUT)/italyfull
 
 sim-italy: | $(OUT) ; $(CC) $(CFLAGS) -Irules -o $(OUT)/simdrv tests/sim/simdrv.c rules/sr_stage.c rules/sr_dplay.c rules/sr_gplay.c rules/sr_post.c rules/sr_check.c rules/sr_pool.c rules/sr_groups.c rules/sr_reg.c -lm && $(OUT)/simdrv 100000 && for b in pts order move cout; do if SIMDRV_BREAK=$$b $(OUT)/simdrv 3 >/dev/null; then echo "simdrv control $$b NOT caught"; exit 1; fi; done && SIMDRV_CGAP=9 $(OUT)/simdrv 100000 >/dev/null || { echo "simdrv SIMDRV_CGAP=9 broke: the C play-outs and cup_out not on one gap"; exit 1; }
 
-test: $(OUT)/test_format $(OUT)/swcc $(OUT)/swc_i486.o $(RULES_I486) $(OUT)/spec_check $(OUT)/team_order $(OUT)/groups_guard $(OUT)/nonleague $(OUT)/step3real $(OUT)/nlplayoff $(OUT)/ecclp $(OUT)/stage $(OUT)/bteams42 $(OUT)/cupplace $(OUT)/reg $(OUT)/s3shape $(OUT)/league_rank $(OUT)/uefa_final $(OUT)/s2ko $(OUT)/s2ko_edge $(OUT)/s2ko_glue $(OUT)/fuzz_rules $(OUT)/fuzz_swcc $(OUT)/fuzz_lib
+test: $(OUT)/test_format $(OUT)/swcc $(OUT)/swc_i486.o $(RULES_I486) $(OUT)/spec_check $(OUT)/team_order $(OUT)/groups_guard $(OUT)/nonleague $(OUT)/step3real $(OUT)/nlplayoff $(OUT)/ecclp $(OUT)/stage $(OUT)/stage_swc $(OUT)/stage_st $(OUT)/bteams42 $(OUT)/cupplace $(OUT)/reg $(OUT)/reg_save $(OUT)/s3shape $(OUT)/league_rank $(OUT)/uefa_final $(OUT)/s2ko $(OUT)/s2ko_edge $(OUT)/s2ko_glue $(OUT)/fuzz_rules $(OUT)/fuzz_swcc $(OUT)/fuzz_lib
 	$(OUT)/swcc compile packs/sample/world.json -o $(OUT)/sample.swc >/dev/null
 	$(OUT)/test_format $(OUT)/sample.swc
 	sh tests/run_specs.sh $(OUT)/swcc
@@ -214,11 +228,15 @@ test: $(OUT)/test_format $(OUT)/swcc $(OUT)/swc_i486.o $(RULES_I486) $(OUT)/spec
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/fuzz_swcc 20000 $$(find tests/specs examples packs -name '*.json')
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/fuzz_lib 30000 tests/rules/fuzz_regress_lib/*.fz
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/reg
+	ASAN_OPTIONS=detect_leaks=0 $(OUT)/reg_save
 	sh tests/rules/frames.sh $(CC) $(I486) -Wno-error=frame-larger-than
 	$(OUT)/swcc compile tests/specs/ok/v14_files_one.json -o $(OUT)/files_one.swc >/dev/null
 	$(OUT)/swcc compile tests/specs/ok/v14_second_floor.json -o $(OUT)/files_none.swc >/dev/null
 	cmp $(OUT)/files_one.swc $(OUT)/files_none.swc && echo "PASS: one 'files' entry = no 'files': the same bytes"
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/stage 500
+	$(OUT)/swcc compile tests/specs/ok/v14_stage_cup.json -o $(OUT)/stage_cup.swc >/dev/null
+	ASAN_OPTIONS=detect_leaks=0 $(OUT)/stage_swc $(OUT)/stage_cup.swc 300
+	ASAN_OPTIONS=detect_leaks=0 $(OUT)/stage_st $(OUT)/stage_cup.swc 200
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/league_rank
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/uefa_final
 	@if grep -n '(const Swc[A-Za-z]* \*)\|(const uint16_t \*)\|(const uint32_t \*)' format/*.c; then echo "the reader reads the spec buffer through a cast (big-endian rule: BE accessors only)"; exit 1; fi

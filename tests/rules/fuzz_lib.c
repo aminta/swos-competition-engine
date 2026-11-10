@@ -5,6 +5,8 @@
      3 sr_stage  calendars, tables, league_rank, ko_left / ko_tie, group sizes / draw, best placed, ko_pairs
      4 sr_pool   light tables, play-offs, regional, cross, extra, season_cross, strengths
      5 sr_reg    the registry: build, then season ends (sr_reg_check after each)
+     6 sr_stled  the ledger item 'ST' (byte 0 = FEh, so the finds above keep their targets): a begun block and
+                 results into it, or any bytes as a loaded block -- sr_st_check, then sr_st_group / sr_st_record
    Byte 1's low bit: 'sane' -- the shape's own fields (rounds, levels, files ...) in their ranges, so the fuzzer
    spends its time past the first refusal; the rest stays the fuzzer's.
    The arrays are the sizes the header gives (SR_CLUB_SLOTS, SR_DIVS ...), the counts at most those (the caller's
@@ -27,7 +29,7 @@ static void BYTES(void *p, size_t n) { for (size_t i = 0; i < n; i++) ((uint8_t 
 
 #define CHECK(c, ...) do { if (!(c)) { fprintf(stderr, "fuzz_lib: " __VA_ARGS__); fputc('\n', stderr); abort(); } } while (0)
 
-static uint64_t ran[6], ok[6];
+static uint64_t ran[7], ok[7];
 static int sane;
 
 /* ---- 0: sr_cupd ---- */
@@ -445,12 +447,89 @@ static void t_reg(void)
     }
 }
 
+/* ---- 6: sr_stled ---- */
+static uint32_t st_clubs(const uint16_t *w, int n)    /* (sr_stled.c's key of the entrants) */
+{
+    uint32_t h = 2166136261u;
+    for (int c = 0; c < n; c++) { h = (h ^ (uint8_t)w[c]) * 16777619u; h = (h ^ (uint8_t)(w[c] >> 8)) * 16777619u; }
+    return h;
+}
+
+static int st_groups_ok(const uint8_t *st, int n, int g, sr_match *m, int room)
+{
+    uint8_t club[SR_STAGE_CLUBS], seen[SR_STAGE_CLUBS];
+    int total = 0;
+    memset(seen, 0, sizeof seen);
+    for (int k = 0; k < g; k++) {
+        const int32_t nm = sr_st_group(st, k, club, m, room);
+        if (nm < 0) { CHECK(room < 4 * SR_STAGE_CLUBS * SR_STAGE_CLUBS / 2, "st_group: a checked block's group %d refused", k); return 0; }
+        int s = 0;
+        while (s < SR_STAGE_CLUBS && (s * (s - 1) / 2) * st[5] < nm) s++;
+        CHECK(s * (s - 1) / 2 * st[5] == nm, "st_group: %d matches for group %d", (int)nm, k);
+        for (int i = 0; i < s; i++) {
+            CHECK(club[i] < n && !seen[club[i]] && st[16 + club[i]] == k && (!i || club[i] > club[i - 1]),
+                  "st_group: group %d's club %d", k, club[i]);
+            seen[club[i]] = 1;
+        }
+        for (int i = 0; i < nm; i++)
+            CHECK(m[i].home < s && m[i].away < s && m[i].home != m[i].away && m[i].played <= 1 && m[i].hg <= 15 && m[i].ag <= 15,
+                  "st_group: group %d's match %d", k, i);
+        total += s;
+    }
+    CHECK(total == n, "st_group: %d clubs in the groups of %d", total, n);
+    return 1;
+}
+
+static void t_stled(void)
+{
+    enum { BLK = 16 + SR_STAGE_CLUBS + 4 * SR_STAGE_CLUBS * (SR_STAGE_CLUBS - 1) / 2 };
+    static uint8_t st[BLK], assoc[SR_STAGE_CLUBS];
+    static uint16_t word[SR_STAGE_CLUBS];
+    static sr_match m[4 * SR_STAGE_CLUBS * SR_STAGE_CLUBS / 2];
+    int32_t n = (int32_t)(int8_t)U8(), g = (int32_t)(int8_t)U8(), legs = (int32_t)(int8_t)U8();
+    if (sane) { n = 2 + (int32_t)((uint32_t)n % 63); g = 1 + (int32_t)((uint32_t)g % (uint32_t)(n / 2)); legs = 1 + (int32_t)((uint32_t)legs % 4); }
+    const uint32_t season = U16(), purpose = U32(), seed = U32();
+    const int32_t room = (int32_t)(U16() % (BLK + 1)), mroom = sane ? (int32_t)(sizeof m / sizeof m[0]) : (int32_t)(U16() % (sizeof m / sizeof m[0] + 1));
+    const int32_t size = sr_st_size(n, g, legs);
+    for (int i = 0; i < SR_STAGE_CLUBS; i++) word[i] = (uint16_t)(sane ? 0x100 + i : U16());
+    CHECK(size < 0 || size <= BLK, "st_size %d", (int)size);
+    if (U8() & 1) {                             /* a begun block, results into it */
+        BYTES(assoc, sizeof assoc);
+        if (sane) for (int i = 0; i < SR_STAGE_CLUBS; i++) assoc[i] %= 16;
+        const int32_t r = sr_st_begin(st, room, n, g, legs, season, purpose, word, U8() & 1 ? assoc : NULL, seed);
+        if (r < 0) { CHECK(r >= -2, "st_begin %d", (int)r); return; }
+        CHECK(r == size && sr_st_check(st, room, n, g, legs, season, purpose, word) == 1, "st_begin %d / size %d not checked", (int)r, (int)size);
+        for (int k = (int)U8(); k > 0 && in < end; k--) {
+            const int32_t h = (int32_t)(U8() % (uint32_t)(n + 2)) - 1, a = (int32_t)(U8() % (uint32_t)(n + 2)) - 1;
+            const int32_t x = sr_st_record(st, h, a, (int32_t)(U8() % 20), (int32_t)(U8() % 20), m, mroom);
+            CHECK(x >= -1 && x < size - 16 - n, "st_record %d", (int)x);
+            CHECK(sr_st_check(st, room, n, g, legs, season, purpose, word) == 1, "st_record broke the block");
+        }
+        st_groups_ok(st, n, g, m, mroom);
+        ok[6]++;
+        return;
+    }
+    BYTES(st, (size_t)room);                    /* any bytes as a loaded block (its key the shape's when sane) */
+    if (sane && room >= 16) { st[0] = 'S'; st[1] = 'T'; st[2] = SR_ST_VERSION; st[3] = (uint8_t)n; st[4] = (uint8_t)g; st[5] = (uint8_t)legs;
+        st[6] = (uint8_t)season; st[7] = (uint8_t)(season >> 8); for (int i = 0; i < 4; i++) st[8 + i] = (uint8_t)(purpose >> 8 * i);
+        const uint32_t cl = st_clubs(word, n); for (int i = 0; i < 4; i++) st[12 + i] = (uint8_t)(cl >> 8 * i);
+        for (int c = 0; c < n && 16 + c < room; c++) st[16 + c] = (uint8_t)(st[16 + c] % (uint8_t)g); }
+    const int32_t c = sr_st_check(st, room, n, g, legs, season, purpose, word);
+    CHECK(c >= -2 && c <= 2, "st_check %d", (int)c);
+    if (c == 1) {
+        st_groups_ok(st, n, g, m, mroom);
+        const int32_t x = sr_st_record(st, (int32_t)(U8() % (uint32_t)n), (int32_t)(U8() % (uint32_t)n), 3, 1, m, mroom);
+        CHECK(x >= -1 && x < size - 16 - n && sr_st_check(st, room, n, g, legs, season, purpose, word) == 1, "st_record on a loaded block %d", (int)x);
+        ok[6]++;
+    }
+}
+
 int LLVMFuzzerTestOneInput(const uint8_t *d, size_t n)
 {
     if (n < 1) return 0;
     in = d + 1;
     end = d + n;
-    const int t = d[0] % 6;
+    const int t = d[0] == 0xFE ? 6 : d[0] % 6;
     sane = (int)(U8() & 1);
     ran[t]++;
     switch (t) {
@@ -459,7 +538,8 @@ int LLVMFuzzerTestOneInput(const uint8_t *d, size_t n)
     case 2: t_groups(); break;
     case 3: t_stage(); break;
     case 4: t_pool(); break;
-    default: t_reg(); break;
+    case 5: t_reg(); break;
+    default: t_stled(); break;
     }
     return 0;
 }
@@ -591,13 +671,14 @@ int main(int argc, char **argv)
     for (int k = 0; k < it; k++) {
         const size_t len = 1 + (size_t)((r = r * 1103515245u + 12345u) >> 8) % 8192;
         for (size_t i = 0; i < len; i++) m[i] = (uint8_t)((r = r * 1103515245u + 12345u) >> 16);
-        m[0] = (uint8_t)(k % 6);
+        m[0] = (uint8_t)(k % 7 == 6 ? 0xFE : k % 7);
         LLVMFuzzerTestOneInput(m, len);
     }
-    printf("PASS: fuzz_lib, %d finds of the fuzzer replayed; %d random inputs: cupd %llu/%llu, cups %llu/%llu, groups %llu/%llu, stage %llu/%llu, pool %llu/%llu, reg %llu/%llu (accepted / run), no sanitizer report, every promise held\n",
+    printf("PASS: fuzz_lib, %d finds of the fuzzer replayed; %d random inputs: cupd %llu/%llu, cups %llu/%llu, groups %llu/%llu, stage %llu/%llu, pool %llu/%llu, reg %llu/%llu, stled %llu/%llu (accepted / run), no sanitizer report, every promise held\n",
            nreg, it, (unsigned long long)ok[0], (unsigned long long)ran[0], (unsigned long long)ok[1], (unsigned long long)ran[1],
            (unsigned long long)ok[2], (unsigned long long)ran[2], (unsigned long long)ok[3], (unsigned long long)ran[3],
-           (unsigned long long)ok[4], (unsigned long long)ran[4], (unsigned long long)ok[5], (unsigned long long)ran[5]);
+           (unsigned long long)ok[4], (unsigned long long)ran[4], (unsigned long long)ok[5], (unsigned long long)ran[5],
+           (unsigned long long)ok[6], (unsigned long long)ran[6]);
     return 0;
 }
 #endif
