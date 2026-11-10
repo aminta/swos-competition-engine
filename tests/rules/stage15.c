@@ -24,6 +24,24 @@ static int play_tie(int legs, const uint8_t *deci)              /* 0: the first 
     return w;
 }
 
+/* the reader's 1.5 checks (MC): a PROT pair a >= b, a KENT entrant from its own stage or a later one -- refused */
+static int refused(const uint8_t *bin, uint32_t len, uint32_t tag, uint32_t at, uint16_t v)
+{
+    static uint8_t b[1 << 20], m[1 << 20];
+    SwcArena a;
+    SwcSpec s;
+    memcpy(b, bin, len);
+    const uint32_t ns = SWC_BE_READ_U16(b + 14), body = 32 + ns * 12;
+    for (uint32_t i = 0; i < ns; i++)
+        if (SWC_BE_READ_U32(b + 32 + i * 12) == tag) {
+            SWC_BE_WRITE_U16(b + SWC_BE_READ_U32(b + 32 + i * 12 + 4) + at, v);
+            SWC_BE_WRITE_U32(b + 16, swc_fnv1a(b + body, len - body));
+            swc_init(&a, m, sizeof m);
+            return swc_spec_open(&s, b, len, &a) == SWC_E_TRUNC;
+        }
+    return 0;
+}
+
 int main(int argc, char **argv)
 {
     if (argc != 3) { fprintf(stderr, "usage: stage15 SPEC.SWC SEASONS\n"); return 2; }
@@ -36,6 +54,8 @@ int main(int argc, char **argv)
     swc_init(&a, mem, sizeof mem);
     if (swc_spec_open(&s, bin, len, &a) != SWC_OK) { printf("FAIL: %s: not a spec\n", argv[1]); return 1; }
     const int seasons = atoi(argv[2]);
+    if (s.nprot && !refused(bin, len, SWC_S_PROT, 2, s.prot[0].a)) { printf("FAIL: %s: a PROT pair a == b read\n", argv[1]); return 1; }
+    if (s.nkent && !refused(bin, len, SWC_S_KENT, 2, s.kent[0].stage)) { printf("FAIL: %s: a KENT entrant from its own stage read\n", argv[1]); return 1; }
     const SwcComp *c = &s.comps[s.ncomps - 1];                  /* (the cup: the spec's last competition) */
     const SwcStage *gs = &s.stages[c->first_stage], *ko = &s.stages[c->first_stage + 1];
     const SwcDraw *dr = NULL;
@@ -142,7 +162,7 @@ int main(int argc, char **argv)
     if (bad || champions != seasons) { printf("FAIL: %s: %d bad (%s), %d champions of %d\n", argv[1], bad, why, champions, seasons); return 1; }
     printf("PASS: %s end to end from the .SWC: %d seasons of %d clubs drawn into %d groups (GDRW: separate %d, %d protect pairs; "
            "clubs of two protect countries no pair forbids together: %d times), groups played, KENT entrants, %u rounds "
-           "with their avoid -- no constraint broken, one champion each (%d matches)\n",
+           "with their avoid -- no constraint broken, one champion each (%d matches); the reader refuses a PROT pair a == b and a KENT src not earlier\n",
            argv[1], seasons, n, g, sep, np, together, ko->nrounds, matches);
     return 0;
 }

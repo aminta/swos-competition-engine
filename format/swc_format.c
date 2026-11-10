@@ -239,8 +239,10 @@ SwcStatus swc_spec_open(SwcSpec *s, const void *bin, uint32_t len, SwcArena *a)
     for (i = 0; i < s->ngdrw; i++)
         if (s->gdrw[i].stage >= s->nstages || (uint32_t)s->gdrw[i].protect + s->gdrw[i].nprotect > s->nprot)
             return SWC_E_TRUNC;
-    for (i = 0; i < s->nkent; i++)
-        if (s->kent[i].stage >= s->nstages || s->kent[i].src >= s->nstages) return SWC_E_TRUNC;
+    for (i = 0; i < s->nprot; i++)                                     /* (a pair of two countries, a < b) */
+        if (s->prot[i].a >= s->prot[i].b) return SWC_E_TRUNC;
+    for (i = 0; i < s->nkent; i++)                                     /* (entrants from an earlier stage only) */
+        if (s->kent[i].stage >= s->nstages || s->kent[i].src >= s->kent[i].stage) return SWC_E_TRUNC;
     return SWC_OK;
 }
 
