@@ -16,12 +16,12 @@ typedef uint8_t u8;
 
 enum { PL = SR_PG_LEVELS, PG = SR_PG_GROUPS, NONE = 0xFF };
 
-/* The level of division d (past the last one: the level below the chain, nl). */
+/* The level of division d (past the last one: the level below the chain, nl; above the first: -1). */
 static int level_of(int d, int nl, const sr_pg_level *lv)
 {
     if (d >= lv[nl - 1].first + lv[nl - 1].groups) return nl;
     for (int l = nl - 1; l >= 0; l--) if (d >= lv[l].first) return l;
-    return 0;
+    return -1;                                  /* (above the chain: off it, as a club below it is) */
 }
 
 /* group a, else the nearest one with room -- at equal distance the later one (else a) */
@@ -191,7 +191,8 @@ int32_t sr_pg_realloc(const sr_pg_league *pg, int32_t l, const uint8_t *rank, co
     static uint16_t on[SR_CLUB_SLOTS];          /* (the level's clubs; a strict club's group in grp) */
     static u8 grp[SR_CLUB_SLOTS], flex[SR_CLUB_SLOTS];
     int n = 0, p = 0, crossed = 0, cnt[2] = { 0, 0 };
-    if (!pg || !pg->level || !pg->club || !rank || !new_off || l < 0 || l >= pg->levels || pg->clubs > SR_CLUB_SLOTS)
+    if (!pg || !pg->level || !pg->club || !rank || !new_off || l < 0 || l >= pg->levels || pg->levels > PL
+        || pg->clubs > SR_CLUB_SLOTS)                          /* (sr_pg_season's limits) */
         return -1;
     const sr_pg_level *L = &pg->level[l];
     if (L->groups != 2) return -1;

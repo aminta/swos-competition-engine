@@ -213,7 +213,9 @@ static int cup_place(const sr_state *st, int ng)
 
 static void serie_c(sr_state *st)
 {
-    int ng = st->dp.ng, q[8], nq = 0, thirds[4], seconds[4], cup, nr1[5], nr1o[5], w1[5], s2[4], o2[4], w2[4];
+    /* (ng 2 .. 4, sr_league_check: R1 the thirds + 2 v the other qualifiers, R2 the seconds + 1 v R1's other winners --
+       sized for 4 groups, where the sides do not match and nothing is played; only 3 groups play on) */
+    int ng = st->dp.ng, q[8], nq = 0, thirds[4], seconds[4], cup, nr1[6], nr1o[8], w1[6], s2[5], o2[6], w2[5];
     if (ng < 2 || ng > 4) return;
     for (int g = 1; g <= ng; g++) if (st->dp.n[g] < 11) return;
     for (int g = 1; g <= ng; g++) {

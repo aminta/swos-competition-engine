@@ -750,7 +750,7 @@ static void gp_season(sr_state *st, const sr_league *lg)
             for (int i = 0; i < n && i < GN; i++) tmp[i] = club[pm[i]];
             for (int i = 0; i < n && i < GN; i++) club[i] = tmp[i];
         }
-        if (st->gp.direct && ok && n >= 2 && (int)gp_row(st, club[0])->pts - (int)gp_row(st, club[1])->pts >= st->gp.direct) {
+        if (st->gp.direct && ok && n >= 2 && club[0] >= 0 && club[1] >= 0 && (int)gp_row(st, club[0])->pts - (int)gp_row(st, club[1])->pts >= st->gp.direct) {
             W[0] = club[0]; L[0] = club[1];     /* (42-s3shape: entrant 0 far enough ahead -- no round played) */
             nt = 1; last = 0; lastr = 0; nlast = 1;
             for (; nr; nr--) r += 6 + 2 * r[0];     /* (its rounds passed over) */
@@ -763,6 +763,8 @@ static void gp_season(sr_state *st, const sr_league *lg)
             int mem[2 * GN], gm = legs & 0x80 ? ties : 2 * ties;     /* (a group round: ties = its members) */
             for (int i = 0; i < gm; i++) {
                 int c = m[i], v = -1;
+                if (!ok) { mem[i] = -1; continue; }     /* (nothing played from here: earlier placings and
+                                                       winners unwritten -- never read, the fuzzer 10/11) */
                 if (c == BEST_LOSER) {          /* the best placed loser of the previous round */
                     for (int t = lastr; t < lastr + nlast && t < nt; t++)
                         if (v < 0 || gp_better(st, L[t], v)) v = L[t];
@@ -783,6 +785,7 @@ static void gp_season(sr_state *st, const sr_league *lg)
                 int gm2 = 0;
                 for (int i = 0; i < ties && i < GT; i++)
                     if (mem[i] != ABSENT) { mem[gm2] = mem[i]; bon[gm2] = m[ties + i]; gs_copy(&st->gp.ms[gm2], &st->gp.ms[i]); gm2++; }
+                if (!gm2) ok = 0;               /* (every member absent: no placings) */
                 if (ok && gm2 <= GT && np + gm2 <= GN) {
                     group(st, mem, gm2, legs & 0x7F, host == HOST_NEUTRAL, bon, P + np, st->gp.ms, st->gp.ps + np);
                     glast = np;
@@ -807,7 +810,7 @@ static void gp_season(sr_state *st, const sr_league *lg)
                 int pn = (pairing & 0x7F) <= 2 * ties ? pairing & 0x7F : 2 * ties;
                 draw(st, mem, pn);
             } else if (ok && pairing) {     /* best v worst: sorted, then 1st v last, 2nd v second last ... */
-                int pn = pairing <= 2 * ties ? pairing : 2 * ties;
+                int pn = (pairing <= 2 * ties ? pairing : 2 * ties) & ~1;    /* (even: sr_spec_check refuses an odd one) */
                 for (int i = 1; i < pn; i++) {
                     int x = mem[i], j = i;
                     while (j > 0 && gp_better(st, x, mem[j - 1])) { mem[j] = mem[j - 1]; j--; }
@@ -859,6 +862,7 @@ static void gp_season(sr_state *st, const sr_league *lg)
         } else if (ok && glast >= 0 && kind == 1) {    /* a final group: its top `winners` to winner_div */
             for (int i = 0; i < n; i++) {
                 int c = club[i], to = DV(c), top = 0;
+                if (c < 0) continue;            /* (an absent entrant: not in these tables) */
                 for (int k = 0; k < winners; k++) if (P[glast + k] == c) top = 1;
                 if (top) to = wdiv;
                 else if (DV(c) == wdiv) to = ldiv;
@@ -870,6 +874,7 @@ static void gp_season(sr_state *st, const sr_league *lg)
             int w = W[last];
             for (int i = 0; i < n; i++) {
                 int c = club[i], to = DV(c);
+                if (c < 0) continue;
                 if (c == w) to = wdiv;
                 else if (DV(c) == wdiv) to = ldiv;
                 gp_move(st, c, to - DV(c));

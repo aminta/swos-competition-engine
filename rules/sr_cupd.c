@@ -118,6 +118,8 @@ int32_t sr_cupd_make(const sr_cupd_end *e, uint32_t season, uint8_t rounds, uint
     const int32_t n1 = 1 << (rounds - 2);
     int32_t p = n - 2 * n1, m = 0;
     if (p < 0) p = 0;
+    if (p > 2 * n1) p = 2 * n1;     /* (more than 4 x n1 clubs: 2p of them play, their winners fill round 1 -- else 2p
+                                       sides past the n clubs, and more winners than round 1 holds) */
     if (p > SR_CUPD_PRE) p = SR_CUPD_PRE;
     out->np = (u8)p;
     for (int32_t k = 0; k < 2 * p; k++) { side[m] = word[ord[k]]; sg[m++] = grp[k]; }

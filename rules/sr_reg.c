@@ -40,7 +40,7 @@ int32_t sr_reg_build(sr_registry *r, int32_t nfiles, const sr_reg_file *f, int32
         int32_t rows = f[i].pool;
         r->f[i].file = f[i].file; r->f[i].ndiv = f[i].ndiv; r->f[i].pool = f[i].pool;   /* (no struct copy: no memcpy) */
         for (int32_t k = 0; k < SR_DIVS; k++) r->f[i].div[k] = f[i].div[k], r->f[i].size[k] = f[i].size[k];
-        if (f[i].ndiv > SR_DIVS) return -1;
+        if (f[i].ndiv > SR_DIVS || f[i].file == 0xFF) return -1;   /* (file 255: row 255's word = SR_REG_NONE) */
         for (int32_t j = 0; j < i; j++) if (f[j].file == f[i].file) return -1;
         for (int32_t k = 0; k < f[i].ndiv; k++) {
             if (f[i].div[k] >= SR_REG_POOL) return -1;

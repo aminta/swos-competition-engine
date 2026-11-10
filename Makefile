@@ -67,6 +67,14 @@ $(OUT)/league_rank: tests/rules/league_rank.c rules/sr_stage.c rules/swosrules.h
 $(OUT)/nonleague: tests/rules/nonleague.c $(RULES) rules/swosrules.h | $(OUT)
 	$(CC) -std=c99 -O1 -g -Wall -Wextra -Wno-missing-field-initializers $(SANITIZE) -Irules -o $@ \
 	    tests/rules/nonleague.c rules/sr_pool.c rules/sr_groups.c
+# the National League / North / South play-offs as gplay bytes against the real format (specs/eng_nl.spec)
+$(OUT)/nlplayoff: tests/rules/nlplayoff.c $(RULES) rules/swosrules.h | $(OUT)
+	$(CC) -std=c99 -O1 -g -Wall -Wextra -Wno-missing-field-initializers $(SANITIZE) -Irules -o $@ \
+	    tests/rules/nlplayoff.c $(RULES)
+# the same rules on the 2026-27 clubs (tests/rules/step3real_data.h, mkstep3real.py from the Mod's data)
+$(OUT)/step3real: tests/rules/step3real.c tests/rules/step3real_data.h $(RULES) rules/swosrules.h | $(OUT)
+	$(CC) -std=c99 -O1 -g -Wall -Wextra -Wno-missing-field-initializers $(SANITIZE) -Irules -o $@ \
+	    tests/rules/step3real.c rules/sr_pool.c rules/sr_groups.c
 
 # The 4.2 B-team rules (second_floor: F2 order-free stays, F3 guard, F4 floor and exits)
 $(OUT)/bteams42: tests/rules/bteams42.c $(RULES) rules/swosrules.h | $(OUT)
@@ -90,6 +98,56 @@ $(OUT)/s3shape: tests/rules/s3shape.c tests/rules/tables.h $(RULES) rules/swosru
 $(OUT)/uefa_final: tests/rules/uefa_final.c $(RULES) rules/swosrules.h | $(OUT)
 	$(CC) -std=c99 -O1 -g -Wall -Wextra -Wno-missing-field-initializers -Wno-unused-function $(SANITIZE) -Irules -o $@ \
 	    tests/rules/uefa_final.c $(RULES)
+
+# 42-s2ko: the Coppa Italia / Supercoppa numbers and bracket (sr_kn) on the real 2025-26 season end and 2026-27 ties
+$(OUT)/s2ko_gen.h: tests/rules/s2ko.py tests/specs/ok/v14_ita_cups.json tests/rules/ita_cups_2526.json | $(OUT)
+	python3 -I tests/rules/s2ko.py $@
+$(OUT)/s2ko: tests/rules/s2ko.c $(OUT)/s2ko_gen.h rules/sr_kn.c rules/swosrules.h | $(OUT)
+	$(CC) -std=c11 -O1 -g -Wall -Wextra -Wno-missing-field-initializers $(SANITIZE) -Irules -I$(OUT) -o $@ \
+	    tests/rules/s2ko.c rules/sr_kn.c -lm
+# 42-s2ko edge cases under the sanitizers: numbers, drawn rounds with byes, the 'KN' block, the step-3 play-off
+$(OUT)/s2ko_edge: tests/rules/s2ko_edge.c rules/sr_kn.c rules/sr_pool.c rules/swosrules.h | $(OUT)
+	$(CC) -std=c11 -O1 -g -Wall -Wextra -Wno-missing-field-initializers $(SANITIZE) -Irules -o $@ \
+	    tests/rules/s2ko_edge.c rules/sr_kn.c rules/sr_pool.c rules/sr_groups.c -lm
+# the rules library on anything its checks accept (random leagues, seasons, specs; ASan / UBSan); libFuzzer: make fuzz
+$(OUT)/fuzz_rules: tests/rules/fuzz_rules.c $(RULES) rules/swosrules.h | $(OUT)
+	$(CC) -std=c11 -O1 -g -Wall -Wextra -Wno-missing-field-initializers -ftrivial-auto-var-init=pattern $(SANITIZE) \
+	    -Irules -o $@ tests/rules/fuzz_rules.c $(RULES) -lm
+FUZZCC   ?= /opt/homebrew/opt/llvm/bin/clang
+FUZZTIME ?= 1800
+fuzz: tests/rules/fuzz_rules.c $(RULES) rules/swosrules.h | $(OUT)
+	$(FUZZCC) -std=c11 -O1 -g -DFUZZ -ftrivial-auto-var-init=pattern -fsanitize=fuzzer,address,undefined -fno-sanitize-recover=all -Irules \
+	    -o $(OUT)/fuzz_rules_lf tests/rules/fuzz_rules.c $(RULES) -lm
+	@mkdir -p $(OUT)/fuzz_corpus
+	python3 -I tests/rules/fuzz_corpus.py tests/rules/specs $(OUT)/fuzz_corpus
+	ASAN_OPTIONS=detect_leaks=0 $(OUT)/fuzz_rules_lf $(OUT)/fuzz_corpus -max_len=4200 -max_total_time=$(FUZZTIME) \
+	    -artifact_prefix=$(OUT)/
+# the library's other entry points on anything (sr_cupd, sr_cups, sr_groups, sr_stage, sr_pool, sr_reg); libFuzzer: make fuzz-lib
+$(OUT)/fuzz_lib: tests/rules/fuzz_lib.c $(RULES) rules/swosrules.h | $(OUT)
+	$(CC) -std=c11 -O1 -g -Wall -Wextra -Wno-missing-field-initializers -ftrivial-auto-var-init=pattern $(SANITIZE) \
+	    -Irules -o $@ tests/rules/fuzz_lib.c $(RULES) -lm
+fuzz-lib: tests/rules/fuzz_lib.c $(RULES) rules/swosrules.h | $(OUT)
+	$(FUZZCC) -std=c11 -O1 -g -DFUZZ -ftrivial-auto-var-init=pattern -fsanitize=fuzzer,address,undefined -fno-sanitize-recover=all -Irules \
+	    -o $(OUT)/fuzz_lib_lf tests/rules/fuzz_lib.c $(RULES) -lm
+	@mkdir -p $(OUT)/fuzz_lib_corpus
+	ASAN_OPTIONS=detect_leaks=0 $(OUT)/fuzz_lib_lf $(OUT)/fuzz_lib_corpus -max_len=16384 -max_total_time=$(FUZZTIME) \
+	    -artifact_prefix=$(OUT)/lib-
+# swcc and the .SWC reader on anything: what swcc accepts must open in the reader (ASan / UBSan); libFuzzer: make fuzz-swcc
+FUZZSWCC = tests/fuzz_swcc.c $(SWCC) $(FORMAT) swcc/swcc.h swcc/json.h format/swc_format.h
+$(OUT)/fuzz_swcc: $(FUZZSWCC) | $(OUT)
+	$(CC) -std=c11 -O1 -g -Wall -Wextra -Wno-missing-field-initializers -ftrivial-auto-var-init=pattern $(SANITIZE) \
+	    -DFUZZ_PROFILES='"$(CURDIR)/profiles"' -o $@ tests/fuzz_swcc.c $(SWCC) $(FORMAT)
+fuzz-swcc: $(FUZZSWCC) $(OUT)/swcc | $(OUT)
+	$(FUZZCC) -std=c11 -O1 -g -DFUZZ -ftrivial-auto-var-init=pattern -fsanitize=fuzzer,address,undefined -fno-sanitize-recover=all \
+	    -DFUZZ_PROFILES='"$(CURDIR)/profiles"' -o $(OUT)/fuzz_swcc_lf tests/fuzz_swcc.c $(SWCC) $(FORMAT)
+	@mkdir -p $(OUT)/fuzz_swcc_corpus
+	python3 -I tests/fuzz_swcc_corpus.py $(OUT)/swcc $(OUT)/fuzz_swcc_corpus $(OUT)/fuzz_swcc.dict $$(find tests/specs examples packs -name '*.json')
+	ASAN_OPTIONS=detect_leaks=0 $(OUT)/fuzz_swcc_lf $(OUT)/fuzz_swcc_corpus -dict=$(OUT)/fuzz_swcc.dict -max_len=65536 \
+	    -max_total_time=$(FUZZTIME) -artifact_prefix=$(OUT)/swcc-
+# 42-s2ko: the KN glue end to end -- a refused cup a clean error (nothing built, play never called), a stop -1
+$(OUT)/s2ko_glue: tests/rules/s2ko_glue.c $(OUT)/s2ko_gen.h rules/sr_kn.c rules/swosrules.h | $(OUT)
+	$(CC) -std=c11 -O1 -g -Wall -Wextra -Wno-missing-field-initializers $(SANITIZE) -Irules -I$(OUT) -o $@ \
+	    tests/rules/s2ko_glue.c rules/sr_kn.c -lm
 
 # Italy's Eccellenza: the light pool with regional + national play-offs and the cup rule (invariants + controls)
 $(OUT)/ecclp: tests/rules/ecclp.c tests/sim/ecclp_italy.h $(RULES) rules/swosrules.h | $(OUT)
@@ -127,7 +185,7 @@ sim: $(OUT)/masssim $(OUT)/italysim $(OUT)/italyfull
 
 sim-italy: | $(OUT) ; $(CC) $(CFLAGS) -Irules -o $(OUT)/simdrv tests/sim/simdrv.c rules/sr_stage.c rules/sr_dplay.c rules/sr_gplay.c rules/sr_post.c rules/sr_check.c rules/sr_pool.c rules/sr_groups.c rules/sr_reg.c -lm && $(OUT)/simdrv 100000 && for b in pts order move cout; do if SIMDRV_BREAK=$$b $(OUT)/simdrv 3 >/dev/null; then echo "simdrv control $$b NOT caught"; exit 1; fi; done && SIMDRV_CGAP=9 $(OUT)/simdrv 100000 >/dev/null || { echo "simdrv SIMDRV_CGAP=9 broke: the C play-outs and cup_out not on one gap"; exit 1; }
 
-test: $(OUT)/test_format $(OUT)/swcc $(OUT)/swc_i486.o $(RULES_I486) $(OUT)/spec_check $(OUT)/team_order $(OUT)/groups_guard $(OUT)/nonleague $(OUT)/ecclp $(OUT)/stage $(OUT)/bteams42 $(OUT)/cupplace $(OUT)/reg $(OUT)/s3shape $(OUT)/league_rank $(OUT)/uefa_final
+test: $(OUT)/test_format $(OUT)/swcc $(OUT)/swc_i486.o $(RULES_I486) $(OUT)/spec_check $(OUT)/team_order $(OUT)/groups_guard $(OUT)/nonleague $(OUT)/step3real $(OUT)/nlplayoff $(OUT)/ecclp $(OUT)/stage $(OUT)/bteams42 $(OUT)/cupplace $(OUT)/reg $(OUT)/s3shape $(OUT)/league_rank $(OUT)/uefa_final $(OUT)/s2ko $(OUT)/s2ko_edge $(OUT)/s2ko_glue $(OUT)/fuzz_rules $(OUT)/fuzz_swcc $(OUT)/fuzz_lib
 	$(OUT)/swcc compile packs/sample/world.json -o $(OUT)/sample.swc >/dev/null
 	$(OUT)/test_format $(OUT)/sample.swc
 	sh tests/run_specs.sh $(OUT)/swcc
@@ -142,11 +200,19 @@ test: $(OUT)/test_format $(OUT)/swcc $(OUT)/swc_i486.o $(RULES_I486) $(OUT)/spec
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/team_order
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/groups_guard
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/nonleague 500
+	ASAN_OPTIONS=detect_leaks=0 $(OUT)/step3real
+	ASAN_OPTIONS=detect_leaks=0 $(OUT)/nlplayoff tests/rules/specs/eng_nl.spec
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/ecclp 500
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/bteams42
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/cupplace
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/s3shape
 	python3 -I tests/rules/s3swc.py $(OUT)/swcc
+	ASAN_OPTIONS=detect_leaks=0 $(OUT)/s2ko
+	ASAN_OPTIONS=detect_leaks=0 $(OUT)/s2ko_edge
+	ASAN_OPTIONS=detect_leaks=0 $(OUT)/s2ko_glue
+	ASAN_OPTIONS=detect_leaks=0 $(OUT)/fuzz_rules 50000 tests/rules/specs/*.spec tests/rules/fuzz_regress/*.fz
+	ASAN_OPTIONS=detect_leaks=0 $(OUT)/fuzz_swcc 20000 $$(find tests/specs examples packs -name '*.json')
+	ASAN_OPTIONS=detect_leaks=0 $(OUT)/fuzz_lib 30000 tests/rules/fuzz_regress_lib/*.fz
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/reg
 	sh tests/rules/frames.sh $(CC) $(I486) -Wno-error=frame-larger-than
 	$(OUT)/swcc compile tests/specs/ok/v14_files_one.json -o $(OUT)/files_one.swc >/dev/null
@@ -188,4 +254,4 @@ wasm-test: $(OUT)/swcc $(OUT)/swcc.wasm
 clean:
 	rm -rf $(OUT)
 
-.PHONY: sim all test clean rules-check wasm wasm-test page
+.PHONY: sim all test clean rules-check wasm wasm-test page fuzz fuzz-swcc fuzz-lib

@@ -26,7 +26,7 @@ int32_t sr_cup_entrants(const sr_quota *q, int32_t nq, int32_t n, int32_t nclubs
         return 0;
     for (int32_t g = 0; g < nq; g++) {
         const int32_t dv = q[g].division, want = q[g].clubs, wb = q[g].byes;
-        const int32_t nl = level[dv];
+        const int32_t nl = dv < SR_DIVS ? level[dv] : 0;        /* (gplay.c: dv < 16 ? .. : 0) */
         int32_t m = 0;
         /* the division's clubs this season, by slot */
         for (int32_t i = 0; i < nclubs; i++)
@@ -36,7 +36,7 @@ int32_t sr_cup_entrants(const sr_quota *q, int32_t nq, int32_t n, int32_t nclubs
             return 0;
         /* relegated into it, stayed, promoted, without a place; then the place, the slot */
         for (int32_t i = 0; i < m; i++) {
-            const int32_t v = place ? place[cand[i]] : 0;
+            const int32_t v = place && cand[i] < SR_CLUB_SLOTS ? place[cand[i]] : 0;
             const int32_t r = v ? (v & 31) : 0xFF, ol = v ? v >> 5 : nl;
             const int32_t grp = !v ? 3 : ol < nl ? 0 : ol == nl ? 1 : 2;
             key[i] = (u32)grp << 17 | (u32)r << 9 | cand[i];

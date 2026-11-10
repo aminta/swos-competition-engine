@@ -1,0 +1,7051 @@
+{
+ "schema": "swc/1.4",
+ "id": "test.ita-cups",
+ "host_world": 9,
+ "_note": "swc/1.4, 42-s2ko: the Coppa Italia (bracket numbers from last season, the fixed bracket) and the Supercoppa on v14_ita_playoffs' Italy with the real 2026-27 clubs of Serie A, B and C (it.wikipedia \"Serie A/B/C 2026-2027\", \"Squadre partecipanti\"; host words are placeholders). The Coppa Italia Serie C here is still the 4-club placeholder of v14_ita_playoffs (its real format: 42-s2ko M2). The Coppa Italia Serie D (42-s2ko M2b) on Serie D 2026-27's 9 groups (it.wikipedia town tables; host words placeholders, files 91-92).",
+ "languages": [
+  "it",
+  "en",
+  "fr",
+  "de"
+ ],
+ "countries": {
+  "ITA": {
+   "names": {
+    "it": "ITALIA",
+    "en": "ITALY",
+    "fr": "ITALIE",
+    "de": "ITALIEN"
+   }
+  }
+ },
+ "clubs": [
+  {
+   "id": "club:ita.atalanta",
+   "name": "ATALANTA",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 0
+   },
+   "geo": [
+    45.695,
+    9.67
+   ]
+  },
+  {
+   "id": "club:ita.bologna",
+   "name": "BOLOGNA",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 1
+   },
+   "geo": [
+    44.4939,
+    11.3428
+   ]
+  },
+  {
+   "id": "club:ita.cagliari",
+   "name": "CAGLIARI",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 2
+   },
+   "geo": [
+    39.2167,
+    9.1167
+   ]
+  },
+  {
+   "id": "club:ita.como",
+   "name": "COMO",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 3
+   },
+   "geo": [
+    45.8103,
+    9.0861
+   ]
+  },
+  {
+   "id": "club:ita.fiorentina",
+   "name": "FIORENTINA",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 4
+   },
+   "geo": [
+    43.7714,
+    11.2542
+   ]
+  },
+  {
+   "id": "club:ita.frosinone",
+   "name": "FROSINONE",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 5
+   },
+   "geo": [
+    41.6333,
+    13.35
+   ]
+  },
+  {
+   "id": "club:ita.genoa",
+   "name": "GENOA",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 6
+   },
+   "geo": [
+    44.4072,
+    8.9339
+   ]
+  },
+  {
+   "id": "club:ita.inter",
+   "name": "INTER",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 7
+   },
+   "geo": [
+    45.4669,
+    9.19
+   ]
+  },
+  {
+   "id": "club:ita.juventus",
+   "name": "JUVENTUS",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 8
+   },
+   "geo": [
+    45.0792,
+    7.6761
+   ]
+  },
+  {
+   "id": "club:ita.lazio",
+   "name": "LAZIO",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 9
+   },
+   "geo": [
+    41.8931,
+    12.4828
+   ]
+  },
+  {
+   "id": "club:ita.lecce",
+   "name": "LECCE",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 10
+   },
+   "geo": [
+    40.352,
+    18.1691
+   ]
+  },
+  {
+   "id": "club:ita.milan",
+   "name": "MILAN",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 11
+   },
+   "geo": [
+    45.4669,
+    9.19
+   ]
+  },
+  {
+   "id": "club:ita.monza",
+   "name": "MONZA",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 12
+   },
+   "geo": [
+    45.5836,
+    9.2736
+   ]
+  },
+  {
+   "id": "club:ita.napoli",
+   "name": "NAPOLI",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 13
+   },
+   "geo": [
+    40.8358,
+    14.2486
+   ]
+  },
+  {
+   "id": "club:ita.parma",
+   "name": "PARMA",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 14
+   },
+   "geo": [
+    44.8015,
+    10.328
+   ]
+  },
+  {
+   "id": "club:ita.roma",
+   "name": "ROMA",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 15
+   },
+   "geo": [
+    41.8931,
+    12.4828
+   ]
+  },
+  {
+   "id": "club:ita.sassuolo",
+   "name": "SASSUOLO",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 16
+   },
+   "geo": [
+    44.5517,
+    10.7856
+   ]
+  },
+  {
+   "id": "club:ita.torino",
+   "name": "TORINO",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 17
+   },
+   "geo": [
+    45.0792,
+    7.6761
+   ]
+  },
+  {
+   "id": "club:ita.udinese",
+   "name": "UDINESE",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 18
+   },
+   "geo": [
+    46.0667,
+    13.2333
+   ]
+  },
+  {
+   "id": "club:ita.venezia",
+   "name": "VENEZIA",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 19
+   },
+   "geo": [
+    45.4397,
+    12.3319
+   ]
+  },
+  {
+   "id": "club:ita.arezzo",
+   "name": "AREZZO",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 20
+   },
+   "geo": [
+    43.4631,
+    11.8781
+   ]
+  },
+  {
+   "id": "club:ita.ascoli",
+   "name": "ASCOLI",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 21
+   },
+   "geo": [
+    42.8547,
+    13.5753
+   ]
+  },
+  {
+   "id": "club:ita.avellino",
+   "name": "AVELLINO",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 22
+   },
+   "geo": [
+    40.9153,
+    14.7897
+   ]
+  },
+  {
+   "id": "club:ita.benevento",
+   "name": "BENEVENTO",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 23
+   },
+   "geo": [
+    41.1333,
+    14.7833
+   ]
+  },
+  {
+   "id": "club:ita.carrarese",
+   "name": "CARRARESE",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 24
+   },
+   "geo": [
+    44.0833,
+    10.1
+   ]
+  },
+  {
+   "id": "club:ita.catanzaro",
+   "name": "CATANZARO",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 25
+   },
+   "geo": [
+    38.91,
+    16.5875
+   ]
+  },
+  {
+   "id": "club:ita.cesena",
+   "name": "CESENA",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 26
+   },
+   "geo": [
+    44.1333,
+    12.2333
+   ]
+  },
+  {
+   "id": "club:ita.cremonese",
+   "name": "CREMONESE",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 27
+   },
+   "geo": [
+    45.1333,
+    10.0247
+   ]
+  },
+  {
+   "id": "club:ita.empoli",
+   "name": "EMPOLI",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 28
+   },
+   "geo": [
+    43.7167,
+    10.95
+   ]
+  },
+  {
+   "id": "club:ita.juvestabia",
+   "name": "JUVE STABIA",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 29
+   },
+   "geo": [
+    40.6947,
+    14.4803
+   ]
+  },
+  {
+   "id": "club:ita.mantova",
+   "name": "MANTOVA",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 30
+   },
+   "geo": [
+    45.1564,
+    10.7911
+   ]
+  },
+  {
+   "id": "club:ita.modena",
+   "name": "MODENA",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 31
+   },
+   "geo": [
+    44.6458,
+    10.9257
+   ]
+  },
+  {
+   "id": "club:ita.padova",
+   "name": "PADOVA",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 32
+   },
+   "geo": [
+    45.4078,
+    11.8733
+   ]
+  },
+  {
+   "id": "club:ita.palermo",
+   "name": "PALERMO",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 33
+   },
+   "geo": [
+    38.1157,
+    13.3613
+   ]
+  },
+  {
+   "id": "club:ita.pisa",
+   "name": "PISA",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 34
+   },
+   "geo": [
+    43.7167,
+    10.4
+   ]
+  },
+  {
+   "id": "club:ita.sampdoria",
+   "name": "SAMPDORIA",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 35
+   },
+   "geo": [
+    44.4072,
+    8.9339
+   ]
+  },
+  {
+   "id": "club:ita.sudtirol",
+   "name": "SUDTIROL",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 36
+   },
+   "geo": [
+    46.4981,
+    11.3548
+   ]
+  },
+  {
+   "id": "club:ita.verona",
+   "name": "VERONA",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 37
+   },
+   "geo": [
+    45.4386,
+    10.9928
+   ]
+  },
+  {
+   "id": "club:ita.vicenza",
+   "name": "VICENZA",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 38
+   },
+   "geo": [
+    45.55,
+    11.55
+   ]
+  },
+  {
+   "id": "club:ita.virtusentella",
+   "name": "VIRTUS ENTELLA",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 39
+   },
+   "geo": [
+    44.3164,
+    9.3237
+   ]
+  },
+  {
+   "id": "club:ita.albinoleffe",
+   "name": "ALBINOLEFFE",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 40
+   },
+   "geo": [
+    45.7606,
+    9.7969
+   ]
+  },
+  {
+   "id": "club:ita.alcione",
+   "name": "ALCIONE",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 41
+   },
+   "geo": [
+    45.4669,
+    9.19
+   ]
+  },
+  {
+   "id": "club:ita.arzignanovalchiampo",
+   "name": "ARZIGNANO",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 42
+   },
+   "geo": [
+    45.5203,
+    11.3397
+   ]
+  },
+  {
+   "id": "club:ita.carpi",
+   "name": "CARPI",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 43
+   },
+   "geo": [
+    44.7833,
+    10.885
+   ]
+  },
+  {
+   "id": "club:ita.cittadella",
+   "name": "CITTADELLA",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 44
+   },
+   "geo": [
+    45.6486,
+    11.7836
+   ]
+  },
+  {
+   "id": "club:ita.desenzano",
+   "name": "DESENZANO",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 45
+   },
+   "geo": [
+    45.4689,
+    10.535
+   ]
+  },
+  {
+   "id": "club:ita.dolomitibellunesi",
+   "name": "DOLOMITI BELL.",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 46
+   },
+   "geo": [
+    46.1408,
+    12.2156
+   ]
+  },
+  {
+   "id": "club:ita.folgorecaratese",
+   "name": "FOLGORE CARATESE",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 47
+   },
+   "geo": [
+    45.6833,
+    9.2333
+   ]
+  },
+  {
+   "id": "club:ita.gianaerminio",
+   "name": "GIANA ERMINIO",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 48
+   },
+   "geo": [
+    45.5333,
+    9.4
+   ]
+  },
+  {
+   "id": "club:ita.juventusnextgen",
+   "name": "JUVENTUS NG",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 49
+   },
+   "geo": [
+    45.0792,
+    7.6761
+   ]
+  },
+  {
+   "id": "club:ita.lecco",
+   "name": "LECCO",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 50
+   },
+   "geo": [
+    45.8533,
+    9.3905
+   ]
+  },
+  {
+   "id": "club:ita.lumezzane",
+   "name": "LUMEZZANE",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 51
+   },
+   "geo": [
+    45.65,
+    10.2667
+   ]
+  },
+  {
+   "id": "club:ita.novara",
+   "name": "NOVARA",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 52
+   },
+   "geo": [
+    45.45,
+    8.62
+   ]
+  },
+  {
+   "id": "club:ita.ospitaletto",
+   "name": "OSPITALETTO",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 53
+   },
+   "geo": [
+    45.5553,
+    10.0733
+   ]
+  },
+  {
+   "id": "club:ita.pergolettese",
+   "name": "PERGOLETTESE",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 54
+   },
+   "geo": [
+    45.3667,
+    9.6833
+   ]
+  },
+  {
+   "id": "club:ita.provercelli",
+   "name": "PRO VERCELLI",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 55
+   },
+   "geo": [
+    45.3261,
+    8.4234
+   ]
+  },
+  {
+   "id": "club:ita.renate",
+   "name": "RENATE",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 56
+   },
+   "geo": [
+    45.7225,
+    9.2783
+   ]
+  },
+  {
+   "id": "club:ita.trento",
+   "name": "TRENTO",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 57
+   },
+   "geo": [
+    46.0667,
+    11.1167
+   ]
+  },
+  {
+   "id": "club:ita.treviso",
+   "name": "TREVISO",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 58
+   },
+   "geo": [
+    45.6658,
+    12.2456
+   ]
+  },
+  {
+   "id": "club:ita.unionbrescia",
+   "name": "UNION BRESCIA",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 59
+   },
+   "geo": [
+    45.5389,
+    10.2203
+   ]
+  },
+  {
+   "id": "club:ita.atalantau23",
+   "name": "ATALANTA U23",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 60
+   },
+   "geo": [
+    45.695,
+    9.67
+   ]
+  },
+  {
+   "id": "club:ita.campobasso",
+   "name": "CAMPOBASSO",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 61
+   },
+   "geo": [
+    41.561,
+    14.6684
+   ]
+  },
+  {
+   "id": "club:ita.forli",
+   "name": "FORLI",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 62
+   },
+   "geo": [
+    44.2228,
+    12.0414
+   ]
+  },
+  {
+   "id": "club:ita.grosseto",
+   "name": "GROSSETO",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 63
+   },
+   "geo": [
+    42.7722,
+    11.1089
+   ]
+  },
+  {
+   "id": "club:ita.gubbio",
+   "name": "GUBBIO",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 64
+   },
+   "geo": [
+    43.353,
+    12.5793
+   ]
+  },
+  {
+   "id": "club:ita.guidonia",
+   "name": "GUIDONIA 1937",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 65
+   },
+   "geo": [
+    41.9968,
+    12.7261
+   ]
+  },
+  {
+   "id": "club:ita.latina",
+   "name": "LATINA",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 66
+   },
+   "geo": [
+    41.4672,
+    12.9036
+   ]
+  },
+  {
+   "id": "club:ita.livorno",
+   "name": "LIVORNO",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 67
+   },
+   "geo": [
+    43.55,
+    10.3167
+   ]
+  },
+  {
+   "id": "club:ita.ostiamare",
+   "name": "OSTIA MARE",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 68
+   },
+   "geo": [
+    41.8931,
+    12.4828
+   ]
+  },
+  {
+   "id": "club:ita.perugia",
+   "name": "PERUGIA",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 69
+   },
+   "geo": [
+    43.1119,
+    12.3885
+   ]
+  },
+  {
+   "id": "club:ita.pescara",
+   "name": "PESCARA",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 70
+   },
+   "geo": [
+    42.4643,
+    14.2142
+   ]
+  },
+  {
+   "id": "club:ita.pianese",
+   "name": "PIANESE",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 71
+   },
+   "geo": [
+    42.85,
+    11.6833
+   ]
+  },
+  {
+   "id": "club:ita.pineto",
+   "name": "PINETO",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 72
+   },
+   "geo": [
+    42.6167,
+    14.0667
+   ]
+  },
+  {
+   "id": "club:ita.ravenna",
+   "name": "RAVENNA",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 73
+   },
+   "geo": [
+    44.4161,
+    12.2017
+   ]
+  },
+  {
+   "id": "club:ita.reggiana",
+   "name": "REGGIANA",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 74
+   },
+   "geo": [
+    44.7,
+    10.6333
+   ]
+  },
+  {
+   "id": "club:ita.sambenedettese",
+   "name": "SAMBENEDETTESE",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 75
+   },
+   "geo": [
+    42.9438,
+    13.8833
+   ]
+  },
+  {
+   "id": "club:ita.spezia",
+   "name": "SPEZIA",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 76
+   },
+   "geo": [
+    44.108,
+    9.8289
+   ]
+  },
+  {
+   "id": "club:ita.torres",
+   "name": "TORRES",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 77
+   },
+   "geo": [
+    40.7267,
+    8.5592
+   ]
+  },
+  {
+   "id": "club:ita.vado",
+   "name": "VADO",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 78
+   },
+   "geo": [
+    44.2692,
+    8.4361
+   ]
+  },
+  {
+   "id": "club:ita.vispesaro",
+   "name": "VIS PESARO",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 79
+   },
+   "geo": [
+    43.9102,
+    12.9133
+   ]
+  },
+  {
+   "id": "club:ita.altamura",
+   "name": "ALTAMURA",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 80
+   },
+   "geo": [
+    40.8167,
+    16.55
+   ]
+  },
+  {
+   "id": "club:ita.cerignola",
+   "name": "CERIGNOLA",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 81
+   },
+   "geo": [
+    41.2667,
+    15.9
+   ]
+  },
+  {
+   "id": "club:ita.picerno",
+   "name": "AZ PICERNO",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 82
+   },
+   "geo": [
+    40.6333,
+    15.6333
+   ]
+  },
+  {
+   "id": "club:ita.bari",
+   "name": "BARI",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 83
+   },
+   "geo": [
+    41.1253,
+    16.8667
+   ]
+  },
+  {
+   "id": "club:ita.barletta",
+   "name": "BARLETTA",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 84
+   },
+   "geo": [
+    41.3167,
+    16.2833
+   ]
+  },
+  {
+   "id": "club:ita.casarano",
+   "name": "CASARANO",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 85
+   },
+   "geo": [
+    40.0167,
+    18.1667
+   ]
+  },
+  {
+   "id": "club:ita.casertana",
+   "name": "CASERTANA",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 86
+   },
+   "geo": [
+    41.0667,
+    14.3333
+   ]
+  },
+  {
+   "id": "club:ita.catania",
+   "name": "CATANIA",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 87
+   },
+   "geo": [
+    37.5027,
+    15.0873
+   ]
+  },
+  {
+   "id": "club:ita.cavese",
+   "name": "CAVESE",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 88
+   },
+   "geo": [
+    40.7008,
+    14.7056
+   ]
+  },
+  {
+   "id": "club:ita.cosenza",
+   "name": "COSENZA",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 89
+   },
+   "geo": [
+    39.3,
+    16.25
+   ]
+  },
+  {
+   "id": "club:ita.crotone",
+   "name": "CROTONE",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 90
+   },
+   "geo": [
+    39.0833,
+    17.1167
+   ]
+  },
+  {
+   "id": "club:ita.foggia",
+   "name": "FOGGIA",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 91
+   },
+   "geo": [
+    41.4584,
+    15.5519
+   ]
+  },
+  {
+   "id": "club:ita.giugliano",
+   "name": "GIUGLIANO",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 92
+   },
+   "geo": [
+    40.9283,
+    14.2011
+   ]
+  },
+  {
+   "id": "club:ita.interu23",
+   "name": "INTER U23",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 93
+   },
+   "geo": [
+    45.4669,
+    9.19
+   ]
+  },
+  {
+   "id": "club:ita.monopoli",
+   "name": "MONOPOLI",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 94
+   },
+   "geo": [
+    40.95,
+    17.3
+   ]
+  },
+  {
+   "id": "club:ita.potenza",
+   "name": "POTENZA",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 95
+   },
+   "geo": [
+    40.6333,
+    15.8
+   ]
+  },
+  {
+   "id": "club:ita.salernitana",
+   "name": "SALERNITANA",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 96
+   },
+   "geo": [
+    40.6806,
+    14.7594
+   ]
+  },
+  {
+   "id": "club:ita.savoia",
+   "name": "SAVOIA",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 97
+   },
+   "geo": [
+    40.7569,
+    14.4444
+   ]
+  },
+  {
+   "id": "club:ita.scafatese",
+   "name": "SCAFATESE",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 98
+   },
+   "geo": [
+    40.7536,
+    14.5253
+   ]
+  },
+  {
+   "id": "club:ita.sorrento",
+   "name": "SORRENTO",
+   "country": "ITA",
+   "host": {
+    "file": 90,
+    "ordinal": 99
+   },
+   "geo": [
+    40.6278,
+    14.3736
+   ]
+  },
+  {
+   "id": "club:ita.alessandria",
+   "name": "ALESSANDRIA",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 0
+   },
+   "geo": [
+    44.9133,
+    8.62
+   ]
+  },
+  {
+   "id": "club:ita.asdasti",
+   "name": "ASTI",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 1
+   },
+   "geo": [
+    44.9,
+    8.2069
+   ]
+  },
+  {
+   "id": "club:ita.asdbiellese",
+   "name": "BIELLESE",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 2
+   },
+   "geo": [
+    45.5664,
+    8.0533
+   ]
+  },
+  {
+   "id": "club:ita.calcio",
+   "name": "BORGOSESIA",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 3
+   },
+   "geo": [
+    45.7169,
+    8.2764
+   ]
+  },
+  {
+   "id": "club:ita.bra",
+   "name": "BRA",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 4
+   },
+   "geo": [
+    44.7,
+    7.85
+   ]
+  },
+  {
+   "id": "club:ita.cellevarazze",
+   "name": "CELLE VARAZZE",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 5
+   },
+   "geo": [
+    44.3421,
+    8.5456
+   ]
+  },
+  {
+   "id": "club:ita.chisola",
+   "name": "CHISOLA",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 6
+   },
+   "geo": [
+    44.95,
+    7.6333
+   ]
+  },
+  {
+   "id": "club:ita.derthona",
+   "name": "DERTHONA",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 7
+   },
+   "geo": [
+    44.8942,
+    8.8656
+   ]
+  },
+  {
+   "id": "club:ita.usdfezzanese",
+   "name": "FEZZANESE",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 8
+   },
+   "geo": [
+    44.08,
+    9.8265
+   ]
+  },
+  {
+   "id": "club:ita.asdcgozzano",
+   "name": "GOZZANO",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 9
+   },
+   "geo": [
+    45.75,
+    8.4333
+   ]
+  },
+  {
+   "id": "club:ita.ssdimperia",
+   "name": "IMPERIA",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 10
+   },
+   "geo": [
+    43.8865,
+    8.0297
+   ]
+  },
+  {
+   "id": "club:ita.gsdlascaris",
+   "name": "LASCARIS",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 11
+   },
+   "geo": [
+    45.1058,
+    7.5434
+   ]
+  },
+  {
+   "id": "club:ita.ligorna",
+   "name": "LIGORNA",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 12
+   },
+   "geo": [
+    44.4072,
+    8.9339
+   ]
+  },
+  {
+   "id": "club:ita.asdmillesimo",
+   "name": "MILLESIMO",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 13
+   },
+   "geo": [
+    44.3644,
+    8.2059
+   ]
+  },
+  {
+   "id": "club:ita.saluzzo",
+   "name": "SALUZZO",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 14
+   },
+   "geo": [
+    44.6453,
+    7.4906
+   ]
+  },
+  {
+   "id": "club:ita.sanremesecalcio",
+   "name": "SANREMESE",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 15
+   },
+   "geo": [
+    43.8175,
+    7.775
+   ]
+  },
+  {
+   "id": "club:ita.sestrilevante",
+   "name": "SESTRI LEVANTE",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 16
+   },
+   "geo": [
+    44.2733,
+    9.3932
+   ]
+  },
+  {
+   "id": "club:ita.valenzanamado",
+   "name": "VALENZANA",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 17
+   },
+   "geo": [
+    45.014,
+    8.6458
+   ]
+  },
+  {
+   "id": "club:ita.brusaporto",
+   "name": "BRUSAPORTO",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 18
+   },
+   "geo": [
+    45.6667,
+    9.7667
+   ]
+  },
+  {
+   "id": "club:ita.caldieroterme",
+   "name": "CALDIERO",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 19
+   },
+   "geo": [
+    45.4037,
+    11.1755
+   ]
+  },
+  {
+   "id": "club:ita.chievoverona",
+   "name": "CHIEVO",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 20
+   },
+   "geo": [
+    45.4386,
+    10.9928
+   ]
+  },
+  {
+   "id": "club:ita.milano",
+   "name": "CLUB MILANO",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 21
+   },
+   "geo": [
+    45.4669,
+    9.19
+   ]
+  },
+  {
+   "id": "club:ita.fiorenzuola",
+   "name": "FIORENZUOLA",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 22
+   },
+   "geo": [
+    44.9333,
+    9.9
+   ]
+  },
+  {
+   "id": "club:ita.leon",
+   "name": "LEON MONZA BRIAN",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 23
+   },
+   "geo": [
+    45.65,
+    9.3167
+   ]
+  },
+  {
+   "id": "club:ita.milanfuturo",
+   "name": "MILAN FUTURO",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 24
+   },
+   "geo": [
+    45.4669,
+    9.19
+   ]
+  },
+  {
+   "id": "club:ita.nibbianovaltid",
+   "name": "NIBBIANO VALTIDO",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 25
+   },
+   "geo": [
+    44.9051,
+    9.3283
+   ]
+  },
+  {
+   "id": "club:ita.propalazzolo",
+   "name": "PALAZZOLO",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 26
+   },
+   "geo": [
+    45.6,
+    9.8833
+   ]
+  },
+  {
+   "id": "club:ita.calciopavonese",
+   "name": "PAVONESE",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 27
+   },
+   "geo": [
+    45.3008,
+    10.2086
+   ]
+  },
+  {
+   "id": "club:ita.piacenzacalcio",
+   "name": "PIACENZA",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 28
+   },
+   "geo": [
+    45.05,
+    9.7
+   ]
+  },
+  {
+   "id": "club:ita.realcalepina",
+   "name": "REAL CALEPINA",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 29
+   },
+   "geo": [
+    45.65,
+    9.85
+   ]
+  },
+  {
+   "id": "club:ita.rovatocalcio",
+   "name": "ROVATO",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 30
+   },
+   "geo": [
+    45.567,
+    9.9986
+   ]
+  },
+  {
+   "id": "club:ita.scanzorosciate",
+   "name": "SCANZOROSCIATE",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 31
+   },
+   "geo": [
+    45.7114,
+    9.7358
+   ]
+  },
+  {
+   "id": "club:ita.tritiumcalcio",
+   "name": "TRITIUM",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 32
+   },
+   "geo": [
+    45.6089,
+    9.52
+   ]
+  },
+  {
+   "id": "club:ita.villavalle",
+   "name": "VILLA VALLE",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 33
+   },
+   "geo": [
+    45.75,
+    9.6167
+   ]
+  },
+  {
+   "id": "club:ita.virtusbergamo",
+   "name": "VIRTUS CISERANOB",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 34
+   },
+   "geo": [
+    45.7317,
+    9.7283
+   ]
+  },
+  {
+   "id": "club:ita.virtusverona",
+   "name": "VIRTUS VERONA",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 35
+   },
+   "geo": [
+    45.4386,
+    10.9928
+   ]
+  },
+  {
+   "id": "club:ita.bassano",
+   "name": "BASSANO",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 36
+   },
+   "geo": [
+    45.7667,
+    11.7342
+   ]
+  },
+  {
+   "id": "club:ita.brian",
+   "name": "BRIAN LIGNANO",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 37
+   },
+   "geo": [
+    45.655,
+    13.0931
+   ]
+  },
+  {
+   "id": "club:ita.calvinoale",
+   "name": "CALVI NOALE",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 38
+   },
+   "geo": [
+    45.5501,
+    12.0709
+   ]
+  },
+  {
+   "id": "club:ita.campodarsego",
+   "name": "CAMPODARSEGO",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 39
+   },
+   "geo": [
+    45.5,
+    11.9167
+   ]
+  },
+  {
+   "id": "club:ita.cjarlinsmuzane",
+   "name": "CJARLINS",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 40
+   },
+   "geo": [
+    45.8,
+    13.1833
+   ]
+  },
+  {
+   "id": "club:ita.fcdconegliano",
+   "name": "CONEGLIANO",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 41
+   },
+   "geo": [
+    45.8872,
+    12.2969
+   ]
+  },
+  {
+   "id": "club:ita.este",
+   "name": "ESTE",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 42
+   },
+   "geo": [
+    45.2333,
+    11.6667
+   ]
+  },
+  {
+   "id": "club:ita.lavarianmortean",
+   "name": "LME",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 43
+   },
+   "geo": [
+    45.956,
+    13.2282
+   ]
+  },
+  {
+   "id": "club:ita.legnagosalus",
+   "name": "LEGNAGO",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 44
+   },
+   "geo": [
+    45.1929,
+    11.3115
+   ]
+  },
+  {
+   "id": "club:ita.luparense",
+   "name": "LUPARENSE",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 45
+   },
+   "geo": [
+    45.6557,
+    11.8594
+   ]
+  },
+  {
+   "id": "club:ita.mestre",
+   "name": "MESTRE",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 46
+   },
+   "geo": [
+    45.4397,
+    12.3319
+   ]
+  },
+  {
+   "id": "club:ita.obermais",
+   "name": "OBERMAIS",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 47
+   },
+   "geo": [
+    46.6689,
+    11.1739
+   ]
+  },
+  {
+   "id": "club:ita.calciosandona",
+   "name": "SAN DONA",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 48
+   },
+   "geo": [
+    45.6298,
+    12.5641
+   ]
+  },
+  {
+   "id": "club:ita.calcioschio",
+   "name": "SCHIO",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 49
+   },
+   "geo": [
+    45.7111,
+    11.3556
+   ]
+  },
+  {
+   "id": "club:ita.triestina",
+   "name": "TRIESTINA",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 50
+   },
+   "geo": [
+    45.6503,
+    13.7703
+   ]
+  },
+  {
+   "id": "club:ita.clodiense",
+   "name": "UNION CLODIENSE",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 51
+   },
+   "geo": [
+    45.2189,
+    12.2785
+   ]
+  },
+  {
+   "id": "club:ita.altavilla",
+   "name": "UNIONE LA ROCCA",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 52
+   },
+   "geo": [
+    45.5164,
+    11.4597
+   ]
+  },
+  {
+   "id": "club:ita.virtusbolzano",
+   "name": "VIRTUS BOLZANO",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 53
+   },
+   "geo": [
+    46.4981,
+    11.3548
+   ]
+  },
+  {
+   "id": "club:ita.arconatese",
+   "name": "ARCONATESE",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 54
+   },
+   "geo": [
+    45.5333,
+    8.85
+   ]
+  },
+  {
+   "id": "club:ita.casatesemerate",
+   "name": "CASATESE MERATE",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 55
+   },
+   "geo": [
+    45.6983,
+    9.3117
+   ]
+  },
+  {
+   "id": "club:ita.castellanzese",
+   "name": "CASTELLANZESE",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 56
+   },
+   "geo": [
+    45.6167,
+    8.9
+   ]
+  },
+  {
+   "id": "club:ita.cittvismodena",
+   "name": "CITTADELLA VIS M",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 57
+   },
+   "geo": [
+    44.6458,
+    10.9257
+   ]
+  },
+  {
+   "id": "club:ita.correggese",
+   "name": "CORREGGESE",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 58
+   },
+   "geo": [
+    44.7717,
+    10.7806
+   ]
+  },
+  {
+   "id": "club:ita.crema",
+   "name": "CREMA",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 59
+   },
+   "geo": [
+    45.3667,
+    9.6833
+   ]
+  },
+  {
+   "id": "club:ita.lentigione",
+   "name": "LENTIGIONE",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 60
+   },
+   "geo": [
+    44.8664,
+    10.4711
+   ]
+  },
+  {
+   "id": "club:ita.oltrepo",
+   "name": "OLTREPO FBC",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 61
+   },
+   "geo": [
+    45.0619,
+    9.2611
+   ]
+  },
+  {
+   "id": "club:ita.paviacalcio",
+   "name": "PAVIA",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 62
+   },
+   "geo": [
+    45.1853,
+    9.155
+   ]
+  },
+  {
+   "id": "club:ita.pistoiese",
+   "name": "PISTOIESE",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 63
+   },
+   "geo": [
+    43.9333,
+    10.9167
+   ]
+  },
+  {
+   "id": "club:ita.pontedera",
+   "name": "PONTEDERA",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 64
+   },
+   "geo": [
+    43.6625,
+    10.6328
+   ]
+  },
+  {
+   "id": "club:ita.propatria",
+   "name": "PRO PATRIA",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 65
+   },
+   "geo": [
+    45.612,
+    8.8518
+   ]
+  },
+  {
+   "id": "club:ita.prosesto",
+   "name": "PRO SESTO",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 66
+   },
+   "geo": [
+    45.5333,
+    9.2333
+   ]
+  },
+  {
+   "id": "club:ita.santangelo",
+   "name": "SANT'ANGELO",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 67
+   },
+   "geo": [
+    45.2389,
+    9.4097
+   ]
+  },
+  {
+   "id": "club:ita.calcio2",
+   "name": "SOLBIATESE",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 68
+   },
+   "geo": [
+    45.7167,
+    8.8167
+   ]
+  },
+  {
+   "id": "club:ita.tropicalcoriano",
+   "name": "TROPICAL CORIANO",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 69
+   },
+   "geo": [
+    43.9691,
+    12.6006
+   ]
+  },
+  {
+   "id": "club:ita.varese",
+   "name": "VARESE",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 70
+   },
+   "geo": [
+    45.8167,
+    8.8333
+   ]
+  },
+  {
+   "id": "club:ita.varesinacalcio",
+   "name": "VARESINA",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 71
+   },
+   "geo": [
+    45.7531,
+    8.8744
+   ]
+  },
+  {
+   "id": "club:ita.flaminia",
+   "name": "FLAMINIA CIVITAC",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 72
+   },
+   "geo": [
+    42.2961,
+    12.41
+   ]
+  },
+  {
+   "id": "club:ita.follgavorrano",
+   "name": "FOLLONICA GAVORR",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 73
+   },
+   "geo": [
+    42.9189,
+    10.7614
+   ]
+  },
+  {
+   "id": "club:ita.ghiviborgo",
+   "name": "GHIVIBORGO",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 74
+   },
+   "geo": [
+    43.9797,
+    10.5467
+   ]
+  },
+  {
+   "id": "club:ita.asdgrassina",
+   "name": "GRASSINA",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 75
+   },
+   "geo": [
+    43.7233,
+    11.2933
+   ]
+  },
+  {
+   "id": "club:ita.lucchesecalcio",
+   "name": "LUCCHESE",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 76
+   },
+   "geo": [
+    43.85,
+    10.5167
+   ]
+  },
+  {
+   "id": "club:ita.mezzolaracalcio",
+   "name": "MEZZOLARA",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 77
+   },
+   "geo": [
+    44.5897,
+    11.5647
+   ]
+  },
+  {
+   "id": "club:ita.montevarchi",
+   "name": "MONTEVARCHI",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 78
+   },
+   "geo": [
+    43.5234,
+    11.5679
+   ]
+  },
+  {
+   "id": "club:ita.prato",
+   "name": "PRATO",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 79
+   },
+   "geo": [
+    43.8808,
+    11.0966
+   ]
+  },
+  {
+   "id": "club:ita.progresso",
+   "name": "PROGRESSO",
+   "country": "ITA",
+   "host": {
+    "file": 91,
+    "ordinal": 80
+   },
+   "geo": [
+    44.5778,
+    11.3617
+   ]
+  },
+  {
+   "id": "club:ita.asdrondinella",
+   "name": "RONDINELLA MARZO",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 0
+   },
+   "geo": [
+    43.7714,
+    11.2542
+   ]
+  },
+  {
+   "id": "club:ita.sandonato",
+   "name": "SAN DONATO TAVAR",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 1
+   },
+   "geo": [
+    43.552,
+    11.1731
+   ]
+  },
+  {
+   "id": "club:ita.sassomarconi",
+   "name": "SASSO MARCONI",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 2
+   },
+   "geo": [
+    44.4,
+    11.25
+   ]
+  },
+  {
+   "id": "club:ita.scandicci",
+   "name": "SCANDICCI",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 3
+   },
+   "geo": [
+    43.7544,
+    11.1894
+   ]
+  },
+  {
+   "id": "club:ita.seravezzapozzi",
+   "name": "SERAVEZZA",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 4
+   },
+   "geo": [
+    44,
+    10.2333
+   ]
+  },
+  {
+   "id": "club:ita.siena",
+   "name": "SIENA",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 5
+   },
+   "geo": [
+    43.3183,
+    11.3314
+   ]
+  },
+  {
+   "id": "club:ita.tau",
+   "name": "TAU ALTOPASCIO",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 6
+   },
+   "geo": [
+    43.8167,
+    10.6747
+   ]
+  },
+  {
+   "id": "club:ita.nuovaternana",
+   "name": "TERNANA",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 7
+   },
+   "geo": [
+    42.5608,
+    12.6468
+   ]
+  },
+  {
+   "id": "club:ita.terranuova",
+   "name": "TERRANUOVA TRAIA",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 8
+   },
+   "geo": [
+    43.5531,
+    11.5894
+   ]
+  },
+  {
+   "id": "club:ita.anconacalcio",
+   "name": "ANCONA",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 9
+   },
+   "geo": [
+    43.6167,
+    13.5167
+   ]
+  },
+  {
+   "id": "club:ita.angelana",
+   "name": "ANGELANA",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 10
+   },
+   "geo": [
+    43.0589,
+    12.5781
+   ]
+  },
+  {
+   "id": "club:ita.atlascoli",
+   "name": "ATLETICO ASCOLI",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 11
+   },
+   "geo": [
+    42.8547,
+    13.5753
+   ]
+  },
+  {
+   "id": "club:ita.folignocalcio",
+   "name": "FOLIGNO",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 12
+   },
+   "geo": [
+    42.9558,
+    12.7033
+   ]
+  },
+  {
+   "id": "club:ita.forsempronese",
+   "name": "FORSEMPRONESE",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 13
+   },
+   "geo": [
+    43.689,
+    12.8061
+   ]
+  },
+  {
+   "id": "club:ita.giulianova",
+   "name": "GIULIANOVA",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 14
+   },
+   "geo": [
+    42.7525,
+    13.9567
+   ]
+  },
+  {
+   "id": "club:ita.laquila",
+   "name": "L'AQUILA",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 15
+   },
+   "geo": [
+    42.354,
+    13.392
+   ]
+  },
+  {
+   "id": "club:ita.lanciano",
+   "name": "LANCIANO FC",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 16
+   },
+   "geo": [
+    42.2312,
+    14.3905
+   ]
+  },
+  {
+   "id": "club:ita.maceratese",
+   "name": "MACERATESE",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 17
+   },
+   "geo": [
+    43.3003,
+    13.4533
+   ]
+  },
+  {
+   "id": "club:ita.asdksport",
+   "name": "MONTECCHIO GALLO",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 18
+   },
+   "geo": [
+    43.8278,
+    12.8017
+   ]
+  },
+  {
+   "id": "club:ita.notarescocalcio",
+   "name": "NOTARESCO",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 19
+   },
+   "geo": [
+    42.65,
+    13.9
+   ]
+  },
+  {
+   "id": "club:ita.pietralunghese",
+   "name": "PIETRALUNGHESE",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 20
+   },
+   "geo": [
+    43.4423,
+    12.4368
+   ]
+  },
+  {
+   "id": "club:ita.recanatese",
+   "name": "RECANATESE",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 21
+   },
+   "geo": [
+    43.3986,
+    13.5525
+   ]
+  },
+  {
+   "id": "club:ita.santegidiese",
+   "name": "SANTEGIDIESE",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 22
+   },
+   "geo": [
+    42.8333,
+    13.7167
+   ]
+  },
+  {
+   "id": "club:ita.trestina",
+   "name": "SPORTING TRESTIN",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 23
+   },
+   "geo": [
+    43.3706,
+    12.2381
+   ]
+  },
+  {
+   "id": "club:ita.teramocalcio",
+   "name": "TERAMO",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 24
+   },
+   "geo": [
+    42.6589,
+    13.7039
+   ]
+  },
+  {
+   "id": "club:ita.termolicalcio",
+   "name": "TERMOLI",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 25
+   },
+   "geo": [
+    42.0028,
+    14.9947
+   ]
+  },
+  {
+   "id": "club:ita.vigorsenigallia",
+   "name": "VIGOR SENIGALLIA",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 26
+   },
+   "geo": [
+    43.7131,
+    13.2183
+   ]
+  },
+  {
+   "id": "club:ita.afragolese",
+   "name": "AFRAGOLESE",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 27
+   },
+   "geo": [
+    40.9167,
+    14.3167
+   ]
+  },
+  {
+   "id": "club:ita.albalonga",
+   "name": "ALBALONGA",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 28
+   },
+   "geo": [
+    41.7333,
+    12.6667
+   ]
+  },
+  {
+   "id": "club:ita.cittadianagni",
+   "name": "ANAGNI",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 29
+   },
+   "geo": [
+    41.75,
+    13.15
+   ]
+  },
+  {
+   "id": "club:ita.anziocalcio",
+   "name": "ANZIO",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 30
+   },
+   "geo": [
+    41.4472,
+    12.6283
+   ]
+  },
+  {
+   "id": "club:ita.aranova",
+   "name": "ARANOVA",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 31
+   },
+   "geo": [
+    41.9294,
+    12.2411
+   ]
+  },
+  {
+   "id": "club:ita.alodigiani",
+   "name": "ATLETICO LODIGIA",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 32
+   },
+   "geo": [
+    41.8931,
+    12.4828
+   ]
+  },
+  {
+   "id": "club:ita.calciobudoni",
+   "name": "BUDONI",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 33
+   },
+   "geo": [
+    40.7038,
+    9.7071
+   ]
+  },
+  {
+   "id": "club:ita.sarrabusogl",
+   "name": "COSTA ORIENTALE",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 34
+   },
+   "geo": [
+    39.6964,
+    9.5789
+   ]
+  },
+  {
+   "id": "club:ita.gelbison",
+   "name": "GELBISON CILENTO",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 35
+   },
+   "geo": [
+    40.2333,
+    15.2667
+   ]
+  },
+  {
+   "id": "club:ita.lattedolce",
+   "name": "LATTE DOLCE",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 36
+   },
+   "geo": [
+    40.7267,
+    8.5592
+   ]
+  },
+  {
+   "id": "club:ita.asdmonastir",
+   "name": "MONASTIR ITALIA",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 37
+   },
+   "geo": [
+    39.3845,
+    9.0445
+   ]
+  },
+  {
+   "id": "club:ita.ossese",
+   "name": "OSSESE",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 38
+   },
+   "geo": [
+    40.6747,
+    8.5922
+   ]
+  },
+  {
+   "id": "club:ita.paganesecalcio",
+   "name": "PAGANESE",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 39
+   },
+   "geo": [
+    40.7417,
+    14.6167
+   ]
+  },
+  {
+   "id": "club:ita.sarnese",
+   "name": "SARNESE",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 40
+   },
+   "geo": [
+    40.8167,
+    14.6167
+   ]
+  },
+  {
+   "id": "club:ita.trastevere",
+   "name": "TRASTEVERE",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 41
+   },
+   "geo": [
+    41.8931,
+    12.4828
+   ]
+  },
+  {
+   "id": "club:ita.unipomezia",
+   "name": "UNIPOMEZIA",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 42
+   },
+   "geo": [
+    41.6693,
+    12.5021
+   ]
+  },
+  {
+   "id": "club:ita.venafro",
+   "name": "VENAFRO",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 43
+   },
+   "geo": [
+    41.4833,
+    14.05
+   ]
+  },
+  {
+   "id": "club:ita.certosavigor",
+   "name": "VIGOR CAMPAGNANO",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 44
+   },
+   "geo": [
+    42.1333,
+    12.3833
+   ]
+  },
+  {
+   "id": "club:ita.fidelisandria",
+   "name": "ANDRIA",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 45
+   },
+   "geo": [
+    41.2317,
+    16.3083
+   ]
+  },
+  {
+   "id": "club:ita.bisceglie",
+   "name": "BISCEGLIE",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 46
+   },
+   "geo": [
+    41.2409,
+    16.5021
+   ]
+  },
+  {
+   "id": "club:ita.brindisi",
+   "name": "BRINDISI",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 47
+   },
+   "geo": [
+    40.6383,
+    17.9458
+   ]
+  },
+  {
+   "id": "club:ita.ebolitanacalcio",
+   "name": "EBOLITANA",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 48
+   },
+   "geo": [
+    40.6169,
+    15.0564
+   ]
+  },
+  {
+   "id": "club:ita.francavilla",
+   "name": "FRANCAVILLA PZ",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 49
+   },
+   "geo": [
+    40.0833,
+    16.2
+   ]
+  },
+  {
+   "id": "club:ita.gladiator",
+   "name": "GLADIATOR",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 50
+   },
+   "geo": [
+    41.0833,
+    14.25
+   ]
+  },
+  {
+   "id": "club:ita.gravina",
+   "name": "GRAVINA BA",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 51
+   },
+   "geo": [
+    40.8206,
+    16.4233
+   ]
+  },
+  {
+   "id": "club:ita.ischia",
+   "name": "ISCHIA ISOLAVERD",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 52
+   },
+   "geo": [
+    40.7333,
+    13.95
+   ]
+  },
+  {
+   "id": "club:ita.manfredonia",
+   "name": "MANFREDONIA",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 53
+   },
+   "geo": [
+    41.6333,
+    15.9167
+   ]
+  },
+  {
+   "id": "club:ita.martinacalcio",
+   "name": "MARTINA",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 54
+   },
+   "geo": [
+    40.7,
+    17.3333
+   ]
+  },
+  {
+   "id": "club:ita.melfi",
+   "name": "MELFI",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 55
+   },
+   "geo": [
+    40.9964,
+    15.6558
+   ]
+  },
+  {
+   "id": "club:ita.nardo",
+   "name": "NARDO",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 56
+   },
+   "geo": [
+    40.1797,
+    18.0333
+   ]
+  },
+  {
+   "id": "club:ita.nocerinacalcio",
+   "name": "NOCERINA",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 57
+   },
+   "geo": [
+    40.75,
+    14.6333
+   ]
+  },
+  {
+   "id": "club:ita.palmese",
+   "name": "PALMESE NA",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 58
+   },
+   "geo": [
+    40.8667,
+    14.55
+   ]
+  },
+  {
+   "id": "club:ita.realaversa",
+   "name": "REAL AVERSA",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 59
+   },
+   "geo": [
+    40.973,
+    14.2065
+   ]
+  },
+  {
+   "id": "club:ita.realforio",
+   "name": "REAL FORIO",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 60
+   },
+   "geo": [
+    40.7333,
+    13.85
+   ]
+  },
+  {
+   "id": "club:ita.turris",
+   "name": "TURRIS",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 61
+   },
+   "geo": [
+    40.7853,
+    14.3953
+   ]
+  },
+  {
+   "id": "club:ita.vfrancavilla",
+   "name": "VIRTUS FRANCAVIL",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 62
+   },
+   "geo": [
+    40.5314,
+    17.5858
+   ]
+  },
+  {
+   "id": "club:ita.athlpalermo",
+   "name": "ATHLETIC CLUB PA",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 63
+   },
+   "geo": [
+    38.1157,
+    13.3613
+   ]
+  },
+  {
+   "id": "club:ita.calcioavola",
+   "name": "AVOLA",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 64
+   },
+   "geo": [
+    36.9167,
+    15.1333
+   ]
+  },
+  {
+   "id": "club:ita.favara",
+   "name": "CASTRUMFAVARA",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 65
+   },
+   "geo": [
+    37.3186,
+    13.6631
+   ]
+  },
+  {
+   "id": "club:ita.ennacalcio",
+   "name": "ENNA",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 66
+   },
+   "geo": [
+    37.5667,
+    14.2667
+   ]
+  },
+  {
+   "id": "club:ita.cittadigela",
+   "name": "GELA",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 67
+   },
+   "geo": [
+    37.0667,
+    14.25
+   ]
+  },
+  {
+   "id": "club:ita.igeavirtus",
+   "name": "IGEA VIRTUS",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 68
+   },
+   "geo": [
+    38.15,
+    15.2167
+   ]
+  },
+  {
+   "id": "club:ita.licatacalcio",
+   "name": "LICATA",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 69
+   },
+   "geo": [
+    37.1083,
+    13.9469
+   ]
+  },
+  {
+   "id": "club:ita.milazzo",
+   "name": "MILAZZO",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 70
+   },
+   "geo": [
+    38.217,
+    15.237
+   ]
+  },
+  {
+   "id": "club:ita.asdmodica",
+   "name": "MODICA",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 71
+   },
+   "geo": [
+    36.8672,
+    14.7614
+   ]
+  },
+  {
+   "id": "club:ita.nissa",
+   "name": "NISSA",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 72
+   },
+   "geo": [
+    37.4915,
+    14.0624
+   ]
+  },
+  {
+   "id": "club:ita.asddigiesse",
+   "name": "PRAIATORTORA",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 73
+   },
+   "geo": [
+    39.898,
+    15.8084
+   ]
+  },
+  {
+   "id": "club:ita.ragusacalcio",
+   "name": "RAGUSA",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 74
+   },
+   "geo": [
+    36.925,
+    14.7306
+   ]
+  },
+  {
+   "id": "club:ita.reggina",
+   "name": "REGGINA",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 75
+   },
+   "geo": [
+    38.1144,
+    15.65
+   ]
+  },
+  {
+   "id": "club:ita.asdsambiase",
+   "name": "SAMBIASE",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 76
+   },
+   "geo": [
+    38.9667,
+    16.2668
+   ]
+  },
+  {
+   "id": "club:ita.siracusacalcio",
+   "name": "SIRACUSA",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 77
+   },
+   "geo": [
+    37.0692,
+    15.2875
+   ]
+  },
+  {
+   "id": "club:ita.trapani",
+   "name": "TRAPANI",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 78
+   },
+   "geo": [
+    38.0175,
+    12.515
+   ]
+  },
+  {
+   "id": "club:ita.vibonese",
+   "name": "VIBONESE",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 79
+   },
+   "geo": [
+    38.6753,
+    16.0959
+   ]
+  },
+  {
+   "id": "club:ita.vigorlamezia",
+   "name": "VIGOR LAMEZIA",
+   "country": "ITA",
+   "host": {
+    "file": 92,
+    "ordinal": 80
+   },
+   "geo": [
+    38.9667,
+    16.3
+   ]
+  }
+ ],
+ "competitions": [
+  {
+   "id": "ita.a",
+   "kind": "league",
+   "country": "ITA",
+   "level": 1,
+   "names": {
+    "it": [
+     "SERIE A",
+     "SERIE A"
+    ],
+    "en": [
+     "SERIE A",
+     "SERIE A"
+    ],
+    "fr": [
+     "SERIE A",
+     "SERIE A"
+    ],
+    "de": [
+     "SERIE A",
+     "SERIE A"
+    ]
+   },
+   "participants": {
+    "count": 20,
+    "clubs": [
+     "club:ita.atalanta",
+     "club:ita.bologna",
+     "club:ita.cagliari",
+     "club:ita.como",
+     "club:ita.fiorentina",
+     "club:ita.frosinone",
+     "club:ita.genoa",
+     "club:ita.inter",
+     "club:ita.juventus",
+     "club:ita.lazio",
+     "club:ita.lecce",
+     "club:ita.milan",
+     "club:ita.monza",
+     "club:ita.napoli",
+     "club:ita.parma",
+     "club:ita.roma",
+     "club:ita.sassuolo",
+     "club:ita.torino",
+     "club:ita.udinese",
+     "club:ita.venezia"
+    ]
+   },
+   "points": {
+    "win": 3,
+    "draw": 1,
+    "loss": 0
+   },
+   "stages": [
+    {
+     "id": "table",
+     "type": "round_robin",
+     "legs": 2,
+     "tiebreakers": [
+      "points",
+      "goal_difference",
+      "goals_for",
+      "draw_lots"
+     ]
+    }
+   ],
+   "outcomes": [
+    {
+     "stage": "table",
+     "positions": "1",
+     "tag": "champion"
+    },
+    {
+     "stage": "table",
+     "positions": "18-20",
+     "tag": "relegated",
+     "zone": "RETR",
+     "to": "ita.b",
+     "season": "next"
+    }
+   ],
+   "modes": [
+    "career",
+    "season",
+    "friendly"
+   ]
+  },
+  {
+   "id": "ita.b",
+   "kind": "league",
+   "country": "ITA",
+   "level": 2,
+   "names": {
+    "it": [
+     "SERIE B",
+     "SERIE B"
+    ],
+    "en": [
+     "SERIE B",
+     "SERIE B"
+    ],
+    "fr": [
+     "SERIE B",
+     "SERIE B"
+    ],
+    "de": [
+     "SERIE B",
+     "SERIE B"
+    ]
+   },
+   "participants": {
+    "count": 20,
+    "clubs": [
+     "club:ita.arezzo",
+     "club:ita.ascoli",
+     "club:ita.avellino",
+     "club:ita.benevento",
+     "club:ita.carrarese",
+     "club:ita.catanzaro",
+     "club:ita.cesena",
+     "club:ita.cremonese",
+     "club:ita.empoli",
+     "club:ita.juvestabia",
+     "club:ita.mantova",
+     "club:ita.modena",
+     "club:ita.padova",
+     "club:ita.palermo",
+     "club:ita.pisa",
+     "club:ita.sampdoria",
+     "club:ita.sudtirol",
+     "club:ita.verona",
+     "club:ita.vicenza",
+     "club:ita.virtusentella"
+    ]
+   },
+   "points": {
+    "win": 3,
+    "draw": 1,
+    "loss": 0
+   },
+   "stages": [
+    {
+     "id": "table",
+     "type": "round_robin",
+     "legs": 2,
+     "tiebreakers": [
+      "points",
+      "goal_difference",
+      "goals_for",
+      "draw_lots"
+     ]
+    },
+    {
+     "id": "playoff",
+     "type": "playoff",
+     "entrants": "table#3-8",
+     "direct_if": {
+      "points_gap_ge": 15
+     },
+     "rounds": [
+      {
+       "ties": 2,
+       "byes": 2,
+       "legs": 1,
+       "home": "fixed",
+       "pairing": "fixed",
+       "fixed": [
+        [
+         "table#5",
+         "table#8"
+        ],
+        [
+         "table#6",
+         "table#7"
+        ]
+       ],
+       "decider": [
+        "better_placed"
+       ]
+      },
+      {
+       "ties": 2,
+       "legs": 2,
+       "home": "fixed",
+       "pairing": "fixed",
+       "fixed": [
+        [
+         "winner:1.2",
+         "table#3"
+        ],
+        [
+         "winner:1.1",
+         "table#4"
+        ]
+       ],
+       "decider": [
+        "aggregate",
+        "better_placed"
+       ]
+      },
+      {
+       "ties": 1,
+       "legs": 2,
+       "home": "better_placed_second_leg",
+       "pairing": "fixed",
+       "fixed": [
+        [
+         "winner:2.1",
+         "winner:2.2"
+        ]
+       ],
+       "decider": [
+        "aggregate",
+        "better_placed_unless_level_on_points",
+        "extra_time",
+        "penalties"
+       ]
+      }
+     ]
+    },
+    {
+     "id": "playout",
+     "type": "playoff",
+     "entrants": "table#16-17",
+     "skip_if": {
+      "points_gap_ge": 5
+     },
+     "rounds": [
+      {
+       "ties": 1,
+       "legs": 2,
+       "home": "better_placed_second_leg",
+       "pairing": "fixed",
+       "fixed": [
+        [
+         "table#16",
+         "table#17"
+        ]
+       ],
+       "decider": [
+        "aggregate",
+        "better_placed_unless_level_on_points",
+        "extra_time",
+        "penalties"
+       ]
+      }
+     ]
+    }
+   ],
+   "outcomes": [
+    {
+     "stage": "table",
+     "positions": "1-2",
+     "tag": "promoted",
+     "zone": "PROM",
+     "to": "ita.a",
+     "season": "next"
+    },
+    {
+     "stage": "playoff",
+     "positions": "1",
+     "tag": "promoted",
+     "to": "ita.a",
+     "season": "next"
+    },
+    {
+     "stage": "playout",
+     "positions": "2",
+     "tag": "relegated",
+     "to": "ita.c-a",
+     "season": "next"
+    },
+    {
+     "stage": "table",
+     "positions": "18",
+     "tag": "relegated",
+     "zone": "RETR",
+     "to": "ita.c-a",
+     "season": "next"
+    },
+    {
+     "stage": "table",
+     "positions": "19",
+     "tag": "relegated",
+     "zone": "RETR",
+     "to": "ita.c-b",
+     "season": "next"
+    },
+    {
+     "stage": "table",
+     "positions": "20",
+     "tag": "relegated",
+     "zone": "RETR",
+     "to": "ita.c-c",
+     "season": "next"
+    }
+   ],
+   "modes": [
+    "career",
+    "season",
+    "friendly"
+   ]
+  },
+  {
+   "id": "ita.c-a",
+   "kind": "league",
+   "country": "ITA",
+   "level": 3,
+   "names": {
+    "it": [
+     "SERIE C A",
+     "SERIE C A"
+    ],
+    "en": [
+     "SERIE C A",
+     "SERIE C A"
+    ],
+    "fr": [
+     "SERIE C A",
+     "SERIE C A"
+    ],
+    "de": [
+     "SERIE C A",
+     "SERIE C A"
+    ]
+   },
+   "participants": {
+    "count": 20,
+    "clubs": [
+     "club:ita.albinoleffe",
+     "club:ita.alcione",
+     "club:ita.arzignanovalchiampo",
+     "club:ita.carpi",
+     "club:ita.cittadella",
+     "club:ita.desenzano",
+     "club:ita.dolomitibellunesi",
+     "club:ita.folgorecaratese",
+     "club:ita.gianaerminio",
+     "club:ita.juventusnextgen",
+     "club:ita.lecco",
+     "club:ita.lumezzane",
+     "club:ita.novara",
+     "club:ita.ospitaletto",
+     "club:ita.pergolettese",
+     "club:ita.provercelli",
+     "club:ita.renate",
+     "club:ita.trento",
+     "club:ita.treviso",
+     "club:ita.unionbrescia"
+    ]
+   },
+   "points": {
+    "win": 3,
+    "draw": 1,
+    "loss": 0
+   },
+   "stages": [
+    {
+     "id": "table",
+     "type": "round_robin",
+     "legs": 2,
+     "tiebreakers": [
+      "points",
+      "goal_difference",
+      "goals_for",
+      "draw_lots"
+     ]
+    }
+   ],
+   "outcomes": [
+    {
+     "stage": "table",
+     "positions": "1",
+     "tag": "promoted",
+     "zone": "PROM",
+     "to": "ita.b",
+     "season": "next"
+    },
+    {
+     "stage": "table",
+     "positions": "2-10",
+     "tag": "playoff",
+     "zone": "P.OFF",
+     "to": "ita.c-po"
+    }
+   ],
+   "modes": [
+    "career",
+    "season",
+    "friendly"
+   ]
+  },
+  {
+   "id": "ita.c-b",
+   "kind": "league",
+   "country": "ITA",
+   "level": 3,
+   "names": {
+    "it": [
+     "SERIE C B",
+     "SERIE C B"
+    ],
+    "en": [
+     "SERIE C B",
+     "SERIE C B"
+    ],
+    "fr": [
+     "SERIE C B",
+     "SERIE C B"
+    ],
+    "de": [
+     "SERIE C B",
+     "SERIE C B"
+    ]
+   },
+   "participants": {
+    "count": 20,
+    "clubs": [
+     "club:ita.atalantau23",
+     "club:ita.campobasso",
+     "club:ita.forli",
+     "club:ita.grosseto",
+     "club:ita.gubbio",
+     "club:ita.guidonia",
+     "club:ita.latina",
+     "club:ita.livorno",
+     "club:ita.ostiamare",
+     "club:ita.perugia",
+     "club:ita.pescara",
+     "club:ita.pianese",
+     "club:ita.pineto",
+     "club:ita.ravenna",
+     "club:ita.reggiana",
+     "club:ita.sambenedettese",
+     "club:ita.spezia",
+     "club:ita.torres",
+     "club:ita.vado",
+     "club:ita.vispesaro"
+    ]
+   },
+   "points": {
+    "win": 3,
+    "draw": 1,
+    "loss": 0
+   },
+   "stages": [
+    {
+     "id": "table",
+     "type": "round_robin",
+     "legs": 2,
+     "tiebreakers": [
+      "points",
+      "goal_difference",
+      "goals_for",
+      "draw_lots"
+     ]
+    }
+   ],
+   "outcomes": [
+    {
+     "stage": "table",
+     "positions": "1",
+     "tag": "promoted",
+     "zone": "PROM",
+     "to": "ita.b",
+     "season": "next"
+    },
+    {
+     "stage": "table",
+     "positions": "2-10",
+     "tag": "playoff",
+     "zone": "P.OFF",
+     "to": "ita.c-po"
+    }
+   ],
+   "modes": [
+    "career",
+    "season",
+    "friendly"
+   ]
+  },
+  {
+   "id": "ita.c-c",
+   "kind": "league",
+   "country": "ITA",
+   "level": 3,
+   "names": {
+    "it": [
+     "SERIE C C",
+     "SERIE C C"
+    ],
+    "en": [
+     "SERIE C C",
+     "SERIE C C"
+    ],
+    "fr": [
+     "SERIE C C",
+     "SERIE C C"
+    ],
+    "de": [
+     "SERIE C C",
+     "SERIE C C"
+    ]
+   },
+   "participants": {
+    "count": 20,
+    "clubs": [
+     "club:ita.altamura",
+     "club:ita.cerignola",
+     "club:ita.picerno",
+     "club:ita.bari",
+     "club:ita.barletta",
+     "club:ita.casarano",
+     "club:ita.casertana",
+     "club:ita.catania",
+     "club:ita.cavese",
+     "club:ita.cosenza",
+     "club:ita.crotone",
+     "club:ita.foggia",
+     "club:ita.giugliano",
+     "club:ita.interu23",
+     "club:ita.monopoli",
+     "club:ita.potenza",
+     "club:ita.salernitana",
+     "club:ita.savoia",
+     "club:ita.scafatese",
+     "club:ita.sorrento"
+    ]
+   },
+   "points": {
+    "win": 3,
+    "draw": 1,
+    "loss": 0
+   },
+   "stages": [
+    {
+     "id": "table",
+     "type": "round_robin",
+     "legs": 2,
+     "tiebreakers": [
+      "points",
+      "goal_difference",
+      "goals_for",
+      "draw_lots"
+     ]
+    }
+   ],
+   "outcomes": [
+    {
+     "stage": "table",
+     "positions": "1",
+     "tag": "promoted",
+     "zone": "PROM",
+     "to": "ita.b",
+     "season": "next"
+    },
+    {
+     "stage": "table",
+     "positions": "2-10",
+     "tag": "playoff",
+     "zone": "P.OFF",
+     "to": "ita.c-po"
+    }
+   ],
+   "modes": [
+    "career",
+    "season",
+    "friendly"
+   ]
+  },
+  {
+   "id": "ita.coppa-c",
+   "kind": "cup",
+   "country": "ITA",
+   "names": {
+    "it": [
+     "COPPA ITALIA C",
+     "COPPA ITALIA C"
+    ],
+    "en": [
+     "COPPA ITALIA C",
+     "COPPA ITALIA C"
+    ],
+    "fr": [
+     "COPPA ITALIA C",
+     "COPPA ITALIA C"
+    ],
+    "de": [
+     "COPPA ITALIA C",
+     "COPPA ITALIA C"
+    ]
+   },
+   "_source": "Lega Pro C.U. n. 36/L of 29/07/2026 (the regulation): 56 clubs in 4 geographic groups of 14 (numbers 5-60 drawn, the lower number at home = a drawn host), the 4 Serie C clubs of the Coppa Italia as seeds in round 2 (one per group by proximity, at home), drawn within each group to the last 16, an open draw from the quarter-finals, semi-finals and final over two legs (points, goal difference = the aggregate; extra time, penalties), single matches straight to penalties. The groups by proximity (Davide 09/11, 42-s2ko Q1): each club's town (it.wikipedia 2026-27 season pages, Wikidata coordinates) to the nearest of the 2026-27 groups' centres with room; on the real 2026-27 clubs 53 of 56 land in their real group (Forli, Picerno, Grosseto do not), the 4 seeds all. Season 1: C.U. 1/CIT (groups, rounds 1-2, the last 16) with the hosts as played -- three field swaps under art. 5 (C.U. 11/CIT: Spezia-Vado, Trento-Desenzano; 20/CIT: Dolomiti Bellunesi-Desenzano) --, the quarter-finals as drawn (C.U. 22/CIT); results: it.wikipedia.",
+   "participants": {
+    "count": 60,
+    "from": "link",
+    "source": [
+     "ita.c-a",
+     "ita.c-b",
+     "ita.c-c"
+    ]
+   },
+   "stages": [
+    {
+     "id": "ko",
+     "type": "knockout",
+     "zones": {
+      "centres": [
+       [
+        45.71,
+        10.45
+       ],
+       [
+        44.38,
+        9.65
+       ],
+       [
+        41.86,
+        15.16
+       ],
+       [
+        40.97,
+        14.19
+       ]
+      ]
+     },
+     "first_season": {
+      "zones": [
+       [
+        "club:ita.lumezzane",
+        "club:ita.arzignanovalchiampo",
+        "club:ita.trento",
+        "club:ita.cittadella",
+        "club:ita.albinoleffe",
+        "club:ita.ospitaletto",
+        "club:ita.gianaerminio",
+        "club:ita.atalantau23",
+        "club:ita.lecco",
+        "club:ita.dolomitibellunesi",
+        "club:ita.folgorecaratese",
+        "club:ita.renate",
+        "club:ita.desenzano",
+        "club:ita.treviso"
+       ],
+       [
+        "club:ita.juventusnextgen",
+        "club:ita.alcione",
+        "club:ita.spezia",
+        "club:ita.carpi",
+        "club:ita.forli",
+        "club:ita.livorno",
+        "club:ita.vado",
+        "club:ita.novara",
+        "club:ita.interu23",
+        "club:ita.provercelli",
+        "club:ita.reggiana",
+        "club:ita.torres",
+        "club:ita.pergolettese",
+        "club:ita.pianese"
+       ],
+       [
+        "club:ita.picerno",
+        "club:ita.bari",
+        "club:ita.cerignola",
+        "club:ita.foggia",
+        "club:ita.barletta",
+        "club:ita.altamura",
+        "club:ita.perugia",
+        "club:ita.casarano",
+        "club:ita.vispesaro",
+        "club:ita.pineto",
+        "club:ita.pescara",
+        "club:ita.monopoli",
+        "club:ita.gubbio",
+        "club:ita.sambenedettese"
+       ],
+       [
+        "club:ita.casertana",
+        "club:ita.latina",
+        "club:ita.giugliano",
+        "club:ita.grosseto",
+        "club:ita.campobasso",
+        "club:ita.crotone",
+        "club:ita.salernitana",
+        "club:ita.ostiamare",
+        "club:ita.cosenza",
+        "club:ita.scafatese",
+        "club:ita.sorrento",
+        "club:ita.cavese",
+        "club:ita.savoia",
+        "club:ita.guidonia"
+       ]
+      ],
+      "rounds": [
+       [
+        [
+         "club:ita.cittadella",
+         "club:ita.atalantau23"
+        ],
+        [
+         "club:ita.trento",
+         "club:ita.ospitaletto"
+        ],
+        [
+         "club:ita.dolomitibellunesi",
+         "club:ita.treviso"
+        ],
+        [
+         "club:ita.arzignanovalchiampo",
+         "club:ita.albinoleffe"
+        ],
+        [
+         "club:ita.lecco",
+         "club:ita.desenzano"
+        ],
+        [
+         "club:ita.gianaerminio",
+         "club:ita.folgorecaratese"
+        ],
+        [
+         "club:ita.lumezzane",
+         "club:ita.renate"
+        ],
+        [
+         "club:ita.spezia",
+         "club:ita.torres"
+        ],
+        [
+         "club:ita.alcione",
+         "club:ita.novara"
+        ],
+        [
+         "club:ita.carpi",
+         "club:ita.pianese"
+        ],
+        [
+         "club:ita.vado",
+         "club:ita.interu23"
+        ],
+        [
+         "club:ita.livorno",
+         "club:ita.reggiana"
+        ],
+        [
+         "club:ita.juventusnextgen",
+         "club:ita.forli"
+        ],
+        [
+         "club:ita.provercelli",
+         "club:ita.pergolettese"
+        ],
+        [
+         "club:ita.bari",
+         "club:ita.casarano"
+        ],
+        [
+         "club:ita.cerignola",
+         "club:ita.monopoli"
+        ],
+        [
+         "club:ita.perugia",
+         "club:ita.vispesaro"
+        ],
+        [
+         "club:ita.pescara",
+         "club:ita.sambenedettese"
+        ],
+        [
+         "club:ita.picerno",
+         "club:ita.barletta"
+        ],
+        [
+         "club:ita.pineto",
+         "club:ita.gubbio"
+        ],
+        [
+         "club:ita.foggia",
+         "club:ita.altamura"
+        ],
+        [
+         "club:ita.crotone",
+         "club:ita.cosenza"
+        ],
+        [
+         "club:ita.giugliano",
+         "club:ita.sorrento"
+        ],
+        [
+         "club:ita.salernitana",
+         "club:ita.scafatese"
+        ],
+        [
+         "club:ita.latina",
+         "club:ita.ostiamare"
+        ],
+        [
+         "club:ita.casertana",
+         "club:ita.savoia"
+        ],
+        [
+         "club:ita.grosseto",
+         "club:ita.guidonia"
+        ],
+        [
+         "club:ita.campobasso",
+         "club:ita.cavese"
+        ]
+       ],
+       [
+        [
+         "winner:1.4",
+         "winner:1.3"
+        ],
+        [
+         "club:ita.unionbrescia",
+         "winner:1.6"
+        ],
+        [
+         "winner:1.2",
+         "winner:1.5"
+        ],
+        [
+         "winner:1.1",
+         "winner:1.7"
+        ],
+        [
+         "winner:1.10",
+         "winner:1.14"
+        ],
+        [
+         "winner:1.8",
+         "winner:1.11"
+        ],
+        [
+         "winner:1.9",
+         "winner:1.12"
+        ],
+        [
+         "club:ita.ravenna",
+         "winner:1.13"
+        ],
+        [
+         "winner:1.20",
+         "winner:1.17"
+        ],
+        [
+         "winner:1.21",
+         "winner:1.18"
+        ],
+        [
+         "club:ita.potenza",
+         "winner:1.16"
+        ],
+        [
+         "winner:1.15",
+         "winner:1.19"
+        ],
+        [
+         "club:ita.catania",
+         "winner:1.26"
+        ],
+        [
+         "winner:1.27",
+         "winner:1.25"
+        ],
+        [
+         "winner:1.23",
+         "winner:1.22"
+        ],
+        [
+         "winner:1.28",
+         "winner:1.24"
+        ]
+       ],
+       [
+        [
+         "winner:2.1",
+         "winner:2.3"
+        ],
+        [
+         "winner:2.2",
+         "winner:2.4"
+        ],
+        [
+         "winner:2.6",
+         "winner:2.7"
+        ],
+        [
+         "winner:2.5",
+         "winner:2.8"
+        ],
+        [
+         "winner:2.11",
+         "winner:2.12"
+        ],
+        [
+         "winner:2.10",
+         "winner:2.9"
+        ],
+        [
+         "winner:2.16",
+         "winner:2.14"
+        ],
+        [
+         "winner:2.13",
+         "winner:2.15"
+        ]
+       ],
+       [
+        [
+         "winner:3.7",
+         "winner:3.3"
+        ],
+        [
+         "winner:3.5",
+         "winner:3.8"
+        ],
+        [
+         "winner:3.6",
+         "winner:3.1"
+        ],
+        [
+         "winner:3.4",
+         "winner:3.2"
+        ]
+       ]
+      ]
+     },
+     "rounds": [
+      {
+       "ties": 28,
+       "legs": 1,
+       "home": "draw",
+       "pairing": "zone",
+       "decider": [
+        "penalties"
+       ]
+      },
+      {
+       "ties": 16,
+       "legs": 1,
+       "home": "joiner",
+       "pairing": "zone",
+       "decider": [
+        "penalties"
+       ],
+       "joins": [
+        {
+         "entrants_of": "ita.coppa",
+         "in": [
+          "ita.c-a",
+          "ita.c-b",
+          "ita.c-c"
+         ],
+         "clubs": 4
+        }
+       ]
+      },
+      {
+       "ties": 8,
+       "legs": 1,
+       "home": "draw",
+       "pairing": "zone",
+       "decider": [
+        "penalties"
+       ]
+      },
+      {
+       "ties": 4,
+       "legs": 1,
+       "home": "draw",
+       "pairing": "draw",
+       "decider": [
+        "penalties"
+       ]
+      },
+      {
+       "ties": 2,
+       "legs": 2,
+       "home": "draw",
+       "pairing": "draw",
+       "decider": [
+        "aggregate",
+        "extra_time",
+        "penalties"
+       ]
+      },
+      {
+       "ties": 1,
+       "legs": 2,
+       "home": "draw",
+       "pairing": "draw",
+       "decider": [
+        "aggregate",
+        "extra_time",
+        "penalties"
+       ]
+      }
+     ]
+    }
+   ],
+   "outcomes": [
+    {
+     "stage": "ko",
+     "positions": "1",
+     "tag": "champion"
+    }
+   ],
+   "modes": [
+    "career",
+    "season"
+   ]
+  },
+  {
+   "id": "ita.d-a",
+   "kind": "league",
+   "country": "ITA",
+   "level": 4,
+   "names": {
+    "it": [
+     "SERIE D A",
+     "SERIE D A"
+    ],
+    "en": [
+     "SERIE D A",
+     "SERIE D A"
+    ],
+    "fr": [
+     "SERIE D A",
+     "SERIE D A"
+    ],
+    "de": [
+     "SERIE D A",
+     "SERIE D A"
+    ]
+   },
+   "points": {
+    "win": 3,
+    "draw": 1,
+    "loss": 0
+   },
+   "stages": [
+    {
+     "id": "table",
+     "type": "round_robin",
+     "legs": 2,
+     "tiebreakers": [
+      "points",
+      "goal_difference",
+      "goals_for",
+      "draw_lots"
+     ]
+    }
+   ],
+   "participants": {
+    "count": 18,
+    "clubs": [
+     "club:ita.alessandria",
+     "club:ita.asdasti",
+     "club:ita.asdbiellese",
+     "club:ita.calcio",
+     "club:ita.bra",
+     "club:ita.cellevarazze",
+     "club:ita.chisola",
+     "club:ita.derthona",
+     "club:ita.usdfezzanese",
+     "club:ita.asdcgozzano",
+     "club:ita.ssdimperia",
+     "club:ita.gsdlascaris",
+     "club:ita.ligorna",
+     "club:ita.asdmillesimo",
+     "club:ita.saluzzo",
+     "club:ita.sanremesecalcio",
+     "club:ita.sestrilevante",
+     "club:ita.valenzanamado"
+    ]
+   },
+   "modes": [
+    "career",
+    "season",
+    "friendly"
+   ]
+  },
+  {
+   "id": "ita.d-b",
+   "kind": "league",
+   "country": "ITA",
+   "level": 4,
+   "names": {
+    "it": [
+     "SERIE D B",
+     "SERIE D B"
+    ],
+    "en": [
+     "SERIE D B",
+     "SERIE D B"
+    ],
+    "fr": [
+     "SERIE D B",
+     "SERIE D B"
+    ],
+    "de": [
+     "SERIE D B",
+     "SERIE D B"
+    ]
+   },
+   "points": {
+    "win": 3,
+    "draw": 1,
+    "loss": 0
+   },
+   "stages": [
+    {
+     "id": "table",
+     "type": "round_robin",
+     "legs": 2,
+     "tiebreakers": [
+      "points",
+      "goal_difference",
+      "goals_for",
+      "draw_lots"
+     ]
+    }
+   ],
+   "participants": {
+    "count": 18,
+    "clubs": [
+     "club:ita.brusaporto",
+     "club:ita.caldieroterme",
+     "club:ita.chievoverona",
+     "club:ita.milano",
+     "club:ita.fiorenzuola",
+     "club:ita.leon",
+     "club:ita.milanfuturo",
+     "club:ita.nibbianovaltid",
+     "club:ita.propalazzolo",
+     "club:ita.calciopavonese",
+     "club:ita.piacenzacalcio",
+     "club:ita.realcalepina",
+     "club:ita.rovatocalcio",
+     "club:ita.scanzorosciate",
+     "club:ita.tritiumcalcio",
+     "club:ita.villavalle",
+     "club:ita.virtusbergamo",
+     "club:ita.virtusverona"
+    ]
+   },
+   "modes": [
+    "career",
+    "season",
+    "friendly"
+   ]
+  },
+  {
+   "id": "ita.d-c",
+   "kind": "league",
+   "country": "ITA",
+   "level": 4,
+   "names": {
+    "it": [
+     "SERIE D C",
+     "SERIE D C"
+    ],
+    "en": [
+     "SERIE D C",
+     "SERIE D C"
+    ],
+    "fr": [
+     "SERIE D C",
+     "SERIE D C"
+    ],
+    "de": [
+     "SERIE D C",
+     "SERIE D C"
+    ]
+   },
+   "points": {
+    "win": 3,
+    "draw": 1,
+    "loss": 0
+   },
+   "stages": [
+    {
+     "id": "table",
+     "type": "round_robin",
+     "legs": 2,
+     "tiebreakers": [
+      "points",
+      "goal_difference",
+      "goals_for",
+      "draw_lots"
+     ]
+    }
+   ],
+   "participants": {
+    "count": 18,
+    "clubs": [
+     "club:ita.bassano",
+     "club:ita.brian",
+     "club:ita.calvinoale",
+     "club:ita.campodarsego",
+     "club:ita.cjarlinsmuzane",
+     "club:ita.fcdconegliano",
+     "club:ita.este",
+     "club:ita.lavarianmortean",
+     "club:ita.legnagosalus",
+     "club:ita.luparense",
+     "club:ita.mestre",
+     "club:ita.obermais",
+     "club:ita.calciosandona",
+     "club:ita.calcioschio",
+     "club:ita.triestina",
+     "club:ita.clodiense",
+     "club:ita.altavilla",
+     "club:ita.virtusbolzano"
+    ]
+   },
+   "modes": [
+    "career",
+    "season",
+    "friendly"
+   ]
+  },
+  {
+   "id": "ita.d-d",
+   "kind": "league",
+   "country": "ITA",
+   "level": 4,
+   "names": {
+    "it": [
+     "SERIE D D",
+     "SERIE D D"
+    ],
+    "en": [
+     "SERIE D D",
+     "SERIE D D"
+    ],
+    "fr": [
+     "SERIE D D",
+     "SERIE D D"
+    ],
+    "de": [
+     "SERIE D D",
+     "SERIE D D"
+    ]
+   },
+   "points": {
+    "win": 3,
+    "draw": 1,
+    "loss": 0
+   },
+   "stages": [
+    {
+     "id": "table",
+     "type": "round_robin",
+     "legs": 2,
+     "tiebreakers": [
+      "points",
+      "goal_difference",
+      "goals_for",
+      "draw_lots"
+     ]
+    }
+   ],
+   "participants": {
+    "count": 18,
+    "clubs": [
+     "club:ita.arconatese",
+     "club:ita.casatesemerate",
+     "club:ita.castellanzese",
+     "club:ita.cittvismodena",
+     "club:ita.correggese",
+     "club:ita.crema",
+     "club:ita.lentigione",
+     "club:ita.oltrepo",
+     "club:ita.paviacalcio",
+     "club:ita.pistoiese",
+     "club:ita.pontedera",
+     "club:ita.propatria",
+     "club:ita.prosesto",
+     "club:ita.santangelo",
+     "club:ita.calcio2",
+     "club:ita.tropicalcoriano",
+     "club:ita.varese",
+     "club:ita.varesinacalcio"
+    ]
+   },
+   "modes": [
+    "career",
+    "season",
+    "friendly"
+   ]
+  },
+  {
+   "id": "ita.d-e",
+   "kind": "league",
+   "country": "ITA",
+   "level": 4,
+   "names": {
+    "it": [
+     "SERIE D E",
+     "SERIE D E"
+    ],
+    "en": [
+     "SERIE D E",
+     "SERIE D E"
+    ],
+    "fr": [
+     "SERIE D E",
+     "SERIE D E"
+    ],
+    "de": [
+     "SERIE D E",
+     "SERIE D E"
+    ]
+   },
+   "points": {
+    "win": 3,
+    "draw": 1,
+    "loss": 0
+   },
+   "stages": [
+    {
+     "id": "table",
+     "type": "round_robin",
+     "legs": 2,
+     "tiebreakers": [
+      "points",
+      "goal_difference",
+      "goals_for",
+      "draw_lots"
+     ]
+    }
+   ],
+   "participants": {
+    "count": 18,
+    "clubs": [
+     "club:ita.flaminia",
+     "club:ita.follgavorrano",
+     "club:ita.ghiviborgo",
+     "club:ita.asdgrassina",
+     "club:ita.lucchesecalcio",
+     "club:ita.mezzolaracalcio",
+     "club:ita.montevarchi",
+     "club:ita.prato",
+     "club:ita.progresso",
+     "club:ita.asdrondinella",
+     "club:ita.sandonato",
+     "club:ita.sassomarconi",
+     "club:ita.scandicci",
+     "club:ita.seravezzapozzi",
+     "club:ita.siena",
+     "club:ita.tau",
+     "club:ita.nuovaternana",
+     "club:ita.terranuova"
+    ]
+   },
+   "modes": [
+    "career",
+    "season",
+    "friendly"
+   ]
+  },
+  {
+   "id": "ita.d-f",
+   "kind": "league",
+   "country": "ITA",
+   "level": 4,
+   "names": {
+    "it": [
+     "SERIE D F",
+     "SERIE D F"
+    ],
+    "en": [
+     "SERIE D F",
+     "SERIE D F"
+    ],
+    "fr": [
+     "SERIE D F",
+     "SERIE D F"
+    ],
+    "de": [
+     "SERIE D F",
+     "SERIE D F"
+    ]
+   },
+   "points": {
+    "win": 3,
+    "draw": 1,
+    "loss": 0
+   },
+   "stages": [
+    {
+     "id": "table",
+     "type": "round_robin",
+     "legs": 2,
+     "tiebreakers": [
+      "points",
+      "goal_difference",
+      "goals_for",
+      "draw_lots"
+     ]
+    }
+   ],
+   "participants": {
+    "count": 18,
+    "clubs": [
+     "club:ita.anconacalcio",
+     "club:ita.angelana",
+     "club:ita.atlascoli",
+     "club:ita.folignocalcio",
+     "club:ita.forsempronese",
+     "club:ita.giulianova",
+     "club:ita.laquila",
+     "club:ita.lanciano",
+     "club:ita.maceratese",
+     "club:ita.asdksport",
+     "club:ita.notarescocalcio",
+     "club:ita.pietralunghese",
+     "club:ita.recanatese",
+     "club:ita.santegidiese",
+     "club:ita.trestina",
+     "club:ita.teramocalcio",
+     "club:ita.termolicalcio",
+     "club:ita.vigorsenigallia"
+    ]
+   },
+   "modes": [
+    "career",
+    "season",
+    "friendly"
+   ]
+  },
+  {
+   "id": "ita.d-g",
+   "kind": "league",
+   "country": "ITA",
+   "level": 4,
+   "names": {
+    "it": [
+     "SERIE D G",
+     "SERIE D G"
+    ],
+    "en": [
+     "SERIE D G",
+     "SERIE D G"
+    ],
+    "fr": [
+     "SERIE D G",
+     "SERIE D G"
+    ],
+    "de": [
+     "SERIE D G",
+     "SERIE D G"
+    ]
+   },
+   "points": {
+    "win": 3,
+    "draw": 1,
+    "loss": 0
+   },
+   "stages": [
+    {
+     "id": "table",
+     "type": "round_robin",
+     "legs": 2,
+     "tiebreakers": [
+      "points",
+      "goal_difference",
+      "goals_for",
+      "draw_lots"
+     ]
+    }
+   ],
+   "participants": {
+    "count": 18,
+    "clubs": [
+     "club:ita.afragolese",
+     "club:ita.albalonga",
+     "club:ita.cittadianagni",
+     "club:ita.anziocalcio",
+     "club:ita.aranova",
+     "club:ita.alodigiani",
+     "club:ita.calciobudoni",
+     "club:ita.sarrabusogl",
+     "club:ita.gelbison",
+     "club:ita.lattedolce",
+     "club:ita.asdmonastir",
+     "club:ita.ossese",
+     "club:ita.paganesecalcio",
+     "club:ita.sarnese",
+     "club:ita.trastevere",
+     "club:ita.unipomezia",
+     "club:ita.venafro",
+     "club:ita.certosavigor"
+    ]
+   },
+   "modes": [
+    "career",
+    "season",
+    "friendly"
+   ]
+  },
+  {
+   "id": "ita.d-h",
+   "kind": "league",
+   "country": "ITA",
+   "level": 4,
+   "names": {
+    "it": [
+     "SERIE D H",
+     "SERIE D H"
+    ],
+    "en": [
+     "SERIE D H",
+     "SERIE D H"
+    ],
+    "fr": [
+     "SERIE D H",
+     "SERIE D H"
+    ],
+    "de": [
+     "SERIE D H",
+     "SERIE D H"
+    ]
+   },
+   "points": {
+    "win": 3,
+    "draw": 1,
+    "loss": 0
+   },
+   "stages": [
+    {
+     "id": "table",
+     "type": "round_robin",
+     "legs": 2,
+     "tiebreakers": [
+      "points",
+      "goal_difference",
+      "goals_for",
+      "draw_lots"
+     ]
+    }
+   ],
+   "participants": {
+    "count": 18,
+    "clubs": [
+     "club:ita.fidelisandria",
+     "club:ita.bisceglie",
+     "club:ita.brindisi",
+     "club:ita.ebolitanacalcio",
+     "club:ita.francavilla",
+     "club:ita.gladiator",
+     "club:ita.gravina",
+     "club:ita.ischia",
+     "club:ita.manfredonia",
+     "club:ita.martinacalcio",
+     "club:ita.melfi",
+     "club:ita.nardo",
+     "club:ita.nocerinacalcio",
+     "club:ita.palmese",
+     "club:ita.realaversa",
+     "club:ita.realforio",
+     "club:ita.turris",
+     "club:ita.vfrancavilla"
+    ]
+   },
+   "modes": [
+    "career",
+    "season",
+    "friendly"
+   ]
+  },
+  {
+   "id": "ita.d-i",
+   "kind": "league",
+   "country": "ITA",
+   "level": 4,
+   "names": {
+    "it": [
+     "SERIE D I",
+     "SERIE D I"
+    ],
+    "en": [
+     "SERIE D I",
+     "SERIE D I"
+    ],
+    "fr": [
+     "SERIE D I",
+     "SERIE D I"
+    ],
+    "de": [
+     "SERIE D I",
+     "SERIE D I"
+    ]
+   },
+   "points": {
+    "win": 3,
+    "draw": 1,
+    "loss": 0
+   },
+   "stages": [
+    {
+     "id": "table",
+     "type": "round_robin",
+     "legs": 2,
+     "tiebreakers": [
+      "points",
+      "goal_difference",
+      "goals_for",
+      "draw_lots"
+     ]
+    }
+   ],
+   "participants": {
+    "count": 18,
+    "clubs": [
+     "club:ita.athlpalermo",
+     "club:ita.calcioavola",
+     "club:ita.favara",
+     "club:ita.ennacalcio",
+     "club:ita.cittadigela",
+     "club:ita.igeavirtus",
+     "club:ita.licatacalcio",
+     "club:ita.milazzo",
+     "club:ita.asdmodica",
+     "club:ita.nissa",
+     "club:ita.asddigiesse",
+     "club:ita.ragusacalcio",
+     "club:ita.reggina",
+     "club:ita.asdsambiase",
+     "club:ita.siracusacalcio",
+     "club:ita.trapani",
+     "club:ita.vibonese",
+     "club:ita.vigorlamezia"
+    ]
+   },
+   "modes": [
+    "career",
+    "season",
+    "friendly"
+   ]
+  },
+  {
+   "id": "ita.coppa-d",
+   "kind": "cup",
+   "country": "ITA",
+   "names": {
+    "it": [
+     "COPPA ITALIA D",
+     "COPPA ITALIA D"
+    ],
+    "en": [
+     "COPPA ITALIA D",
+     "COPPA ITALIA D"
+    ],
+    "fr": [
+     "COPPA ITALIA D",
+     "COPPA ITALIA D"
+    ],
+    "de": [
+     "COPPA ITALIA D",
+     "COPPA ITALIA D"
+    ]
+   },
+   "_source": "LND Dipartimento Interregionale C.U. n. 1 of 06/08/2026 (the regulation): every Serie D club (162); a preliminary round of 34 ties (art. 1: the 36 promoted, the 8 relegated from Serie C, the 17 play-out winners and clubs safe by more than 8 points, the 6 re-admitted, the worst of the Coppa Disciplina), a first round of the 34 winners and the 94 others (art. 2), then the main bracket of 64 (art. 3), the last 32 / 16 / 8 paired by the Dipartimento (art. 4); hosts drawn up to the round of 64 (art. 9), from the last 32 alternation (art. 4: the club away in its previous tie hosts; both home or both away: drawn); single matches straight to penalties (art. 5); semi-finals drawn, two legs, points then goals, then penalties directly (art. 6-7); the final two legs until the LND decides (art. 8: two legs or one neutral match; Davide 09/11, Q3). Later seasons (Davide 09/11): the preliminary = the clubs new to Serie D (promoted, relegated from C, re-admitted = the engine's fill-ins, Q2), then the others from the bottom of last season's tables up (the play-out survivors; the Coppa Disciplina place to the next of them, Q2) -- the Mod's entry order; the pairs drawn within geographic blocks (the pool halved by geography: blocks of 2 in the preliminary, 4 in round 1 -- calibrated on 2026-27: 2740 / 3977 km in all against the real 2610 / 4048), the bracket above them fixed. Season 1: the real draw and results (Transfermarkt ITC4, the data session's coppa_italia_serie_d_2627.json); the ties TM leaves out of the last 32 / 16 from the unused winners in order.",
+   "participants": {
+    "count": 162,
+    "from": "numbers",
+    "source": [
+     "ita.d-a",
+     "ita.d-b",
+     "ita.d-c",
+     "ita.d-d",
+     "ita.d-e",
+     "ita.d-f",
+     "ita.d-g",
+     "ita.d-h",
+     "ita.d-i"
+    ]
+   },
+   "stages": [
+    {
+     "id": "ko",
+     "type": "knockout",
+     "numbers": [
+      {
+       "take": 68,
+       "from": [
+        "ita.d-a:new",
+        "ita.d-b:new",
+        "ita.d-c:new",
+        "ita.d-d:new",
+        "ita.d-e:new",
+        "ita.d-f:new",
+        "ita.d-g:new",
+        "ita.d-h:new",
+        "ita.d-i:new"
+       ],
+       "else": [
+        "ita.d-a#1-18",
+        "ita.d-b#1-18",
+        "ita.d-c#1-18",
+        "ita.d-d#1-18",
+        "ita.d-e#1-18",
+        "ita.d-f#1-18",
+        "ita.d-g#1-18",
+        "ita.d-h#1-18",
+        "ita.d-i#1-18"
+       ],
+       "else_order": "place_desc"
+      },
+      {
+       "take": 94,
+       "from": [
+        "ita.d-a#1-18",
+        "ita.d-b#1-18",
+        "ita.d-c#1-18",
+        "ita.d-d#1-18",
+        "ita.d-e#1-18",
+        "ita.d-f#1-18",
+        "ita.d-g#1-18",
+        "ita.d-h#1-18",
+        "ita.d-i#1-18"
+       ],
+       "else": [
+        "ita.d-a:new",
+        "ita.d-b:new",
+        "ita.d-c:new",
+        "ita.d-d:new",
+        "ita.d-e:new",
+        "ita.d-f:new",
+        "ita.d-g:new",
+        "ita.d-h:new",
+        "ita.d-i:new"
+       ]
+      }
+     ],
+     "rounds": [
+      {
+       "ties": 34,
+       "legs": 1,
+       "home": "draw",
+       "pairing": "geo",
+       "decider": [
+        "penalties"
+       ],
+       "block": 2,
+       "numbers": "1-68"
+      },
+      {
+       "ties": 64,
+       "legs": 1,
+       "home": "draw",
+       "pairing": "geo",
+       "decider": [
+        "penalties"
+       ],
+       "block": 4,
+       "numbers": "69-162"
+      },
+      {
+       "ties": 32,
+       "legs": 1,
+       "home": "draw",
+       "pairing": "fixed",
+       "decider": [
+        "penalties"
+       ],
+       "fixed": [
+        [
+         "winner:2.1",
+         "winner:2.2"
+        ],
+        [
+         "winner:2.3",
+         "winner:2.4"
+        ],
+        [
+         "winner:2.5",
+         "winner:2.6"
+        ],
+        [
+         "winner:2.7",
+         "winner:2.8"
+        ],
+        [
+         "winner:2.9",
+         "winner:2.10"
+        ],
+        [
+         "winner:2.11",
+         "winner:2.12"
+        ],
+        [
+         "winner:2.13",
+         "winner:2.14"
+        ],
+        [
+         "winner:2.15",
+         "winner:2.16"
+        ],
+        [
+         "winner:2.17",
+         "winner:2.18"
+        ],
+        [
+         "winner:2.19",
+         "winner:2.20"
+        ],
+        [
+         "winner:2.21",
+         "winner:2.22"
+        ],
+        [
+         "winner:2.23",
+         "winner:2.24"
+        ],
+        [
+         "winner:2.25",
+         "winner:2.26"
+        ],
+        [
+         "winner:2.27",
+         "winner:2.28"
+        ],
+        [
+         "winner:2.29",
+         "winner:2.30"
+        ],
+        [
+         "winner:2.31",
+         "winner:2.32"
+        ],
+        [
+         "winner:2.33",
+         "winner:2.34"
+        ],
+        [
+         "winner:2.35",
+         "winner:2.36"
+        ],
+        [
+         "winner:2.37",
+         "winner:2.38"
+        ],
+        [
+         "winner:2.39",
+         "winner:2.40"
+        ],
+        [
+         "winner:2.41",
+         "winner:2.42"
+        ],
+        [
+         "winner:2.43",
+         "winner:2.44"
+        ],
+        [
+         "winner:2.45",
+         "winner:2.46"
+        ],
+        [
+         "winner:2.47",
+         "winner:2.48"
+        ],
+        [
+         "winner:2.49",
+         "winner:2.50"
+        ],
+        [
+         "winner:2.51",
+         "winner:2.52"
+        ],
+        [
+         "winner:2.53",
+         "winner:2.54"
+        ],
+        [
+         "winner:2.55",
+         "winner:2.56"
+        ],
+        [
+         "winner:2.57",
+         "winner:2.58"
+        ],
+        [
+         "winner:2.59",
+         "winner:2.60"
+        ],
+        [
+         "winner:2.61",
+         "winner:2.62"
+        ],
+        [
+         "winner:2.63",
+         "winner:2.64"
+        ]
+       ]
+      },
+      {
+       "ties": 16,
+       "legs": 1,
+       "home": "alternate",
+       "pairing": "fixed",
+       "decider": [
+        "penalties"
+       ],
+       "fixed": [
+        [
+         "winner:3.1",
+         "winner:3.2"
+        ],
+        [
+         "winner:3.3",
+         "winner:3.4"
+        ],
+        [
+         "winner:3.5",
+         "winner:3.6"
+        ],
+        [
+         "winner:3.7",
+         "winner:3.8"
+        ],
+        [
+         "winner:3.9",
+         "winner:3.10"
+        ],
+        [
+         "winner:3.11",
+         "winner:3.12"
+        ],
+        [
+         "winner:3.13",
+         "winner:3.14"
+        ],
+        [
+         "winner:3.15",
+         "winner:3.16"
+        ],
+        [
+         "winner:3.17",
+         "winner:3.18"
+        ],
+        [
+         "winner:3.19",
+         "winner:3.20"
+        ],
+        [
+         "winner:3.21",
+         "winner:3.22"
+        ],
+        [
+         "winner:3.23",
+         "winner:3.24"
+        ],
+        [
+         "winner:3.25",
+         "winner:3.26"
+        ],
+        [
+         "winner:3.27",
+         "winner:3.28"
+        ],
+        [
+         "winner:3.29",
+         "winner:3.30"
+        ],
+        [
+         "winner:3.31",
+         "winner:3.32"
+        ]
+       ]
+      },
+      {
+       "ties": 8,
+       "legs": 1,
+       "home": "alternate",
+       "pairing": "fixed",
+       "decider": [
+        "penalties"
+       ],
+       "fixed": [
+        [
+         "winner:4.1",
+         "winner:4.2"
+        ],
+        [
+         "winner:4.3",
+         "winner:4.4"
+        ],
+        [
+         "winner:4.5",
+         "winner:4.6"
+        ],
+        [
+         "winner:4.7",
+         "winner:4.8"
+        ],
+        [
+         "winner:4.9",
+         "winner:4.10"
+        ],
+        [
+         "winner:4.11",
+         "winner:4.12"
+        ],
+        [
+         "winner:4.13",
+         "winner:4.14"
+        ],
+        [
+         "winner:4.15",
+         "winner:4.16"
+        ]
+       ]
+      },
+      {
+       "ties": 4,
+       "legs": 1,
+       "home": "alternate",
+       "pairing": "fixed",
+       "decider": [
+        "penalties"
+       ],
+       "fixed": [
+        [
+         "winner:5.1",
+         "winner:5.2"
+        ],
+        [
+         "winner:5.3",
+         "winner:5.4"
+        ],
+        [
+         "winner:5.5",
+         "winner:5.6"
+        ],
+        [
+         "winner:5.7",
+         "winner:5.8"
+        ]
+       ]
+      },
+      {
+       "ties": 2,
+       "legs": 2,
+       "home": "draw",
+       "pairing": "draw",
+       "decider": [
+        "aggregate",
+        "penalties"
+       ]
+      },
+      {
+       "ties": 1,
+       "legs": 2,
+       "home": "draw",
+       "pairing": "draw",
+       "decider": [
+        "aggregate",
+        "penalties"
+       ]
+      }
+     ],
+     "first_season": {
+      "numbers": [
+       "club:ita.tritiumcalcio",
+       "club:ita.calciopavonese",
+       "club:ita.maceratese",
+       "club:ita.recanatese",
+       "club:ita.lavarianmortean",
+       "club:ita.triestina",
+       "club:ita.bisceglie",
+       "club:ita.melfi",
+       "club:ita.ischia",
+       "club:ita.gladiator",
+       "club:ita.santegidiese",
+       "club:ita.lanciano",
+       "club:ita.pietralunghese",
+       "club:ita.asdrondinella",
+       "club:ita.angelana",
+       "club:ita.nuovaternana",
+       "club:ita.certosavigor",
+       "club:ita.anziocalcio",
+       "club:ita.aranova",
+       "club:ita.ossese",
+       "club:ita.cittadianagni",
+       "club:ita.venafro",
+       "club:ita.follgavorrano",
+       "club:ita.pontedera",
+       "club:ita.asdgrassina",
+       "club:ita.lucchesecalcio",
+       "club:ita.calciosandona",
+       "club:ita.luparense",
+       "club:ita.virtusverona",
+       "club:ita.calcioschio",
+       "club:ita.crema",
+       "club:ita.paviacalcio",
+       "club:ita.calcio2",
+       "club:ita.arconatese",
+       "club:ita.calcio",
+       "club:ita.derthona",
+       "club:ita.castellanzese",
+       "club:ita.asdcgozzano",
+       "club:ita.asdmillesimo",
+       "club:ita.usdfezzanese",
+       "club:ita.bra",
+       "club:ita.gsdlascaris",
+       "club:ita.alessandria",
+       "club:ita.asdasti",
+       "club:ita.sassomarconi",
+       "club:ita.mezzolaracalcio",
+       "club:ita.vibonese",
+       "club:ita.calcioavola",
+       "club:ita.ragusacalcio",
+       "club:ita.trapani",
+       "club:ita.turris",
+       "club:ita.realforio",
+       "club:ita.sarnese",
+       "club:ita.ebolitanacalcio",
+       "club:ita.obermais",
+       "club:ita.virtusbolzano",
+       "club:ita.asddigiesse",
+       "club:ita.brindisi",
+       "club:ita.licatacalcio",
+       "club:ita.cittadigela",
+       "club:ita.propatria",
+       "club:ita.varesinacalcio",
+       "club:ita.siracusacalcio",
+       "club:ita.asdmodica",
+       "club:ita.tropicalcoriano",
+       "club:ita.asdksport",
+       "club:ita.fiorenzuola",
+       "club:ita.nibbianovaltid",
+       "club:ita.calciobudoni",
+       "club:ita.lattedolce",
+       "club:ita.trestina",
+       "club:ita.campodarsego",
+       "club:ita.bassano",
+       "club:ita.manfredonia",
+       "club:ita.fidelisandria",
+       "club:ita.milanfuturo",
+       "club:ita.santangelo",
+       "club:ita.seravezzapozzi",
+       "club:ita.tau",
+       "club:ita.altavilla",
+       "club:ita.chievoverona",
+       "club:ita.casatesemerate",
+       "club:ita.montevarchi",
+       "club:ita.terranuova",
+       "club:ita.valenzanamado",
+       "club:ita.brian",
+       "club:ita.nissa",
+       "club:ita.igeavirtus",
+       "club:ita.cjarlinsmuzane",
+       "club:ita.caldieroterme",
+       "club:ita.chisola",
+       "club:ita.saluzzo",
+       "club:ita.cellevarazze",
+       "club:ita.sarrabusogl",
+       "club:ita.asdmonastir",
+       "club:ita.realaversa",
+       "club:ita.propalazzolo",
+       "club:ita.lentigione",
+       "club:ita.ennacalcio",
+       "club:ita.siena",
+       "club:ita.flaminia",
+       "club:ita.forsempronese",
+       "club:ita.gelbison",
+       "club:ita.virtusbergamo",
+       "club:ita.realcalepina",
+       "club:ita.calvinoale",
+       "club:ita.mestre",
+       "club:ita.este",
+       "club:ita.fcdconegliano",
+       "club:ita.rovatocalcio",
+       "club:ita.villavalle",
+       "club:ita.brusaporto",
+       "club:ita.scanzorosciate",
+       "club:ita.leon",
+       "club:ita.prosesto",
+       "club:ita.cittvismodena",
+       "club:ita.progresso",
+       "club:ita.piacenzacalcio",
+       "club:ita.correggese",
+       "club:ita.pistoiese",
+       "club:ita.scandicci",
+       "club:ita.trastevere",
+       "club:ita.unipomezia",
+       "club:ita.albalonga",
+       "club:ita.alodigiani",
+       "club:ita.vigorsenigallia",
+       "club:ita.anconacalcio",
+       "club:ita.termolicalcio",
+       "club:ita.atlascoli",
+       "club:ita.francavilla",
+       "club:ita.nocerinacalcio",
+       "club:ita.milazzo",
+       "club:ita.gravina",
+       "club:ita.martinacalcio",
+       "club:ita.ghiviborgo",
+       "club:ita.vfrancavilla",
+       "club:ita.nardo",
+       "club:ita.asdbiellese",
+       "club:ita.athlpalermo",
+       "club:ita.legnagosalus",
+       "club:ita.clodiense",
+       "club:ita.sestrilevante",
+       "club:ita.ligorna",
+       "club:ita.giulianova",
+       "club:ita.laquila",
+       "club:ita.oltrepo",
+       "club:ita.varese",
+       "club:ita.prato",
+       "club:ita.sandonato",
+       "club:ita.asdsambiase",
+       "club:ita.vigorlamezia",
+       "club:ita.folignocalcio",
+       "club:ita.teramocalcio",
+       "club:ita.notarescocalcio",
+       "club:ita.favara",
+       "club:ita.milano",
+       "club:ita.paganesecalcio",
+       "club:ita.palmese",
+       "club:ita.sanremesecalcio",
+       "club:ita.ssdimperia",
+       "club:ita.reggina",
+       "club:ita.afragolese"
+      ],
+      "rounds": [
+       [
+        [
+         "club:ita.tritiumcalcio",
+         "club:ita.calciopavonese"
+        ],
+        [
+         "club:ita.maceratese",
+         "club:ita.recanatese"
+        ],
+        [
+         "club:ita.lavarianmortean",
+         "club:ita.triestina"
+        ],
+        [
+         "club:ita.bisceglie",
+         "club:ita.melfi"
+        ],
+        [
+         "club:ita.ischia",
+         "club:ita.gladiator"
+        ],
+        [
+         "club:ita.santegidiese",
+         "club:ita.lanciano"
+        ],
+        [
+         "club:ita.pietralunghese",
+         "club:ita.asdrondinella"
+        ],
+        [
+         "club:ita.angelana",
+         "club:ita.nuovaternana"
+        ],
+        [
+         "club:ita.certosavigor",
+         "club:ita.anziocalcio"
+        ],
+        [
+         "club:ita.aranova",
+         "club:ita.ossese"
+        ],
+        [
+         "club:ita.cittadianagni",
+         "club:ita.venafro"
+        ],
+        [
+         "club:ita.follgavorrano",
+         "club:ita.pontedera"
+        ],
+        [
+         "club:ita.asdgrassina",
+         "club:ita.lucchesecalcio"
+        ],
+        [
+         "club:ita.calciosandona",
+         "club:ita.luparense"
+        ],
+        [
+         "club:ita.virtusverona",
+         "club:ita.calcioschio"
+        ],
+        [
+         "club:ita.crema",
+         "club:ita.paviacalcio"
+        ],
+        [
+         "club:ita.calcio2",
+         "club:ita.arconatese"
+        ],
+        [
+         "club:ita.calcio",
+         "club:ita.derthona"
+        ],
+        [
+         "club:ita.castellanzese",
+         "club:ita.asdcgozzano"
+        ],
+        [
+         "club:ita.asdmillesimo",
+         "club:ita.usdfezzanese"
+        ],
+        [
+         "club:ita.bra",
+         "club:ita.gsdlascaris"
+        ],
+        [
+         "club:ita.alessandria",
+         "club:ita.asdasti"
+        ],
+        [
+         "club:ita.sassomarconi",
+         "club:ita.mezzolaracalcio"
+        ],
+        [
+         "club:ita.vibonese",
+         "club:ita.calcioavola"
+        ],
+        [
+         "club:ita.ragusacalcio",
+         "club:ita.trapani"
+        ],
+        [
+         "club:ita.turris",
+         "club:ita.realforio"
+        ],
+        [
+         "club:ita.sarnese",
+         "club:ita.ebolitanacalcio"
+        ],
+        [
+         "club:ita.obermais",
+         "club:ita.virtusbolzano"
+        ],
+        [
+         "club:ita.asddigiesse",
+         "club:ita.brindisi"
+        ],
+        [
+         "club:ita.licatacalcio",
+         "club:ita.cittadigela"
+        ],
+        [
+         "club:ita.propatria",
+         "club:ita.varesinacalcio"
+        ],
+        [
+         "club:ita.siracusacalcio",
+         "club:ita.asdmodica"
+        ],
+        [
+         "club:ita.tropicalcoriano",
+         "club:ita.asdksport"
+        ],
+        [
+         "club:ita.fiorenzuola",
+         "club:ita.nibbianovaltid"
+        ]
+       ],
+       [
+        [
+         "club:ita.calciobudoni",
+         "club:ita.lattedolce"
+        ],
+        [
+         "winner:1.8",
+         "club:ita.trestina"
+        ],
+        [
+         "club:ita.campodarsego",
+         "club:ita.bassano"
+        ],
+        [
+         "winner:1.23",
+         "winner:1.33"
+        ],
+        [
+         "club:ita.manfredonia",
+         "club:ita.fidelisandria"
+        ],
+        [
+         "club:ita.milanfuturo",
+         "club:ita.santangelo"
+        ],
+        [
+         "club:ita.seravezzapozzi",
+         "club:ita.tau"
+        ],
+        [
+         "winner:1.15",
+         "club:ita.altavilla"
+        ],
+        [
+         "club:ita.chievoverona",
+         "club:ita.casatesemerate"
+        ],
+        [
+         "club:ita.montevarchi",
+         "club:ita.terranuova"
+        ],
+        [
+         "winner:1.19",
+         "club:ita.valenzanamado"
+        ],
+        [
+         "club:ita.brian",
+         "winner:1.3"
+        ],
+        [
+         "club:ita.nissa",
+         "club:ita.igeavirtus"
+        ],
+        [
+         "winner:1.14",
+         "club:ita.cjarlinsmuzane"
+        ],
+        [
+         "winner:1.28",
+         "club:ita.caldieroterme"
+        ],
+        [
+         "winner:1.22",
+         "club:ita.chisola"
+        ],
+        [
+         "winner:1.21",
+         "club:ita.saluzzo"
+        ],
+        [
+         "club:ita.cellevarazze",
+         "winner:1.20"
+        ],
+        [
+         "club:ita.sarrabusogl",
+         "club:ita.asdmonastir"
+        ],
+        [
+         "club:ita.realaversa",
+         "winner:1.11"
+        ],
+        [
+         "club:ita.propalazzolo",
+         "winner:1.1"
+        ],
+        [
+         "club:ita.lentigione",
+         "winner:1.34"
+        ],
+        [
+         "winner:1.32",
+         "club:ita.ennacalcio"
+        ],
+        [
+         "club:ita.siena",
+         "winner:1.7"
+        ],
+        [
+         "club:ita.flaminia",
+         "winner:1.12"
+        ],
+        [
+         "club:ita.forsempronese",
+         "winner:1.6"
+        ],
+        [
+         "club:ita.gelbison",
+         "winner:1.5"
+        ],
+        [
+         "club:ita.virtusbergamo",
+         "club:ita.realcalepina"
+        ],
+        [
+         "club:ita.calvinoale",
+         "club:ita.mestre"
+        ],
+        [
+         "club:ita.este",
+         "club:ita.fcdconegliano"
+        ],
+        [
+         "club:ita.rovatocalcio",
+         "club:ita.villavalle"
+        ],
+        [
+         "club:ita.brusaporto",
+         "club:ita.scanzorosciate"
+        ],
+        [
+         "club:ita.leon",
+         "club:ita.prosesto"
+        ],
+        [
+         "club:ita.cittvismodena",
+         "club:ita.progresso"
+        ],
+        [
+         "club:ita.piacenzacalcio",
+         "club:ita.correggese"
+        ],
+        [
+         "club:ita.pistoiese",
+         "club:ita.scandicci"
+        ],
+        [
+         "club:ita.trastevere",
+         "club:ita.unipomezia"
+        ],
+        [
+         "club:ita.albalonga",
+         "club:ita.alodigiani"
+        ],
+        [
+         "club:ita.vigorsenigallia",
+         "club:ita.anconacalcio"
+        ],
+        [
+         "club:ita.termolicalcio",
+         "club:ita.atlascoli"
+        ],
+        [
+         "club:ita.francavilla",
+         "winner:1.4"
+        ],
+        [
+         "winner:1.27",
+         "club:ita.nocerinacalcio"
+        ],
+        [
+         "club:ita.milazzo",
+         "winner:1.24"
+        ],
+        [
+         "club:ita.gravina",
+         "club:ita.martinacalcio"
+        ],
+        [
+         "winner:1.13",
+         "club:ita.ghiviborgo"
+        ],
+        [
+         "club:ita.vfrancavilla",
+         "club:ita.nardo"
+        ],
+        [
+         "club:ita.asdbiellese",
+         "winner:1.18"
+        ],
+        [
+         "club:ita.athlpalermo",
+         "winner:1.25"
+        ],
+        [
+         "club:ita.legnagosalus",
+         "club:ita.clodiense"
+        ],
+        [
+         "club:ita.sestrilevante",
+         "club:ita.ligorna"
+        ],
+        [
+         "club:ita.giulianova",
+         "club:ita.laquila"
+        ],
+        [
+         "club:ita.oltrepo",
+         "winner:1.16"
+        ],
+        [
+         "winner:1.17",
+         "club:ita.varese"
+        ],
+        [
+         "club:ita.prato",
+         "club:ita.sandonato"
+        ],
+        [
+         "winner:1.10",
+         "winner:1.9"
+        ],
+        [
+         "club:ita.asdsambiase",
+         "club:ita.vigorlamezia"
+        ],
+        [
+         "winner:1.2",
+         "club:ita.folignocalcio"
+        ],
+        [
+         "club:ita.teramocalcio",
+         "club:ita.notarescocalcio"
+        ],
+        [
+         "winner:1.30",
+         "club:ita.favara"
+        ],
+        [
+         "winner:1.31",
+         "club:ita.milano"
+        ],
+        [
+         "club:ita.paganesecalcio",
+         "club:ita.palmese"
+        ],
+        [
+         "club:ita.sanremesecalcio",
+         "club:ita.ssdimperia"
+        ],
+        [
+         "club:ita.reggina",
+         "winner:1.29"
+        ],
+        [
+         "winner:1.26",
+         "club:ita.afragolese"
+        ]
+       ],
+       [
+        [
+         "winner:2.29",
+         "winner:2.8"
+        ],
+        [
+         "winner:2.50",
+         "winner:2.36"
+        ],
+        [
+         "winner:2.4",
+         "winner:2.34"
+        ],
+        [
+         "winner:2.22",
+         "winner:2.35"
+        ],
+        [
+         "winner:2.39",
+         "winner:2.26"
+        ],
+        [
+         "winner:2.25",
+         "winner:2.24"
+        ],
+        [
+         "winner:2.37",
+         "winner:2.58"
+        ],
+        [
+         "winner:2.1",
+         "winner:2.19"
+        ],
+        [
+         "winner:2.51",
+         "winner:2.40"
+        ],
+        [
+         "winner:2.55",
+         "winner:2.38"
+        ],
+        [
+         "winner:2.53",
+         "winner:2.60"
+        ],
+        [
+         "winner:2.28",
+         "winner:2.33"
+        ],
+        [
+         "winner:2.32",
+         "winner:2.9"
+        ],
+        [
+         "winner:2.13",
+         "winner:2.63"
+        ],
+        [
+         "winner:2.11",
+         "winner:2.17"
+        ],
+        [
+         "winner:2.10",
+         "winner:2.54"
+        ],
+        [
+         "winner:2.43",
+         "winner:2.23"
+        ],
+        [
+         "winner:2.47",
+         "winner:2.16"
+        ],
+        [
+         "winner:2.30",
+         "winner:2.15"
+        ],
+        [
+         "winner:2.62",
+         "winner:2.18"
+        ],
+        [
+         "winner:2.59",
+         "winner:2.48"
+        ],
+        [
+         "winner:2.7",
+         "winner:2.45"
+        ],
+        [
+         "winner:2.14",
+         "winner:2.12"
+        ],
+        [
+         "winner:2.52",
+         "winner:2.6"
+        ],
+        [
+         "winner:2.56",
+         "winner:2.27"
+        ],
+        [
+         "winner:2.49",
+         "winner:2.3"
+        ],
+        [
+         "winner:2.61",
+         "winner:2.20"
+        ],
+        [
+         "winner:2.42",
+         "winner:2.64"
+        ],
+        [
+         "winner:2.5",
+         "winner:2.41"
+        ],
+        [
+         "winner:2.46",
+         "winner:2.44"
+        ],
+        [
+         "winner:2.31",
+         "winner:2.21"
+        ],
+        [
+         "winner:2.2",
+         "winner:2.57"
+        ]
+       ],
+       [
+        [
+         "winner:3.15",
+         "winner:3.18"
+        ],
+        [
+         "winner:3.12",
+         "winner:3.11"
+        ],
+        [
+         "winner:3.24",
+         "winner:3.20"
+        ],
+        [
+         "winner:3.19",
+         "winner:3.23"
+        ],
+        [
+         "winner:3.1",
+         "winner:3.26"
+        ],
+        [
+         "winner:3.4",
+         "winner:3.3"
+        ],
+        [
+         "winner:3.22",
+         "winner:3.2"
+        ],
+        [
+         "winner:3.6",
+         "winner:3.5"
+        ],
+        [
+         "winner:3.7",
+         "winner:3.8"
+        ],
+        [
+         "winner:3.27",
+         "winner:3.9"
+        ],
+        [
+         "winner:3.28",
+         "winner:3.10"
+        ],
+        [
+         "winner:3.25",
+         "winner:3.14"
+        ],
+        [
+         "winner:3.17",
+         "winner:3.21"
+        ],
+        [
+         "winner:3.31",
+         "winner:3.13"
+        ],
+        [
+         "winner:3.29",
+         "winner:3.30"
+        ],
+        [
+         "winner:3.16",
+         "winner:3.32"
+        ]
+       ],
+       [
+        [
+         "winner:4.1",
+         "winner:4.14"
+        ],
+        [
+         "winner:4.2",
+         "winner:4.3"
+        ],
+        [
+         "winner:4.4",
+         "winner:4.5"
+        ],
+        [
+         "winner:4.6",
+         "winner:4.7"
+        ],
+        [
+         "winner:4.9",
+         "winner:4.10"
+        ],
+        [
+         "winner:4.11",
+         "winner:4.15"
+        ],
+        [
+         "winner:4.12",
+         "winner:4.13"
+        ],
+        [
+         "winner:4.8",
+         "winner:4.16"
+        ]
+       ],
+       [
+        [
+         "winner:5.1",
+         "winner:5.2"
+        ],
+        [
+         "winner:5.3",
+         "winner:5.4"
+        ],
+        [
+         "winner:5.5",
+         "winner:5.6"
+        ],
+        [
+         "winner:5.7",
+         "winner:5.8"
+        ]
+       ]
+      ]
+     }
+    }
+   ],
+   "outcomes": [
+    {
+     "stage": "ko",
+     "positions": "1",
+     "tag": "champion"
+    }
+   ],
+   "modes": [
+    "career",
+    "season"
+   ]
+  },
+  {
+   "id": "ita.c-po",
+   "kind": "playoff",
+   "country": "ITA",
+   "names": {
+    "it": [
+     "PLAY-OFF C",
+     "PLAY-OFF C"
+    ],
+    "en": [
+     "PLAY-OFF C",
+     "PLAY-OFF C"
+    ],
+    "fr": [
+     "PLAY-OFF C",
+     "PLAY-OFF C"
+    ],
+    "de": [
+     "PLAY-OFF C",
+     "PLAY-OFF C"
+    ]
+   },
+   "participants": {
+    "count": 28,
+    "from": "link",
+    "source": [
+     "ita.c-a",
+     "ita.c-b",
+     "ita.c-c"
+    ]
+   },
+   "stages": [
+    {
+     "id": "po",
+     "type": "playoff",
+     "rank": "place_then_record",
+     "entrants": [
+      "ita.c-a#2-10",
+      "ita.c-b#2-10",
+      "ita.c-c#2-10",
+      {
+       "cup_place": {
+        "cup": "ita.coppa-c",
+        "groups": [
+         "ita.c-a",
+         "ita.c-b",
+         "ita.c-c"
+        ],
+        "takes": "table#11-15",
+        "takes_if_safe": "table#16-17",
+        "playout_gap": 8,
+        "instead": [
+         "group#11"
+        ],
+        "unknown": "best_of:#11"
+       }
+      }
+     ],
+     "rounds": [
+      {
+       "per": [
+        "ita.c-a",
+        "ita.c-b",
+        "ita.c-c"
+       ],
+       "ties": 3,
+       "byes": 10,
+       "legs": 1,
+       "home": "better_placed",
+       "pairing": "by_place",
+       "clubs": [
+        "#5-10"
+       ],
+       "decider": [
+        "better_placed"
+       ]
+      },
+      {
+       "per": [
+        "ita.c-a",
+        "ita.c-b",
+        "ita.c-c"
+       ],
+       "ties": 2,
+       "byes": 7,
+       "legs": 1,
+       "home": "better_placed",
+       "pairing": "by_place",
+       "clubs": [
+        "#4",
+        "winners:1"
+       ],
+       "decider": [
+        "better_placed"
+       ]
+      },
+      {
+       "ties": 5,
+       "byes": 3,
+       "legs": 2,
+       "home": "fixed",
+       "pairing": "seeded",
+       "seeds": [
+        "ita.c-a#3",
+        "ita.c-b#3",
+        "ita.c-c#3",
+        "cup_place",
+        {
+         "best_of": "winners:2"
+        }
+       ],
+       "drawn": [
+        {
+         "rest_of": "winners:2"
+        }
+       ],
+       "decider": [
+        "aggregate",
+        "seed"
+       ]
+      },
+      {
+       "ties": 4,
+       "legs": 2,
+       "home": "fixed",
+       "pairing": "seeded",
+       "seeds": [
+        "ita.c-a#2",
+        "ita.c-b#2",
+        "ita.c-c#2",
+        {
+         "best_of": "winners:3"
+        }
+       ],
+       "drawn": [
+        {
+         "rest_of": "winners:3"
+        }
+       ],
+       "decider": [
+        "aggregate",
+        "seed"
+       ]
+      },
+      {
+       "ties": 2,
+       "legs": 2,
+       "home": "fixed",
+       "pairing": "draw",
+       "decider": [
+        "aggregate",
+        "extra_time",
+        "penalties"
+       ]
+      },
+      {
+       "ties": 1,
+       "legs": 2,
+       "home": "fixed",
+       "pairing": "bracket",
+       "decider": [
+        "aggregate",
+        "extra_time",
+        "penalties"
+       ]
+      }
+     ]
+    }
+   ],
+   "outcomes": [
+    {
+     "stage": "po",
+     "positions": "1",
+     "tag": "promoted",
+     "to": "ita.b",
+     "season": "next"
+    }
+   ],
+   "modes": [
+    "career",
+    "season"
+   ]
+  },
+  {
+   "id": "ita.coppa",
+   "kind": "cup",
+   "country": "ITA",
+   "names": {
+    "it": [
+     "COPPA ITALIA",
+     "COPPA ITALIA"
+    ],
+    "en": [
+     "COPPA ITALIA",
+     "COPPA ITALIA"
+    ],
+    "fr": [
+     "COPPA ITALIA",
+     "COPPA ITALIA"
+    ],
+    "de": [
+     "COPPA ITALIA",
+     "COPPA ITALIA"
+    ]
+   },
+   "_source": "Lega Serie A C.U. n. 253 of 27/05/2024 (regulation 2024-25 .. 2026-27): 3.1 the Ranking a-g and the numbers 1-44, Allegato 1 the bracket, 3.2-3.8 hosts and deciders; the 2026-27 numbers and the field swap Palermo (25) - Lecce (17) in the round of 64: it.wikipedia 'Coppa Italia 2026-2027'. The C group winners / runners-up are ranked by points per match (as applied in 2026-27: groups of 20 and 19 clubs), the C.U. says points; the substitute 'meglio classificata ex art. 49 NOIF' of the national play-off's 2nd round = place, then points per match (Ravenna in 2026-27). 'unknown' (MC Q5 2, declared, not C.U.; approved by Davide 09/11/2026): a fact the save lacks -> the holder = the champion; promoted / relegated = by place; the play-off final's loser = the best placed non-promoted of B 3rd-8th; the play-out winner = the 16th; the C play-off winner or the Coppa Italia Serie C winner = the 2nd round's best (the C.U.'s own substitute, also 'if the Coppa Italia Serie C is not played'); the 2nd round's clubs = C places 2-10. Not in the C.U. either (declared, approved 09/11/2026): a holder that is a Serie B club staying in B makes 13 candidates for the 12 places of 9-20 -- the list order decides, the 3rd promoted club goes to 25-36.",
+   "participants": {
+    "count": 44,
+    "from": "numbers",
+    "source": [
+     "ita.a",
+     "ita.b",
+     "ita.c-a",
+     "ita.c-b",
+     "ita.c-c"
+    ]
+   },
+   "stages": [
+    {
+     "id": "ko",
+     "type": "knockout",
+     "numbers": [
+      {
+       "take": 1,
+       "from": [
+        "ita.coppa:winner"
+       ]
+      },
+      {
+       "take": 7,
+       "from": [
+        "ita.a#1-8"
+       ]
+      },
+      {
+       "take": 12,
+       "from": [
+        "ita.a#8-17",
+        "ita.b:up"
+       ]
+      },
+      {
+       "take": 4,
+       "from": [
+        "ita.a:down",
+        "ita.b/playoff:finalist"
+       ]
+      },
+      {
+       "take": 12,
+       "from": [
+        "ita.b#3-15",
+        "ita.b/playout:winner",
+        "ita.b#16"
+       ]
+      },
+      {
+       "take": 3,
+       "from": [
+        "ita.c-a#1",
+        "ita.c-b#1",
+        "ita.c-c#1"
+       ],
+       "order": "record"
+      },
+      {
+       "take": 1,
+       "from": [
+        "ita.c-po:winner"
+       ],
+       "else": [
+        "ita.c-po:round4"
+       ],
+       "else_order": "place_record"
+      },
+      {
+       "take": 3,
+       "from": [
+        "ita.c-a#2",
+        "ita.c-b#2",
+        "ita.c-c#2"
+       ],
+       "order": "record",
+       "else": [
+        "ita.c-po:round4"
+       ],
+       "else_order": "place_record"
+      },
+      {
+       "take": 1,
+       "from": [
+        "ita.coppa-c:winner"
+       ],
+       "else": [
+        "ita.c-po:round4"
+       ],
+       "else_order": "place_record"
+      }
+     ],
+     "unknown": {
+      "ita.coppa:winner": "ita.a#1",
+      "ita.b:up": "ita.b#1-3",
+      "ita.a:down": "ita.a#18-20",
+      "ita.b/playoff:finalist": "ita.b#3-8",
+      "ita.b/playout:winner": "ita.b#16",
+      "ita.c-po:winner": "none",
+      "ita.c-po:round4": [
+       "ita.c-a#2-10",
+       "ita.c-b#2-10",
+       "ita.c-c#2-10"
+      ],
+      "ita.coppa-c:winner": "none"
+     },
+     "first_season": {
+      "numbers": [
+       "club:ita.inter",
+       "club:ita.napoli",
+       "club:ita.roma",
+       "club:ita.como",
+       "club:ita.milan",
+       "club:ita.juventus",
+       "club:ita.atalanta",
+       "club:ita.bologna",
+       "club:ita.lazio",
+       "club:ita.udinese",
+       "club:ita.sassuolo",
+       "club:ita.torino",
+       "club:ita.parma",
+       "club:ita.cagliari",
+       "club:ita.fiorentina",
+       "club:ita.genoa",
+       "club:ita.lecce",
+       "club:ita.venezia",
+       "club:ita.frosinone",
+       "club:ita.monza",
+       "club:ita.cremonese",
+       "club:ita.verona",
+       "club:ita.pisa",
+       "club:ita.catanzaro",
+       "club:ita.palermo",
+       "club:ita.modena",
+       "club:ita.juvestabia",
+       "club:ita.avellino",
+       "club:ita.mantova",
+       "club:ita.padova",
+       "club:ita.cesena",
+       "club:ita.carrarese",
+       "club:ita.sampdoria",
+       "club:ita.virtusentella",
+       "club:ita.empoli",
+       "club:ita.sudtirol",
+       "club:ita.vicenza",
+       "club:ita.arezzo",
+       "club:ita.benevento",
+       "club:ita.ascoli",
+       "club:ita.catania",
+       "club:ita.unionbrescia",
+       "club:ita.ravenna",
+       "club:ita.potenza"
+      ],
+      "swap_home": [
+       "2.4"
+      ]
+     },
+     "rounds": [
+      {
+       "ties": 4,
+       "legs": 1,
+       "home": "lower_number",
+       "pairing": "fixed",
+       "fixed": [
+        [
+         "#40",
+         "#44"
+        ],
+        [
+         "#37",
+         "#41"
+        ],
+        [
+         "#38",
+         "#42"
+        ],
+        [
+         "#39",
+         "#43"
+        ]
+       ],
+       "decider": [
+        "penalties"
+       ]
+      },
+      {
+       "ties": 16,
+       "legs": 1,
+       "home": "lower_number",
+       "pairing": "fixed",
+       "fixed": [
+        [
+         "#16",
+         "winner:1.1"
+        ],
+        [
+         "#24",
+         "#36"
+        ],
+        [
+         "#9",
+         "#29"
+        ],
+        [
+         "#17",
+         "#25"
+        ],
+        [
+         "#12",
+         "#32"
+        ],
+        [
+         "#20",
+         "#28"
+        ],
+        [
+         "#21",
+         "#33"
+        ],
+        [
+         "#13",
+         "winner:1.2"
+        ],
+        [
+         "#14",
+         "winner:1.3"
+        ],
+        [
+         "#22",
+         "#34"
+        ],
+        [
+         "#11",
+         "#31"
+        ],
+        [
+         "#19",
+         "#27"
+        ],
+        [
+         "#10",
+         "#30"
+        ],
+        [
+         "#18",
+         "#26"
+        ],
+        [
+         "#23",
+         "#35"
+        ],
+        [
+         "#15",
+         "winner:1.4"
+        ]
+       ],
+       "decider": [
+        "penalties"
+       ]
+      },
+      {
+       "ties": 8,
+       "legs": 1,
+       "home": "lower_number",
+       "pairing": "fixed",
+       "fixed": [
+        [
+         "winner:2.1",
+         "winner:2.2"
+        ],
+        [
+         "winner:2.3",
+         "winner:2.4"
+        ],
+        [
+         "winner:2.5",
+         "winner:2.6"
+        ],
+        [
+         "winner:2.7",
+         "winner:2.8"
+        ],
+        [
+         "winner:2.9",
+         "winner:2.10"
+        ],
+        [
+         "winner:2.11",
+         "winner:2.12"
+        ],
+        [
+         "winner:2.13",
+         "winner:2.14"
+        ],
+        [
+         "winner:2.15",
+         "winner:2.16"
+        ]
+       ],
+       "decider": [
+        "penalties"
+       ]
+      },
+      {
+       "ties": 8,
+       "legs": 1,
+       "home": "lower_number",
+       "pairing": "fixed",
+       "fixed": [
+        [
+         "#1",
+         "winner:3.1"
+        ],
+        [
+         "#8",
+         "winner:3.2"
+        ],
+        [
+         "#5",
+         "winner:3.3"
+        ],
+        [
+         "#4",
+         "winner:3.4"
+        ],
+        [
+         "#3",
+         "winner:3.5"
+        ],
+        [
+         "#6",
+         "winner:3.6"
+        ],
+        [
+         "#7",
+         "winner:3.7"
+        ],
+        [
+         "#2",
+         "winner:3.8"
+        ]
+       ],
+       "decider": [
+        "penalties"
+       ]
+      },
+      {
+       "ties": 4,
+       "legs": 1,
+       "home": "lower_number",
+       "pairing": "fixed",
+       "fixed": [
+        [
+         "winner:4.1",
+         "winner:4.2"
+        ],
+        [
+         "winner:4.3",
+         "winner:4.4"
+        ],
+        [
+         "winner:4.5",
+         "winner:4.6"
+        ],
+        [
+         "winner:4.7",
+         "winner:4.8"
+        ]
+       ],
+       "decider": [
+        "penalties"
+       ]
+      },
+      {
+       "ties": 2,
+       "legs": 2,
+       "home": "lower_number_second_leg",
+       "pairing": "fixed",
+       "fixed": [
+        [
+         "winner:5.1",
+         "winner:5.2"
+        ],
+        [
+         "winner:5.3",
+         "winner:5.4"
+        ]
+       ],
+       "decider": [
+        "aggregate",
+        "extra_time",
+        "penalties"
+       ]
+      },
+      {
+       "ties": 1,
+       "legs": 1,
+       "home": "neutral",
+       "pairing": "fixed",
+       "fixed": [
+        [
+         "winner:6.1",
+         "winner:6.2"
+        ]
+       ],
+       "decider": [
+        "extra_time",
+        "penalties"
+       ]
+      }
+     ]
+    }
+   ],
+   "outcomes": [
+    {
+     "stage": "ko",
+     "positions": "1",
+     "tag": "champion"
+    }
+   ],
+   "modes": [
+    "career",
+    "season"
+   ]
+  },
+  {
+   "id": "ita.supercoppa",
+   "kind": "cup",
+   "country": "ITA",
+   "names": {
+    "it": [
+     "SUPERCOPPA ITALIANA",
+     "SUPERCOPPA"
+    ],
+    "en": [
+     "SUPERCOPPA ITALIANA",
+     "SUPERCOPPA"
+    ],
+    "fr": [
+     "SUPERCOPPA ITALIANA",
+     "SUPERCOPPA"
+    ],
+    "de": [
+     "SUPERCOPPA ITALIANA",
+     "SUPERCOPPA"
+    ]
+   },
+   "_source": "Lega Serie A C.U. n. 43 of 01/10/2026: one match, extra time, penalties; the champion v the Coppa Italia winner, its finalist when they are one club (Inter v Lazio, Meazza, 22/12/2026); venue: neutral (Q4, MC); 'unknown' (declared, approved by Davide 09/11/2026): the cup winner / finalist -> Serie A's 2nd.",
+   "participants": {
+    "count": 2,
+    "from": "numbers",
+    "source": [
+     "ita.a",
+     "ita.b",
+     "ita.c-a",
+     "ita.c-b",
+     "ita.c-c"
+    ]
+   },
+   "stages": [
+    {
+     "id": "final",
+     "type": "knockout",
+     "numbers": [
+      {
+       "take": 1,
+       "from": [
+        "ita.a#1"
+       ]
+      },
+      {
+       "take": 1,
+       "from": [
+        "ita.coppa:winner",
+        "ita.coppa:finalist"
+       ]
+      }
+     ],
+     "unknown": {
+      "ita.coppa:winner": "ita.a#2",
+      "ita.coppa:finalist": "ita.a#2"
+     },
+     "first_season": {
+      "numbers": [
+       "club:ita.inter",
+       "club:ita.lazio"
+      ]
+     },
+     "rounds": [
+      {
+       "ties": 1,
+       "legs": 1,
+       "home": "neutral",
+       "pairing": "fixed",
+       "fixed": [
+        [
+         "#1",
+         "#2"
+        ]
+       ],
+       "decider": [
+        "extra_time",
+        "penalties"
+       ]
+      }
+     ]
+    }
+   ],
+   "outcomes": [
+    {
+     "stage": "final",
+     "positions": "1",
+     "tag": "champion"
+    }
+   ],
+   "modes": [
+    "career",
+    "season"
+   ]
+  }
+ ]
+}
