@@ -343,14 +343,17 @@ static void hash_order(u32 seed, u32 salt, i32 n, u8 *ord)
  * one club of a pot per group, one club of an association per group; the last pot's colours the larger groups only.
  * A whole draw exists iff no association has more clubs than there are groups (Koenig: a bipartite multigraph of
  * degree <= g takes g colours; the short last pot padded with g - r dummy clubs of a dummy association, whose colours
- * are then named the smaller groups). gking builds one: the witness. Each pick of the draw that differs from the
- * witness asks gsolve, a complete search, whether the picks so far still leave a whole draw (and if so, which: the
- * new witness). gsolve: the most constrained club (fewest groups) or slot (a pot's group with the fewest clubs that
- * can fill it) first, a pot's clubs and an association's each matchable to groups of their own (Hall) at every node,
- * groups whose state is the same tried once, a club's association once per slot. Its nodes have a budget for the
- * whole draw: a pick it cannot decide in time is passed over as one that leaves no draw, so the club goes to a later
- * group of its order -- at the latest the witness's. The draw always ends, in a bounded time. */
-enum { GBUDGET = 4000 };                                       /* gsolve's nodes in one draw */
+ * are then named the smaller groups). gking builds one: the witness. A pick of the draw equal to the witness's group
+ * needs no check; another first tries gkempe, the witness's two-group Kempe chain from the club flipped (a draw again,
+ * no search: UEFA-like shapes need nothing more); failing that, gsolve, a complete search, says whether the picks so
+ * far still leave a whole draw (and if so, which: the new witness). gsolve: done as soon as the witness's groups are
+ * free for every club left; else the most constrained club (fewest groups) or slot (a pot's group with the fewest
+ * clubs that can fill it) first, the witness's value first, Hall matchings where the last pick changed them, groups
+ * whose state is the same tried once, a club's association once per slot. Its nodes have a budget for the whole draw:
+ * a pick it cannot decide in time is passed over as one that leaves no draw, so the club goes to a later group of its
+ * order -- at the latest the witness's. The draw always ends, in a bounded time. */
+enum { GBUDGET = 100000 };                                     /* gsolve's nodes + matching steps in one draw
+                                                                   (~200 i486 instructions a step: ~20 M) */
 
 typedef struct {
     i32 n, g, np, steps;
@@ -388,8 +391,9 @@ static int gsame(const sr_gdraw *d, i32 j, i32 k)
 }
 
 /* clubs l[0..m-1] each to a group of its own among those they can go to (Kuhn's augmenting paths) */
-static int gaug(const sr_gdraw *d, const u8 *l, i32 i, u32 *seen, i8 *by)
+static int gaug(sr_gdraw *d, const u8 *l, i32 i, u32 *seen, i8 *by)
 {
+    if (--d->steps < 0) return 1;                               /* (the budget: no pruning, gsolve stops) */
     const u32 m = gdom(d, l[i]) & ~*seen;
     for (i32 j = 0; j < d->g; j++) {
         if (!(m >> j & 1)) continue;
@@ -398,38 +402,58 @@ static int gaug(const sr_gdraw *d, const u8 *l, i32 i, u32 *seen, i8 *by)
     }
     return 0;
 }
-static int gmatch(const sr_gdraw *d, const u8 *l, i32 m)
+static int gmatch(sr_gdraw *d, const u8 *l, i32 m)
 {
     i8 by[32];
     for (i32 j = 0; j < d->g; j++) by[j] = -1;
     for (i32 i = 0; i < m; i++) { u32 seen = 0; if (!gaug(d, l, i, &seen, by)) return 0; }
     return 1;
 }
-/* a pot's clubs left, and an association's, each to groups of their own: the draw's two Hall conditions */
-static int ghall(const sr_gdraw *d)
+/* a pot's clubs left, and an association's, each to groups of their own: the draw's two Hall conditions -- checked
+ * where club `last`, just placed, changed them (they held before: a draw existed): its pot and the pots of its
+ * association's clubs, its association and the associations of its pot's clubs */
+static __attribute__((noinline)) int ghall(sr_gdraw *d, i32 last)   /* (its arrays off gsolve's
+                                                                   recursion: the DOS stack) */
 {
-    u8 l[N];
+    u8 l[N], mark[N];
     i32 m;
+    const i32 lp = d->pot[last];
+    for (i32 p = 0; p < d->np; p++) mark[p] = p == lp;
+    for (i32 c = 0; d->assoc && c < d->n; c++)
+        if (d->grp[c] == 0xFF && d->assoc[c] == d->assoc[last]) mark[d->pot[c]] = 1;
     for (i32 p = 0; p < d->np; p++) {
+        if (!mark[p]) continue;
         m = 0;
         for (i32 c = p * d->g; c < d->n && c < (p + 1) * d->g; c++) if (d->grp[c] == 0xFF) l[m++] = (u8)c;
         if (m > 1 && !gmatch(d, l, m)) return 0;
     }
     if (!d->assoc) return 1;
     u32 seen[8] = { 0 };
-    for (i32 c = 0; c < d->n; c++) {
+    for (i32 t = -1; t < d->g; t++) {
+        const i32 c = t < 0 ? last : lp * d->g + t;
+        if (t >= 0 && (c >= d->n || d->grp[c] != 0xFF)) continue;
         const u8 a = d->assoc[c];
-        if (d->grp[c] != 0xFF || seen[a >> 5] >> (a & 31) & 1) continue;
+        if (seen[a >> 5] >> (a & 31) & 1) continue;
         seen[a >> 5] |= 1u << (a & 31);
         m = 0;
-        for (i32 k = c; k < d->n; k++) if (d->grp[k] == 0xFF && d->assoc[k] == a) l[m++] = (u8)k;
+        for (i32 k = 0; k < d->n; k++) if (d->grp[k] == 0xFF && d->assoc[k] == a) l[m++] = (u8)k;
         if (m > 1 && !gmatch(d, l, m)) return 0;
     }
     return 1;
 }
 
+/* group j's state for what is left (gsame's), hashed: interchangeable groups hash alike */
+static u16 gsig(const sr_gdraw *d, i32 j)
+{
+    u32 h = 2166136261u;
+    for (i32 p = 0; p < d->np; p++) h = (h ^ (d->slot[p] >> j & 1)) * 16777619u;
+    for (i32 c = 0; d->assoc && c < d->n; c++)
+        if (d->grp[c] == 0xFF) h = (h ^ (d->used[d->assoc[c]] >> j & 1)) * 16777619u;
+    return (u16)(h ^ h >> 16);
+}
+
 /* 1: the clubs left all placed (the witness written), 0: none can be, -1: the budget spent */
-static i32 gsolve(sr_gdraw *d)
+static i32 gsolve(sr_gdraw *d, i32 last)
 {
     if (--d->steps < 0) return -1;
     i32 bc = -1, bn = 99;
@@ -440,7 +464,12 @@ static i32 gsolve(sr_gdraw *d)
         if (k < bn) { bn = k; bc = c; }
     }
     if (bc < 0) { for (i32 c = 0; c < d->n; c++) d->wit[c] = d->grp[c]; return 1; }
-    if (!ghall(d)) return 0;
+    i32 fits = 1;                                               /* the witness's groups still free for every club
+                                                                   left: they complete the draw (the witness keeps
+                                                                   them apart among themselves) */
+    for (i32 c = 0; c < d->n && fits; c++) fits = d->grp[c] != 0xFF || (gdom(d, c) >> d->wit[c] & 1);
+    if (fits) { for (i32 c = 0; c < d->n; c++) if (d->grp[c] != 0xFF) d->wit[c] = d->grp[c]; return 1; }
+    if (!ghall(d, last)) return 0;
     i32 bp = -1, bj = -1, sn = 99;
     for (i32 p = 0; bn > 1 && p < d->np; p++)                   /* every free place of a pot needs a club */
         for (i32 j = 0; j < d->g; j++) {
@@ -452,28 +481,35 @@ static i32 gsolve(sr_gdraw *d)
         }
     if (sn < bn) {                                              /* the place of pot bp in group bj: which club */
         u32 tried[8] = { 0 };
-        for (i32 c = bp * d->g; c < d->n && c < (bp + 1) * d->g; c++) {
+        i32 wc = -1;                                            /* (the witness's club there first) */
+        for (i32 c = bp * d->g; c < d->n && c < (bp + 1) * d->g; c++) if (d->wit[c] == bj) wc = c;
+        for (i32 t = bp * d->g - 1; t < d->n && t < (bp + 1) * d->g; t++) {
+            const i32 c = t < bp * d->g ? wc : t;
+            if (c < 0 || (t >= bp * d->g && c == wc)) continue;
             if (d->grp[c] != 0xFF || !(gdom(d, c) >> bj & 1)) continue;
             const u8 a = d->assoc ? d->assoc[c] : 0;
             if (tried[a >> 5] >> (a & 31) & 1) continue;        /* (a club of the same association: the same) */
             tried[a >> 5] |= 1u << (a & 31);
             gput(d, c, bj);
-            const i32 r = gsolve(d);
+            const i32 r = gsolve(d, c);
             gtake(d, c, bj);
             if (r) return r;
         }
         return 0;
     }
-    const u32 m = gdom(d, bc);                                  /* club bc: which group */
+    const u32 m = gdom(d, bc);                                  /* club bc: which group (the witness's first) */
     u32 done = 0;
-    for (i32 j = 0; j < d->g; j++) {
-        if (!(m >> j & 1)) continue;
+    u16 sig[32];
+    for (i32 t = -1; t < d->g; t++) {
+        const i32 j = t < 0 ? d->wit[bc] : t;
+        if (!(m >> j & 1) || (t >= 0 && j == d->wit[bc])) continue;
         i32 dup = 0;
-        for (i32 k = 0; k < d->g && !dup; k++) if (done >> k & 1) dup = gsame(d, j, k);
+        sig[j] = gsig(d, j);
+        for (i32 k = 0; k < d->g && !dup; k++) if (done >> k & 1 && sig[k] == sig[j]) dup = gsame(d, j, k);
         if (dup) continue;
         done |= 1u << j;
         gput(d, bc, j);
-        const i32 r = gsolve(d);
+        const i32 r = gsolve(d, bc);
         gtake(d, bc, j);
         if (r) return r;
     }
@@ -500,7 +536,7 @@ static i32 kat(const sr_gking *k, i32 pot, i32 as, i32 x)       /* the edge of c
 static i32 lowbit(u32 m) { i32 j = 0; while (!(m >> j & 1)) j++; return j; }
 
 /* a whole draw into wit (-2 an association with more clubs than groups) */
-static i32 gking(i32 n, i32 g, const u8 *assoc, u8 *wit)
+static __attribute__((noinline)) i32 gking(i32 n, i32 g, const u8 *assoc, u8 *wit)
 {
     sr_gking k;
     k.n = n; k.g = g; k.assoc = assoc; k.e = n % g ? n + g - n % g : n;
@@ -534,6 +570,30 @@ static i32 gking(i32 n, i32 g, const u8 *assoc, u8 *wit)
     return 1;
 }
 
+/* club c, just put in group j off the witness (its group w there): the witness's j / w Kempe chain from c flipped --
+ * the clubs in j or w linked to c through a pot or an association swap the two (still a proper draw, c in j). Refused
+ * (0) when the chain holds another drawn club or would put the short last pot's club in a smaller group. */
+static __attribute__((noinline)) int gkempe(sr_gdraw *d, i32 c, i32 j, i32 big)
+{
+    const i32 w = d->wit[c];
+    u8 q[N], in[N];
+    i32 nq = 0;
+    for (i32 x = 0; x < d->n; x++) in[x] = 0;
+    q[nq++] = (u8)c; in[c] = 1;
+    for (i32 h = 0; h < nq; h++) {
+        const i32 x = q[h];
+        for (i32 y = 0; y < d->n; y++)
+            if (!in[y] && (d->wit[y] == j || d->wit[y] == w) &&
+                (d->pot[y] == d->pot[x] || (d->assoc && d->assoc[y] == d->assoc[x]))) { in[y] = 1; q[nq++] = (u8)y; }
+    }
+    for (i32 h = 1; h < nq; h++) {
+        const i32 y = q[h], to = d->wit[y] == j ? w : j;
+        if (d->grp[y] != 0xFF || (d->pot[y] == d->np - 1 && d->n % d->g && to >= big)) return 0;
+    }
+    for (i32 h = 0; h < nq; h++) d->wit[q[h]] = (u8)(d->wit[q[h]] == j ? w : j);
+    return 1;
+}
+
 i32 sr_group_draw(i32 n, i32 g, const u8 *assoc, u32 seed, u8 *grp)
 {
     u8 size[N];
@@ -561,7 +621,7 @@ i32 sr_group_draw(i32 n, i32 g, const u8 *assoc, u32 seed, u8 *grp)
             const i32 j = go[k];
             if (!(gdom(&d, c) >> j & 1)) continue;
             gput(&d, c, j);
-            r = d.wit[c] == j ? 1 : gsolve(&d);
+            r = d.wit[c] == j || gkempe(&d, c, j, n % g) ? 1 : gsolve(&d, c);
             if (r > 0) break;
             gtake(&d, c, j);                                    /* (no draw that way, or undecided in the budget) */
         }
