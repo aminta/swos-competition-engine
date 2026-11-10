@@ -50,7 +50,7 @@ into this binary; an engine decodes it once when it opens a world (reference rea
 | `STAG` | id, RNG purpose, competition, type, legs, teams, groups, tie-breakers, first round, rounds, flags | `44211222222` |
 | `ENTR` | club index | `2` |
 | `TIEB`, `DECI` | bytes: code lists ending with 0 | — |
-| `ROUN` | ties, legs, home, deciders, pairing, pad | `211211` |
+| `ROUN` | ties, legs, home, deciders, pairing, avoid (v1.5, was pad = 0: bit 0 same group, bit 1 association) | `211211` |
 | `OUTC` | stage, from, to (positions: 1..127, or 128 + N = N-th from the bottom), tag, zone, target (0xFFFE = out of the world), season, flags (bit 0, v1.2: a `to` list, see `TOLS`; was pad = 0) | `21111211` |
 | `REG ` | competition, game modes | `22` |
 | `META` | pack id, pack version (string offsets) | `44` |
@@ -61,9 +61,13 @@ into this binary; an engine decodes it once when it opens a world (reference rea
 | `PRNT` | club, parent club: a second team and its first team (v1.3) | `22` |
 | `SECT` | country (STRS offset of the code), level: the highest level a country's second teams play (v1.3) | `22` |
 | `SECF` | country (STRS offset of the code), level: the second teams' floor, below which a second team leaves the world (v1.4) | `22` |
+| `GDRW` | stage, pots (1 access order, 2 coefficient), separate (bit 0 association), first PROT pair, PROT pairs: a groups stage's draw (v1.5) | `21122` |
+| `PROT` | country, country (CLUB.country's dense indices, a < b): clubs never drawn together -- pairs, not merged classes (v1.5) | `22` |
+| `KENT` | stage, source stage, kind (1 places, 2 best of), group (0xFF all), from, to: a stage's entrants in seeding order (v1.5) | `221111` |
 
 Unknown tags are skipped (a newer compiler may add sections a reader can ignore); a format that changes a layout
-bumps `format`. `tests/golden/sample.swc` is the reference file (the sample pack, byte for byte).
+bumps `format`. A section an older engine must not ignore (GDRW, KENT, a non-zero ROUN avoid: they change a draw)
+comes with header `engine_min` 2 (= `SWC_VERSION` 2), so that engine refuses the file. `tests/golden/sample.swc` is the reference file (the sample pack, byte for byte).
 
 ## Baking a pack into a build
 

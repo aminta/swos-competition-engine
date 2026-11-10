@@ -70,7 +70,9 @@ typedef struct {
     int nstinfo;
     /* output */
     Buf strs, names, club, comp, stag, entr, tieb, deci, roun, outc, reg, meta, fixt, grps, srce, tols, prnt, sect, secf;
+    Buf gdrw, prot, kent;       /* v1.5 */
     uint32_t arena;
+    int engine_min;             /* 2 when a v1.5 draw construct is compiled (GDRW, KENT, a round's avoid), else 1 */
 } C;
 
 static void diag(C *c, JNode *at, int error, const char *path, const char *fmt, ...)
@@ -2346,7 +2348,8 @@ static uint8_t *write_bin(C *c, int world, size_t *len)
         { SWC_S_STAG, &c->stag }, { SWC_S_ENTR, &c->entr }, { SWC_S_TIEB, &c->tieb }, { SWC_S_DECI, &c->deci },
         { SWC_S_ROUN, &c->roun }, { SWC_S_OUTC, &c->outc }, { SWC_S_REG, &c->reg }, { SWC_S_META, &c->meta },
         { SWC_S_FIXT, &c->fixt }, { SWC_S_GRPS, &c->grps }, { SWC_S_SRCE, &c->srce }, { SWC_S_TOLS, &c->tols },
-        { SWC_S_PRNT, &c->prnt }, { SWC_S_SECT, &c->sect }, { SWC_S_SECF, &c->secf } };
+        { SWC_S_PRNT, &c->prnt }, { SWC_S_SECT, &c->sect }, { SWC_S_SECF, &c->secf }, { SWC_S_GDRW, &c->gdrw },
+        { SWC_S_PROT, &c->prot }, { SWC_S_KENT, &c->kent } };
     int ns = (int)(sizeof sec / sizeof sec[0]), i;
     while (ns > 13 && !sec[ns - 1].b->n) ns--;           /* sections added after the first release: only when used */
     Buf out = { 0 };
@@ -2374,7 +2377,7 @@ static uint8_t *write_bin(C *c, int world, size_t *len)
     h = out.p;
     SWC_BE_WRITE_U32(h, SWC_MAGIC);
     SWC_BE_WRITE_U16(h + 4, SWC_FORMAT);
-    SWC_BE_WRITE_U16(h + 6, SWC_VERSION);
+    SWC_BE_WRITE_U16(h + 6, c->engine_min > 1 ? c->engine_min : 1);   /* (v1.5: 2 only for a spec that needs it) */
     SWC_BE_WRITE_U32(h + 8, 0);
     SWC_BE_WRITE_U16(h + 12, world);
     SWC_BE_WRITE_U16(h + 14, ns);

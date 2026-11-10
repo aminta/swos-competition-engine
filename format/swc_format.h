@@ -14,7 +14,10 @@
 #include <stddef.h>
 
 
-#define SWC_VERSION        0x0001          /* reader version (engine_min in a spec header must be <= this) */
+#define SWC_VERSION        0x0002          /* reader version (engine_min in a spec header must be <= this; 2: swc/1.5's
+                                              GDRW / PROT / KENT and SwcRound.avoid -- swcc writes engine_min 2 only
+                                              for a spec that uses one, so an older reader refuses it, never draws
+                                              it without its constraints) */
 #define SWC_FORMAT         2               /* binary spec format (2: big-endian; 1 was little-endian, S0 only) */
 
 /* ---- status (stable numbers) ------------------------------------------------------------------------------------ */
@@ -114,6 +117,9 @@ typedef struct { uint32_t tag, off, len; } SwcSection;       /* directory entry,
 #define SWC_S_PRNT  SWC_TAG('P','R','N','T')   /* SwcParent records: a second team's parent club (v1.3) */
 #define SWC_S_SECT  SWC_TAG('S','E','C','T')   /* SwcSecondTeams records: a country's highest level for second teams (v1.3) */
 #define SWC_S_SECF  SWC_TAG('S','E','C','F')   /* SwcSecondTeams records: a country's lowest level for second teams, their floor (v1.4) */
+#define SWC_S_GDRW  SWC_TAG('G','D','R','W')   /* SwcDraw records: a groups stage's draw constraints (v1.5) */
+#define SWC_S_PROT  SWC_TAG('P','R','O','T')   /* SwcProtect records: country pairs whose clubs never meet in a draw (v1.5) */
+#define SWC_S_KENT  SWC_TAG('K','E','N','T')   /* SwcKoEntrant records: a stage's entrants from earlier stages, in seeding order (v1.5) */
 
 #define SWC_LANGS   4                          /* it, en, fr, de: the order of SwcName.str */
 
@@ -154,7 +160,10 @@ typedef struct {
     uint16_t flags;
 } SwcStage;
 
-typedef struct { uint16_t ties; uint8_t legs, home; uint16_t deci; uint8_t pairing, pad; } SwcRound;
+typedef struct { uint16_t ties; uint8_t legs, home; uint16_t deci; uint8_t pairing, avoid; } SwcRound;
+/* SwcRound.avoid (v1.5; was pad = 0, swcc zeroes every round): the pairs the round's draw never makes */
+#define SWC_AV_SAME_GROUP  1                   /* two clubs from one group of the KENT source stage */
+#define SWC_AV_ASSOCIATION 2                   /* two clubs of one association, or of a PROT pair of countries */
 
 typedef enum { SWC_TAG_NONE = 0, SWC_TAG_CHAMPION, SWC_TAG_PROMOTED, SWC_TAG_RELEGATED, SWC_TAG_PLAYOFF,
                SWC_TAG_PLAYOUT, SWC_TAG_CONTINENTAL, SWC_TAG_QUALIFIED } SwcTagKind;
@@ -178,6 +187,24 @@ typedef struct { uint16_t comp, source; } SwcSource;
 typedef struct { uint16_t outcome, target; } SwcTarget;           /* OUTC index, COMP index */
 typedef struct { uint16_t club, parent; } SwcParent;               /* CLUB indices: a second team, its first team (v1.3) */
 typedef struct { uint16_t country, highest; } SwcSecondTeams;      /* STRS country code, the highest level a second team plays (v1.3) */
+
+/* v1.5: a groups stage's draw (GDRW, at most one per stage). Pots: 1 = access order (the stage's clubs in entrant
+   order, pot k = clubs k*g .. k*g+g-1: sr_group_draw's input); 2 = coefficient (game data: refused for a profile
+   that does not supply it). separate bit 0: two clubs of one association never in one group (classes: König's
+   bound). PROT[protect .. protect+nprotect-1]: country pairs whose clubs never share a group -- kept as PAIRS, never
+   merged into classes (UEFA's clashes are chains: KOS-BIH and KOS-SRB do not forbid BIH v SRB; MC 2026-11-10). */
+typedef struct { uint16_t stage; uint8_t pots, separate; uint16_t protect, nprotect; } SwcDraw;
+#define SWC_POTS_ACCESS_ORDER 1
+#define SWC_POTS_COEFFICIENT  2
+#define SWC_SEP_ASSOCIATION   1
+typedef struct { uint16_t a, b; } SwcProtect;                      /* CLUB.country's dense indices, a < b */
+/* v1.5: one record per item of a stage's `entrants` list, in list order = the seeding order: item by item; within an
+   item place by place, then group by group (A..H). kind 1: places from..to of src (1..127, or 128 + N = N-th from
+   the bottom, as OUTC); kind 2: best_of (from = the place, to = how many). group 0xFF = every group of src. */
+typedef struct { uint16_t stage, src; uint8_t kind, group, from, to; } SwcKoEntrant;
+#define SWC_KE_PLACES  1
+#define SWC_KE_BEST_OF 2
+#define SWC_KE_ALL     0xFF
 
 /* Tie-breaker criteria (TIEB) and deciders (DECI): dense codes shared with swcc. 0 ends a list. */
 typedef enum { SWC_TB_END = 0, SWC_TB_POINTS, SWC_TB_GOAL_DIFFERENCE, SWC_TB_GOALS_FOR, SWC_TB_GOALS_AGAINST,
@@ -214,6 +241,9 @@ typedef struct {
     const SwcParent *prnt;  uint32_t nprnt;
     const SwcSecondTeams *sect; uint32_t nsect;
     const SwcSecondTeams *secf; uint32_t nsecf;     /* (highest = the floor: below it a second team leaves the world) */
+    const SwcDraw *gdrw;    uint32_t ngdrw;         /* (v1.5) */
+    const SwcProtect *prot; uint32_t nprot;
+    const SwcKoEntrant *kent; uint32_t nkent;
 } SwcSpec;
 
 /* Checks the header, the directory, the hash and every section's bounds and record size, and decodes the records
