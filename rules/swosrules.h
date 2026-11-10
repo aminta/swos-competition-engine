@@ -801,11 +801,13 @@ int32_t sr_reg_check(const sr_registry *r);
 /* FNV-1a 32 over the shape: nfiles, each file's number, divisions and sizes, pool rows; nclub */
 uint32_t sr_reg_layout(int32_t nfiles, const sr_reg_file *f, int32_t nclub);
 int32_t  sr_reg_save_size(const sr_registry *r);                   /* bytes; -1 no registry */
-/* The bytes written (flags 0); -1 room short or a registry that fails sr_reg_check. */
+/* The bytes written (flags 0: the caller sets them after, swe_st_save's order); -1 room short, nclub past
+ * SR_REG_CLUBS (10-bit idents), a file whose rows are not its divisions' sizes + pool, or one failing sr_reg_check. */
 int32_t  sr_reg_save(const sr_registry *r, uint32_t layout, uint16_t season, uint8_t *out, int32_t room);
 /* r built from the spec first (sr_reg_build: the files' shape, nclub). 1 loaded; 0 absent (len 0), another
  * version, file count or layout: r unchanged, the caller imports or keeps the built one; -1 corrupt (short, rows
- * not the files', an ident >= nclub or twice): r unchanged. */
+ * not the files', an ident >= nclub or twice) or r's own shape bad (as sr_reg_save): r unchanged -- except a block
+ * that passes those and then fails sr_reg_check: r filled, the caller rebuilds it (sr_reg_build). */
 int32_t  sr_reg_load(sr_registry *r, uint32_t layout, const uint8_t *in, int32_t len);
 /* The word map: an old team word -> its club's word now (SR_REG_NONE: off the files), sorted by the old word;
  * a word not in it is unchanged. The count; -1 bad input (a word twice, a swap of a word with itself), -2 room short. */

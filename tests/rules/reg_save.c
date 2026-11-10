@@ -128,6 +128,21 @@ int main(void)
             }
             if (sr_reg_load(&L, lay, buf, size) != -1 || !same(&L, &K)) FAIL("an ident %s: not corrupt, or L changed", v ? "past nclub" : "twice");
         }
+        /* r's own shape (MC 10/11): a file's rows not its sizes + pool, nclub past 10 bits -- both refused, L unchanged */
+        sr_reg_save(&R, lay, 2027, buf, sizeof buf);
+        static sr_registry S;
+        S = R; S.f[1].pool++;
+        if (sr_reg_save(&S, lay, 2027, buf + 512, sizeof buf - 512) != -1) FAIL("save: rows not sizes + pool, not refused");
+        L.f[1].pool++; K = L;
+        if (sr_reg_load(&L, lay, buf, size) != -1 || memcmp(&L, &K, sizeof L)) FAIL("load: rows not sizes + pool, not refused or L changed");
+        L.f[1].pool--; K = L;
+        S = R; S.nclub = SR_REG_CLUBS + 1;
+        if (sr_reg_save(&S, lay, 2027, buf + 512, sizeof buf - 512) != -1) FAIL("save: nclub past SR_REG_CLUBS not refused");
+        L.nclub = SR_REG_CLUBS + 1; K = L;
+        if (sr_reg_load(&L, lay, buf, size) != -1 || memcmp(&L, &K, sizeof L)) FAIL("load: nclub past SR_REG_CLUBS not refused or L changed");
+        L.nclub = NC; K = L;
+        if (sr_reg_load(&L, lay, buf, size) != 1) FAIL("load after the shape refusals: not loaded");
+        sr_reg_build(&L, 2, fi, NC, div); K = L;
         /* control: rows 0 and 1 swapped -- a valid block, another registry: the round trip's compare sees it */
         sr_reg_save(&R, lay, 2027, buf, sizeof buf);
         const unsigned i0 = R.at[0][0], i1 = R.at[0][1];
