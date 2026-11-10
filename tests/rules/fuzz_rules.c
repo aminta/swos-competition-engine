@@ -98,7 +98,11 @@ static void one(const uint8_t *h, const uint8_t *spec, uint32_t len)
     se.base = (uint16_t)hr(600);
     if (h[8] & 32) {                            /* levels: groups of parallel divisions */
         int n = 0;
-        for (int d = 0; d < nd; d++) if (d == 0 || hr(3)) lv_first[n++] = (uint8_t)d;
+        if (hr(4)) { for (int d = 0; d < nd; d++) if (d == 0 || hr(3)) lv_first[n++] = (uint8_t)d; }
+        else {                                  /* (any levels: a damaged save; sr_season_check judges them) */
+            n = (int)hr(SR_DIVS + 2);
+            for (int l = 0; l < n && l < SR_DIVS; l++) lv_first[l] = (uint8_t)hr(hr(2) ? 256 : (uint32_t)nd + 1);
+        }
         lv.levels = (uint8_t)n; lv.first = lv_first;
         se.levels = &lv;
     }
@@ -212,6 +216,18 @@ int main(int argc, char **argv)
                 printf("FAIL: Italy with %d groups: %d moves\n", ng, (int)mv);
                 return 1;
             }
+        }
+    }
+    {   /* the levels (sr_season_check): first[0] 0, then strictly up -- a damaged save's levels refused */
+        static const uint8_t okf[4] = { 0, 1, 2, 5 }, back[3] = { 0, 2, 1 }, same[3] = { 0, 1, 1 }, late[2] = { 1, 2 };
+        const sr_levels lv[4] = { { 4, okf }, { 3, back }, { 3, same }, { 2, late } };
+        for (int k = 0; k < 4; k++) {
+            sr_season se;
+            sr_check_error e;
+            memset(&se, 0, sizeof se);
+            se.levels = &lv[k];
+            const int32_t c = sr_season_check(&se, &e);
+            if (c != (k ? SR_CHECK_VALUE : SR_CHECK_OK)) { printf("FAIL: sr_season_check, levels case %d: %d\n", k, (int)c); return 1; }
         }
     }
     uint32_t r = 2026;

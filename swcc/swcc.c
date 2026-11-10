@@ -1181,6 +1181,7 @@ static void do_comp(C *c, int ci, StageInfo *all_st, int *nall)
             for (q = src ? src->child : NULL; q; q = q->next) {
                 int k2 = q->type == J_STR ? find_comp(c, q->str) : -1;
                 if (k2 < 0) ERR(q, p2, "source: no competition \"%s\"", q->type == J_STR ? q->str : "?");
+                else if (!from) continue;                    /* ('source' without 'from': refused above) */
                 else if (!strcmp(from->str, "numbers")) {   /* (v1.4: the leagues whose clubs may be numbered) */
                     JNode *kd = json_get(c->comps[k2], "kind");
                     if (!kd || kd->type != J_STR || strcmp(kd->str, "league")) ERR(q, p2, "source: \"%s\" is not a league", q->str);

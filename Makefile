@@ -122,6 +122,28 @@ fuzz: tests/rules/fuzz_rules.c $(RULES) rules/swosrules.h | $(OUT)
 	python3 -I tests/rules/fuzz_corpus.py tests/rules/specs $(OUT)/fuzz_corpus
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/fuzz_rules_lf $(OUT)/fuzz_corpus -max_len=4200 -max_total_time=$(FUZZTIME) \
 	    -artifact_prefix=$(OUT)/
+# the library's other entry points on anything (sr_cupd, sr_cups, sr_groups, sr_stage, sr_pool, sr_reg); libFuzzer: make fuzz-lib
+$(OUT)/fuzz_lib: tests/rules/fuzz_lib.c $(RULES) rules/swosrules.h | $(OUT)
+	$(CC) -std=c11 -O1 -g -Wall -Wextra -Wno-missing-field-initializers -ftrivial-auto-var-init=pattern $(SANITIZE) \
+	    -Irules -o $@ tests/rules/fuzz_lib.c $(RULES) -lm
+fuzz-lib: tests/rules/fuzz_lib.c $(RULES) rules/swosrules.h | $(OUT)
+	$(FUZZCC) -std=c11 -O1 -g -DFUZZ -ftrivial-auto-var-init=pattern -fsanitize=fuzzer,address,undefined -fno-sanitize-recover=all -Irules \
+	    -o $(OUT)/fuzz_lib_lf tests/rules/fuzz_lib.c $(RULES) -lm
+	@mkdir -p $(OUT)/fuzz_lib_corpus
+	ASAN_OPTIONS=detect_leaks=0 $(OUT)/fuzz_lib_lf $(OUT)/fuzz_lib_corpus -max_len=16384 -max_total_time=$(FUZZTIME) \
+	    -artifact_prefix=$(OUT)/lib-
+# swcc and the .SWC reader on anything: what swcc accepts must open in the reader (ASan / UBSan); libFuzzer: make fuzz-swcc
+FUZZSWCC = tests/fuzz_swcc.c $(SWCC) $(FORMAT) swcc/swcc.h swcc/json.h format/swc_format.h
+$(OUT)/fuzz_swcc: $(FUZZSWCC) | $(OUT)
+	$(CC) -std=c11 -O1 -g -Wall -Wextra -Wno-missing-field-initializers -ftrivial-auto-var-init=pattern $(SANITIZE) \
+	    -DFUZZ_PROFILES='"$(CURDIR)/profiles"' -o $@ tests/fuzz_swcc.c $(SWCC) $(FORMAT)
+fuzz-swcc: $(FUZZSWCC) $(OUT)/swcc | $(OUT)
+	$(FUZZCC) -std=c11 -O1 -g -DFUZZ -ftrivial-auto-var-init=pattern -fsanitize=fuzzer,address,undefined -fno-sanitize-recover=all \
+	    -DFUZZ_PROFILES='"$(CURDIR)/profiles"' -o $(OUT)/fuzz_swcc_lf tests/fuzz_swcc.c $(SWCC) $(FORMAT)
+	@mkdir -p $(OUT)/fuzz_swcc_corpus
+	python3 -I tests/fuzz_swcc_corpus.py $(OUT)/swcc $(OUT)/fuzz_swcc_corpus $(OUT)/fuzz_swcc.dict $$(find tests/specs examples packs -name '*.json')
+	ASAN_OPTIONS=detect_leaks=0 $(OUT)/fuzz_swcc_lf $(OUT)/fuzz_swcc_corpus -dict=$(OUT)/fuzz_swcc.dict -max_len=65536 \
+	    -max_total_time=$(FUZZTIME) -artifact_prefix=$(OUT)/swcc-
 # 42-s2ko: the KN glue end to end -- a refused cup a clean error (nothing built, play never called), a stop -1
 $(OUT)/s2ko_glue: tests/rules/s2ko_glue.c $(OUT)/s2ko_gen.h rules/sr_kn.c rules/swosrules.h | $(OUT)
 	$(CC) -std=c11 -O1 -g -Wall -Wextra -Wno-missing-field-initializers $(SANITIZE) -Irules -I$(OUT) -o $@ \
@@ -161,7 +183,7 @@ sim: $(OUT)/masssim $(OUT)/italysim $(OUT)/italyfull
 	@for b in drop bteam updown regdrop regdup regdiv; do if ITALYFULL_BREAK=$$b $(OUT)/italyfull 2 3 >/dev/null; then echo "italyfull control $$b NOT caught"; exit 1; fi; done
 	@echo "italyfull controls: a club dropped, a B team in its first team's division, one too many up, a swap dropped, a slot twice, a wrong division byte -> caught"
 
-test: $(OUT)/test_format $(OUT)/swcc $(OUT)/swc_i486.o $(RULES_I486) $(OUT)/spec_check $(OUT)/team_order $(OUT)/groups_guard $(OUT)/nonleague $(OUT)/step3real $(OUT)/nlplayoff $(OUT)/ecclp $(OUT)/stage $(OUT)/bteams42 $(OUT)/cupplace $(OUT)/reg $(OUT)/s3shape $(OUT)/league_rank $(OUT)/uefa_final $(OUT)/s2ko $(OUT)/s2ko_edge $(OUT)/s2ko_glue $(OUT)/fuzz_rules
+test: $(OUT)/test_format $(OUT)/swcc $(OUT)/swc_i486.o $(RULES_I486) $(OUT)/spec_check $(OUT)/team_order $(OUT)/groups_guard $(OUT)/nonleague $(OUT)/step3real $(OUT)/nlplayoff $(OUT)/ecclp $(OUT)/stage $(OUT)/bteams42 $(OUT)/cupplace $(OUT)/reg $(OUT)/s3shape $(OUT)/league_rank $(OUT)/uefa_final $(OUT)/s2ko $(OUT)/s2ko_edge $(OUT)/s2ko_glue $(OUT)/fuzz_rules $(OUT)/fuzz_swcc $(OUT)/fuzz_lib
 	$(OUT)/swcc compile packs/sample/world.json -o $(OUT)/sample.swc >/dev/null
 	$(OUT)/test_format $(OUT)/sample.swc
 	sh tests/run_specs.sh $(OUT)/swcc
@@ -187,6 +209,8 @@ test: $(OUT)/test_format $(OUT)/swcc $(OUT)/swc_i486.o $(RULES_I486) $(OUT)/spec
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/s2ko_edge
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/s2ko_glue
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/fuzz_rules 50000 tests/rules/specs/*.spec tests/rules/fuzz_regress/*.fz
+	ASAN_OPTIONS=detect_leaks=0 $(OUT)/fuzz_swcc 20000 $$(find tests/specs examples packs -name '*.json')
+	ASAN_OPTIONS=detect_leaks=0 $(OUT)/fuzz_lib 30000 tests/rules/fuzz_regress_lib/*.fz
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/reg
 	sh tests/rules/frames.sh $(CC) $(I486) -Wno-error=frame-larger-than
 	$(OUT)/swcc compile tests/specs/ok/v14_files_one.json -o $(OUT)/files_one.swc >/dev/null
@@ -228,4 +252,4 @@ wasm-test: $(OUT)/swcc $(OUT)/swcc.wasm
 clean:
 	rm -rf $(OUT)
 
-.PHONY: sim all test clean rules-check wasm wasm-test page fuzz
+.PHONY: sim all test clean rules-check wasm wasm-test page fuzz fuzz-swcc fuzz-lib

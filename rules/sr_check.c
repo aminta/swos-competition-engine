@@ -169,6 +169,10 @@ int32_t sr_season_check(const sr_season *se, sr_check_error *err)
         return fail(err, SR_CHECK_COUNT, -1, 0, "SEASON WINNERS entries (at most 40)");
     if (se->levels && (se->levels->levels > SR_DIVS || (se->levels->levels && !se->levels->first)))
         return fail(err, SR_CHECK_COUNT, -1, 0, "levels");
+    if (se->levels)                             /* (each level's first division: from 0 up, strictly) */
+        for (uint32_t l = 0; l < se->levels->levels; l++)
+            if (l ? se->levels->first[l] <= se->levels->first[l - 1] : se->levels->first[0] != 0)
+                return fail(err, SR_CHECK_VALUE, -1, l, "levels' first divisions (0, then strictly up)");
     return SR_CHECK_OK;
 }
 

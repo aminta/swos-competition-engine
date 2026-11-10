@@ -370,8 +370,16 @@ static int augment(const sr_gdraw *d, const u8 *list, i32 q, i32 p, i8 *owner, u
  * and no association has more clubs left than groups without it */
 static int gdraw_open(const sr_gdraw *d, i32 i)
 {
-    if (d->assoc)
-        for (i32 a = 0; a < 256; a++) if (d->left[a] > d->g - d->with[a]) return 0;
+    if (d->assoc) {                                             /* (groups with room and without it) */
+        i32 room = 0;
+        for (i32 j = 0; j < d->g; j++) room += d->cnt[j] < d->size[j];
+        for (i32 a = 0; a < 256; a++) {
+            if (!d->left[a]) continue;
+            i32 open = room;
+            if (d->with[a]) for (i32 j = 0; j < d->g; j++) open -= d->cnt[j] < d->size[j] && (d->has[j][a >> 5] >> (a & 31) & 1);
+            if (d->left[a] > open) return 0;
+        }
+    }
     for (i32 p = i / d->g; p * d->g < d->n; p++) {
         const i32 b = p * d->g > i + 1 ? p * d->g : i + 1, end = (p + 1) * d->g < d->n ? (p + 1) * d->g : d->n;
         if (b >= end) continue;
@@ -436,6 +444,18 @@ i32 sr_best_placed(const sr_group *g, i32 ng, i32 place, i32 win, i32 draw, i32 
         if (!usable(*t) || (*t >= SR_TB_H2H_POINTS && *t <= SR_TB_H2H_AWAY_GOALS) || *t == SR_TB_H2H_REAPPLIED ||
             *t == SR_TB_AVULSA) return -1;
     if (ng < 1 || ng > N) return -1;
+    for (i32 j = 0; j < ng; j++) {                              /* (each group as sr_rr_table leaves it) */
+        u8 seen[N];
+        if (g[j].n < 0 || g[j].n > N || g[j].nm < 0) return -1;
+        for (i32 k = 0; k < g[j].n; k++) seen[k] = 0;
+        for (i32 k = 0; k < g[j].n; k++) {
+            const i32 c = g[j].table[k].club;
+            if (c >= g[j].n || seen[c]) return -1;
+            seen[c] = 1;
+        }
+        for (i32 k = 0; k < g[j].nm; k++)
+            if (g[j].m[k].home >= g[j].n || g[j].m[k].away >= g[j].n) return -1;
+    }
     i32 least = g[0].n;
     for (i32 j = 1; j < ng; j++) if (g[j].n < least) least = g[j].n;
     sr_srow row[N];
@@ -481,6 +501,21 @@ i32 sr_best_placed(const sr_group *g, i32 ng, i32 place, i32 win, i32 draw, i32 
 
 typedef struct { i32 mode, n; const u8 *avoid; u32 seed; u8 order[N]; u8 used[N]; i32 steps; } sr_pdraw;
 
+/* the free clubs can still all be paired (exact: draw -- no avoid class holds more than half of them; seeded --
+ * no class more than the pairs left, its free top-half and bottom-half clubs together; Hall's condition) */
+static int pdraw_open(const sr_pdraw *d)
+{
+    if (!d->avoid) return 1;
+    const i32 half = d->mode == SR_PAIR_SEEDED ? d->n / 2 : d->n;
+    u8 cnt[256];
+    i32 left = 0;
+    for (i32 a = 0; a < 256; a++) cnt[a] = 0;
+    for (i32 c = 0; c < d->n; c++) if (!d->used[c]) { cnt[d->avoid[c]]++; left += c < half; }
+    const i32 pairs = d->mode == SR_PAIR_SEEDED ? left : left / 2;
+    for (i32 a = 0; a < 256; a++) if (cnt[a] > pairs) return 0;
+    return 1;
+}
+
 /* pair d of the round: the first club of the hashed order still free (the top half's, seeded) v a free club
  * the round can still be finished with */
 static int pdraw(sr_pdraw *d, u8 *out, i32 k)
@@ -498,7 +533,7 @@ static int pdraw(sr_pdraw *d, u8 *out, i32 k)
         const i32 b = go[q];
         if (d->used[b] || (d->mode == SR_PAIR_SEEDED && b < half) || (d->avoid && d->avoid[a] == d->avoid[b])) continue;
         d->used[b] = 1; out[2 * k] = (u8)a; out[2 * k + 1] = (u8)b;
-        if (pdraw(d, out, k + 1)) return 1;
+        if (pdraw_open(d) && pdraw(d, out, k + 1)) return 1;
         d->used[b] = 0;
     }
     d->used[a] = 0;
@@ -524,5 +559,5 @@ i32 sr_ko_pairs(i32 mode, i32 n, const u8 *avoid, u32 seed, u8 *out)
     d.mode = mode; d.n = n; d.avoid = avoid; d.seed = seed; d.steps = BUDGET;
     for (i32 k = 0; k < n; k++) d.used[k] = 0;
     hash_order(seed, 0xD7000000u, n, d.order);
-    return pdraw(&d, out, 0) ? n / 2 : -2;
+    return pdraw_open(&d) && pdraw(&d, out, 0) ? n / 2 : -2;
 }
