@@ -97,3 +97,40 @@ lk = {"schema": "swc/1.5", "id": "test.v15-linked", "host_world": 9,
                         "outcomes": [{"stage": "ko", "positions": "1", "tag": "champion"}],
                         "modes": ["career", "season", "preset", "friendly"]}]}
 json.dump(lk, open(f"{E}/tests/specs/ok/v15_draw_linked.json", "w"), indent=1, ensure_ascii=False)
+# v1.5.1: the quota bound of a linked first stage (participants "from": "link": the places the leagues give).
+def lg(code, cls, top, cup="tst.cup"):
+    return {"id": f"tst.{code.lower()}", "kind": "league", "level": 1, "country": code, "names": NM("LIGA " + code, "LEAGUE " + code),
+            "participants": {"count": len(cls), "clubs": [c["id"] for c in cls]},
+            "stages": [{"id": "table", "type": "round_robin", "legs": 2, "tiebreakers": ["points", "goal_difference", "goals_for", "draw_lots"]}],
+            "outcomes": [{"stage": "table", "positions": "1", "tag": "champion"},
+                         {"stage": "table", "positions": top, "tag": "continental", "to": cup, "season": "next"}],
+            "modes": ["career", "season", "preset", "friendly"]}
+def linked(leagues, cl, codes, n, g, draw, note):
+    return {"schema": "swc/1.5", "id": "test.v151-linked", "host_world": 9, "_note": note,
+            "languages": ["it", "en", "fr", "de"], "countries": countries(codes), "clubs": cl,
+            "competitions": leagues + [
+                {"id": "tst.cup", "kind": "continental", "country": codes[0], "names": NM("COPPA", "CUP"),
+                 "participants": {"count": n, "from": "link", "source": [l["id"] for l in leagues]},
+                 "stages": [{"id": "groups", "type": "groups", "groups": g, "legs": 2,
+                             "tiebreakers": ["points", "goal_difference", "goals_for", "draw_lots"], "draw": draw},
+                            {"id": "ko", "type": "knockout", "entrants": ["groups#1"], "rounds": [r(1, 1, "draw")] if g == 2 else [r(2, 2, "draw"), r(1, 1, "draw")]}],  # (g 2 or 4)
+                 "outcomes": [{"stage": "ko", "positions": "1", "tag": "champion"}],
+                 "modes": ["career", "season", "preset", "friendly"]}]}
+SEP = {"pots": "access_order", "separate": ["association"]}
+# ESP's league gives 3, the mixed league (1 ESP + 3 POR clubs, POR's) gives 2 -- at most 1 of them ESP: ESP <= 4 for 4
+# groups (the plain sum of places, 5, would refuse it: the mutant test), POR <= 2, ENG 3
+c1 = clubs([("ESP", 4), ("ENG", 4)]); mix = clubs([("POR", 3)]) + [dict(clubs([("ESP", 5)])[4], host={"file": 70, "ordinal": 3})]
+for k, c in enumerate(mix[:3]): c["host"] = {"file": 70, "ordinal": k}
+L1 = [lg("ESP", c1[:4], "1-3"), lg("ENG", c1[4:], "1-3"), lg("POR", mix, "1-2")]
+okl = linked(L1, c1 + mix, ["ESP", "ENG", "POR"], 8, 4, SEP,
+             "swc/1.5.1 (synthetic): 8 linked clubs into 4 groups; ESP gets 3 places from its league and at most 1 from POR's league (its one ESP club): 4 for 4 groups.")
+json.dump(okl, open(f"{E}/tests/specs/ok/v151_linked_ok.json", "w"), indent=1, ensure_ascii=False)
+c2 = clubs([("ESP", 4), ("ENG", 4)])
+b1 = linked([lg("ESP", c2[:4], "1-3"), lg("ENG", c2[4:], "1")], c2, ["ESP", "ENG"], 4, 2, SEP, "")
+b1["_expect"] = "association ESP can have up to 3 clubs for 2 groups"
+json.dump(b1, open(f"{E}/tests/specs/bad/v151_linked_quota.json", "w"), indent=1, ensure_ascii=False)
+c3 = clubs([("ESP", 4), ("ENG", 4), ("FRA", 4)])
+b2 = linked([lg("ESP", c3[:4], "1"), lg("ENG", c3[4:8], "1-2"), lg("FRA", c3[8:], "1")], c3, ["ESP", "ENG", "FRA"], 4, 2,
+            dict(SEP, protect=[["ESP", "ENG"]]), "")
+b2["_expect"] = "protect: ESP and the countries kept apart from it can have 3 clubs for 2 groups"
+json.dump(b2, open(f"{E}/tests/specs/bad/v151_linked_clique.json", "w"), indent=1, ensure_ascii=False)
