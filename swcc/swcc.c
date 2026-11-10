@@ -988,7 +988,8 @@ static void supplied(C *c, JNode *at, const char *path, const char *what, int bi
    participants and the stage the competition's first, the clubs are counted: a country with more clubs than groups
    is refused (the engine's -2), and so is a protect component that is a clique (each of its pairs listed: one class
    then, König's bound) with more clubs than groups. A chain component is not bounded here: a draw with no solution
-   returns -2 at run time and the stage is not drawn (a harness FAIL, no silent relaxation). */
+   returns -2 at run time and the stage is not drawn (a harness FAIL, no silent relaxation). A linked first stage
+   (no fixed list): check_draw_links, after every competition (v1.5.1). */
 static void draw_of(C *c, JNode *st, const char *sp, int stage, int g, int first, const SwcComp *rec)
 {
     JNode *dr = opt(c, st, "draw", J_OBJ, sp), *v, *q;
@@ -2492,6 +2493,141 @@ static void check_links(C *c)
     free(one);
 }
 
+/* v1.5.1: a linked competition's first stage drawn with "separate" (its participants "from": "link" / 'quota': no
+   fixed list, so draw_of cannot count them). Every competition gets the clubs that can ever be in it: its fixed
+   ones, and those of each competition that sends it clubs (outcomes, 'to' lists, quotas, sources), to a fixed point.
+   A country's bound is then the sum over the outcomes into it of min(the places, that country's clubs the sender can
+   hold) -- the quotas, a club takes one place -- capped by its clubs that can be in it. More than the groups: refused
+   (the engine's -2 at run time otherwise), and so is a protect clique component over the groups (as draw_of). */
+static int nj_of(const SwcOutcome *o, const StageInfo *x)
+{
+    int ko = x->type == SWC_ST_KNOCKOUT || x->type == SWC_ST_PLAYOFF;
+    if (ko) return ((o->from <= 1 && o->to >= 1) + (o->from <= 2 && o->to >= 2)) * x->last_ties * (x->per_group ? x->groups : 1);
+    return (pos_res(o->to, x->gmin) - pos_res(o->from, x->gmin) + 1) * x->groups;
+}
+static int cnt_in(C *c, const uint8_t *set, uint16_t ct)
+{
+    int k = 0;
+    for (int i = 0; i < c->nclubs; i++)
+        if (set[i >> 3] >> (i & 7) & 1) {
+            SwcClub cl;
+            memcpy(&cl, c->club.p + (size_t)i * sizeof cl, sizeof cl);
+            k += cl.country == ct;
+        }
+    return k;
+}
+static void check_draw_links(C *c)
+{
+    const SwcOutcome *o = (const SwcOutcome *)c->outc.p;
+    const SwcComp *cm = (const SwcComp *)c->comp.p;
+    const SwcStage *sg = (const SwcStage *)c->stag.p;
+    const StageInfo *si = (const StageInfo *)c->stinfo;
+    const SwcDraw *dw = (const SwcDraw *)c->gdrw.p;
+    const SwcProtect *pp = (const SwcProtect *)c->prot.p;
+    const uint16_t *src = (const uint16_t *)c->srce.p, *tl = (const uint16_t *)c->tols.p;
+    int no = (int)(c->outc.n / sizeof *o), nsrc = (int)(c->srce.n / 4), ntl = (int)(c->tols.n / 4);
+    int nd = (int)(c->gdrw.n / sizeof *dw), nb = (c->nclubs + 7) / 8, any = 0, more = 1, i, j, k;
+    SwcSpec sv = { .strs = (const char *)c->strs.p, .nstrs = (uint32_t)c->strs.n };
+    for (i = 0; i < nd; i++)
+        any |= dw[i].separate && cm[sg[dw[i].stage].comp].nentr == 0 && cm[sg[dw[i].stage].comp].first_stage == dw[i].stage;
+    if (!any || !nb) return;
+    uint8_t *cand = calloc((size_t)c->ncomps * (size_t)nb, 1);
+    for (i = 0; i < c->ncomps; i++)
+        for (k = 0; k < cm[i].nentr; k++) {
+            uint16_t ix;
+            memcpy(&ix, c->entr.p + 2u * (cm[i].entr + (unsigned)k), 2);
+            if (ix < c->nclubs) cand[(size_t)i * nb + (ix >> 3)] |= (uint8_t)(1u << (ix & 7));
+        }
+#define QB_OR(to, from) do { uint8_t *d_ = cand + (size_t)(to) * nb; const uint8_t *s_ = cand + (size_t)(from) * nb; \
+    for (int b_ = 0; b_ < nb; b_++) if (s_[b_] & ~d_[b_]) { d_[b_] |= s_[b_]; more = 1; } } while (0)
+    while (more) {                                  /* (monotone: the sets only grow) */
+        more = 0;
+        for (j = 0; j < no; j++) if (o[j].target < c->ncomps && !(o[j].flags & 1)) QB_OR(o[j].target, sg[o[j].stage].comp);
+        for (k = 0; k < ntl; k++) QB_OR(tl[2 * k + 1], sg[o[tl[2 * k]].stage].comp);
+        for (k = 0; k < nsrc; k++) QB_OR(src[2 * k], src[2 * k + 1]);
+        for (i = 0; i < c->ncomps; i++) {
+            JNode *q = json_get(json_get(c->comps[i], "participants"), "quota");
+            for (q = q && q->type == J_ARR ? q->child : NULL; q; q = q->next) {
+                JNode *f = json_get(q, "from");
+                int fx = f && f->type == J_STR ? find_comp(c, f->str) : -1;
+                if (fx >= 0) QB_OR(i, fx);
+            }
+        }
+    }
+    for (i = 0; i < nd; i++) {
+        const int st = dw[i].stage, ci = sg[st].comp, g = sg[st].groups ? sg[st].groups : 1;
+        const uint8_t *in = cand + (size_t)ci * nb;
+        uint16_t cty[128];
+        int bnd[128], comp[128], nc = 0;
+        if (!dw[i].separate || cm[ci].nentr || cm[ci].first_stage != st) continue;
+        for (k = 0; k < c->nclubs && nc < 128; k++) {   /* the countries that can be in it */
+            SwcClub cl;
+            if (!(in[k >> 3] >> (k & 7) & 1)) continue;
+            memcpy(&cl, c->club.p + (size_t)k * sizeof cl, sizeof cl);
+            for (j = 0; j < nc && cty[j] != cl.country; j++)
+                ;
+            if (j == nc) cty[nc++] = cl.country;
+        }
+        for (j = 0; j < nc; j++) {
+            int sum = 0, all = cnt_in(c, in, cty[j]);
+            for (k = 0; k < no; k++)
+                if (o[k].target == ci && !(o[k].flags & 1)) {
+                    int n = nj_of(&o[k], &si[o[k].stage]), h = cnt_in(c, cand + (size_t)sg[o[k].stage].comp * nb, cty[j]);
+                    sum += n < h ? n : h;
+                }
+            for (k = 0; k < ntl; k++)
+                if (tl[2 * k + 1] == ci) {
+                    const SwcOutcome *x = &o[tl[2 * k]];
+                    int n = nj_of(x, &si[x->stage]), h = cnt_in(c, cand + (size_t)sg[x->stage].comp * nb, cty[j]);
+                    sum += n < h ? n : h;
+                }
+            {
+                JNode *q = json_get(json_get(c->comps[ci], "participants"), "quota");
+                for (q = q && q->type == J_ARR ? q->child : NULL; q; q = q->next) {
+                    JNode *f = json_get(q, "from"), *cl = json_get(q, "clubs");
+                    int fx = f && f->type == J_STR ? find_comp(c, f->str) : -1;
+                    if (fx < 0 || !cl || cl->type != J_NUM) continue;
+                    int h = cnt_in(c, cand + (size_t)fx * nb, cty[j]);
+                    sum += (int)cl->num < h ? (int)cl->num : h;
+                }
+            }
+            bnd[j] = sum < all ? sum : all;
+            if (bnd[j] > g)
+                ERR(c->comps[ci], swc_str(&sv, cm[ci].id), "association %s can have up to %d clubs for %d groups (the places its competitions give this one; separate: never two in one group)",
+                    swc_strs_at(c, cty[j]), bnd[j], g);
+        }
+        for (j = 0; j < nc; j++) comp[j] = j;       /* protect components: a clique's bounds summed (draw_of's rule) */
+        for (k = 0; k < dw[i].nprotect; k++) {
+            int a = -1, b = -1;
+            for (j = 0; j < nc; j++) { if (cty[j] == pp[dw[i].protect + k].a) a = j; if (cty[j] == pp[dw[i].protect + k].b) b = j; }
+            if (a < 0 || b < 0) continue;
+            while (comp[a] != a) a = comp[a];
+            while (comp[b] != b) b = comp[b];
+            if (a != b) comp[b] = a;
+        }
+        for (j = 0; j < nc; j++) {
+            int r = j, sum = 0, m = 0, pairs = 0;
+            while (comp[r] != r) r = comp[r];
+            if (r != j) continue;
+            for (int x = 0; x < nc; x++) { int r2 = x; while (comp[r2] != r2) r2 = comp[r2]; if (r2 == j) { sum += bnd[x]; m++; } }
+            if (m < 2) continue;
+            for (k = 0; k < dw[i].nprotect; k++) {
+                int a = -1, r2;
+                for (int x = 0; x < nc; x++) if (cty[x] == pp[dw[i].protect + k].a) a = x;
+                if (a < 0) continue;
+                for (r2 = a; comp[r2] != r2; r2 = comp[r2])
+                    ;
+                pairs += r2 == j;
+            }
+            if (pairs == m * (m - 1) / 2 && sum > g)
+                ERR(c->comps[ci], swc_str(&sv, cm[ci].id), "protect: %s and the countries kept apart from it can have %d clubs for %d groups (the places their competitions give this one)",
+                    swc_strs_at(c, cty[j]), sum, g);
+        }
+    }
+#undef QB_OR
+    free(cand);
+}
+
 /* ---- writer ------------------------------------------------------------------------------------------------------ */
 static void pad4(Buf *b) { while (b->n & 3) bput(b, NULL, 1); }
 
@@ -2699,6 +2835,7 @@ int swcc_compile(const char *spec, size_t len, const char *name, const char *pro
                 c->stinfo = st;
                 for (i = 0; i < c->ncomps; i++) do_comp(c, i, st, &nst);
                 if (c->errors == 0) check_links(c);
+                if (c->errors == 0) check_draw_links(c);
                 if (c->errors == 0) check_second_teams(c);
                 if (c->errors == 0) check_second_floor(c);
                 if (c->errors == 0) check_files(c);

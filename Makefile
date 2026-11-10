@@ -208,6 +208,7 @@ test: $(OUT)/test_format $(OUT)/swcc $(OUT)/swc_i486.o $(RULES_I486) $(OUT)/spec
 	$(OUT)/swcc compile packs/sample/world.json -o $(OUT)/sample.swc >/dev/null
 	$(OUT)/test_format $(OUT)/sample.swc
 	sh tests/run_specs.sh $(OUT)/swcc
+	sh tests/specs/qb_mutant.sh "$(CC) $(CFLAGS)" $(PROFILE) $(FORMAT)
 	python3 tests/contract/check.py tests/contract/*/*.json
 	@if nm $(OUT)/swc_i486.o | grep -q ' U '; then echo "i486 object has undefined symbols:"; nm $(OUT)/swc_i486.o | grep ' U '; exit 1; fi
 	@echo "i486 object: no undefined symbols"

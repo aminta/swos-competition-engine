@@ -1,0 +1,439 @@
+{
+ "schema": "swc/1.5",
+ "id": "test.v151-linked",
+ "host_world": 9,
+ "_note": "",
+ "languages": [
+  "it",
+  "en",
+  "fr",
+  "de"
+ ],
+ "countries": {
+  "ESP": {
+   "names": {
+    "it": "SPAGNA",
+    "en": "SPAGNA",
+    "fr": "SPAGNA",
+    "de": "SPAGNA"
+   }
+  },
+  "ENG": {
+   "names": {
+    "it": "INGHILTERRA",
+    "en": "INGHILTERRA",
+    "fr": "INGHILTERRA",
+    "de": "INGHILTERRA"
+   }
+  },
+  "FRA": {
+   "names": {
+    "it": "FRANCIA",
+    "en": "FRANCIA",
+    "fr": "FRANCIA",
+    "de": "FRANCIA"
+   }
+  }
+ },
+ "clubs": [
+  {
+   "id": "club:esp.alfa",
+   "name": "ESP ALFA",
+   "country": "ESP",
+   "host": {
+    "file": 60,
+    "ordinal": 0
+   }
+  },
+  {
+   "id": "club:esp.beta",
+   "name": "ESP BETA",
+   "country": "ESP",
+   "host": {
+    "file": 60,
+    "ordinal": 1
+   }
+  },
+  {
+   "id": "club:esp.gamma",
+   "name": "ESP GAMMA",
+   "country": "ESP",
+   "host": {
+    "file": 60,
+    "ordinal": 2
+   }
+  },
+  {
+   "id": "club:esp.delta",
+   "name": "ESP DELTA",
+   "country": "ESP",
+   "host": {
+    "file": 60,
+    "ordinal": 3
+   }
+  },
+  {
+   "id": "club:eng.alfa",
+   "name": "ENG ALFA",
+   "country": "ENG",
+   "host": {
+    "file": 61,
+    "ordinal": 0
+   }
+  },
+  {
+   "id": "club:eng.beta",
+   "name": "ENG BETA",
+   "country": "ENG",
+   "host": {
+    "file": 61,
+    "ordinal": 1
+   }
+  },
+  {
+   "id": "club:eng.gamma",
+   "name": "ENG GAMMA",
+   "country": "ENG",
+   "host": {
+    "file": 61,
+    "ordinal": 2
+   }
+  },
+  {
+   "id": "club:eng.delta",
+   "name": "ENG DELTA",
+   "country": "ENG",
+   "host": {
+    "file": 61,
+    "ordinal": 3
+   }
+  },
+  {
+   "id": "club:fra.alfa",
+   "name": "FRA ALFA",
+   "country": "FRA",
+   "host": {
+    "file": 62,
+    "ordinal": 0
+   }
+  },
+  {
+   "id": "club:fra.beta",
+   "name": "FRA BETA",
+   "country": "FRA",
+   "host": {
+    "file": 62,
+    "ordinal": 1
+   }
+  },
+  {
+   "id": "club:fra.gamma",
+   "name": "FRA GAMMA",
+   "country": "FRA",
+   "host": {
+    "file": 62,
+    "ordinal": 2
+   }
+  },
+  {
+   "id": "club:fra.delta",
+   "name": "FRA DELTA",
+   "country": "FRA",
+   "host": {
+    "file": 62,
+    "ordinal": 3
+   }
+  }
+ ],
+ "competitions": [
+  {
+   "id": "tst.esp",
+   "kind": "league",
+   "level": 1,
+   "country": "ESP",
+   "names": {
+    "it": [
+     "LIGA ESP",
+     "LIGA ESP"
+    ],
+    "en": [
+     "LEAGUE ESP",
+     "LEAGUE ESP"
+    ],
+    "fr": [
+     "LEAGUE ESP",
+     "LEAGUE ESP"
+    ],
+    "de": [
+     "LEAGUE ESP",
+     "LEAGUE ESP"
+    ]
+   },
+   "participants": {
+    "count": 4,
+    "clubs": [
+     "club:esp.alfa",
+     "club:esp.beta",
+     "club:esp.gamma",
+     "club:esp.delta"
+    ]
+   },
+   "stages": [
+    {
+     "id": "table",
+     "type": "round_robin",
+     "legs": 2,
+     "tiebreakers": [
+      "points",
+      "goal_difference",
+      "goals_for",
+      "draw_lots"
+     ]
+    }
+   ],
+   "outcomes": [
+    {
+     "stage": "table",
+     "positions": "1",
+     "tag": "champion"
+    },
+    {
+     "stage": "table",
+     "positions": "1",
+     "tag": "continental",
+     "to": "tst.cup",
+     "season": "next"
+    }
+   ],
+   "modes": [
+    "career",
+    "season",
+    "preset",
+    "friendly"
+   ]
+  },
+  {
+   "id": "tst.eng",
+   "kind": "league",
+   "level": 1,
+   "country": "ENG",
+   "names": {
+    "it": [
+     "LIGA ENG",
+     "LIGA ENG"
+    ],
+    "en": [
+     "LEAGUE ENG",
+     "LEAGUE ENG"
+    ],
+    "fr": [
+     "LEAGUE ENG",
+     "LEAGUE ENG"
+    ],
+    "de": [
+     "LEAGUE ENG",
+     "LEAGUE ENG"
+    ]
+   },
+   "participants": {
+    "count": 4,
+    "clubs": [
+     "club:eng.alfa",
+     "club:eng.beta",
+     "club:eng.gamma",
+     "club:eng.delta"
+    ]
+   },
+   "stages": [
+    {
+     "id": "table",
+     "type": "round_robin",
+     "legs": 2,
+     "tiebreakers": [
+      "points",
+      "goal_difference",
+      "goals_for",
+      "draw_lots"
+     ]
+    }
+   ],
+   "outcomes": [
+    {
+     "stage": "table",
+     "positions": "1",
+     "tag": "champion"
+    },
+    {
+     "stage": "table",
+     "positions": "1-2",
+     "tag": "continental",
+     "to": "tst.cup",
+     "season": "next"
+    }
+   ],
+   "modes": [
+    "career",
+    "season",
+    "preset",
+    "friendly"
+   ]
+  },
+  {
+   "id": "tst.fra",
+   "kind": "league",
+   "level": 1,
+   "country": "FRA",
+   "names": {
+    "it": [
+     "LIGA FRA",
+     "LIGA FRA"
+    ],
+    "en": [
+     "LEAGUE FRA",
+     "LEAGUE FRA"
+    ],
+    "fr": [
+     "LEAGUE FRA",
+     "LEAGUE FRA"
+    ],
+    "de": [
+     "LEAGUE FRA",
+     "LEAGUE FRA"
+    ]
+   },
+   "participants": {
+    "count": 4,
+    "clubs": [
+     "club:fra.alfa",
+     "club:fra.beta",
+     "club:fra.gamma",
+     "club:fra.delta"
+    ]
+   },
+   "stages": [
+    {
+     "id": "table",
+     "type": "round_robin",
+     "legs": 2,
+     "tiebreakers": [
+      "points",
+      "goal_difference",
+      "goals_for",
+      "draw_lots"
+     ]
+    }
+   ],
+   "outcomes": [
+    {
+     "stage": "table",
+     "positions": "1",
+     "tag": "champion"
+    },
+    {
+     "stage": "table",
+     "positions": "1",
+     "tag": "continental",
+     "to": "tst.cup",
+     "season": "next"
+    }
+   ],
+   "modes": [
+    "career",
+    "season",
+    "preset",
+    "friendly"
+   ]
+  },
+  {
+   "id": "tst.cup",
+   "kind": "continental",
+   "country": "ESP",
+   "names": {
+    "it": [
+     "COPPA",
+     "COPPA"
+    ],
+    "en": [
+     "CUP",
+     "CUP"
+    ],
+    "fr": [
+     "CUP",
+     "CUP"
+    ],
+    "de": [
+     "CUP",
+     "CUP"
+    ]
+   },
+   "participants": {
+    "count": 4,
+    "from": "link",
+    "source": [
+     "tst.esp",
+     "tst.eng",
+     "tst.fra"
+    ]
+   },
+   "stages": [
+    {
+     "id": "groups",
+     "type": "groups",
+     "groups": 2,
+     "legs": 2,
+     "tiebreakers": [
+      "points",
+      "goal_difference",
+      "goals_for",
+      "draw_lots"
+     ],
+     "draw": {
+      "pots": "access_order",
+      "separate": [
+       "association"
+      ],
+      "protect": [
+       [
+        "ESP",
+        "ENG"
+       ]
+      ]
+     }
+    },
+    {
+     "id": "ko",
+     "type": "knockout",
+     "entrants": [
+      "groups#1"
+     ],
+     "rounds": [
+      {
+       "ties": 1,
+       "legs": 1,
+       "home": "neutral",
+       "pairing": "draw",
+       "decider": [
+        "extra_time",
+        "penalties"
+       ]
+      }
+     ]
+    }
+   ],
+   "outcomes": [
+    {
+     "stage": "ko",
+     "positions": "1",
+     "tag": "champion"
+    }
+   ],
+   "modes": [
+    "career",
+    "season",
+    "preset",
+    "friendly"
+   ]
+  }
+ ],
+ "_expect": "protect: ESP and the countries kept apart from it can have 3 clubs for 2 groups"
+}

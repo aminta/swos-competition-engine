@@ -1,0 +1,443 @@
+{
+ "schema": "swc/1.5",
+ "id": "test.v151-linked",
+ "host_world": 9,
+ "_note": "swc/1.5.1 (synthetic): 8 linked clubs into 4 groups; ESP gets 3 places from its league and at most 1 from POR's league (its one ESP club): 4 for 4 groups.",
+ "languages": [
+  "it",
+  "en",
+  "fr",
+  "de"
+ ],
+ "countries": {
+  "ESP": {
+   "names": {
+    "it": "SPAGNA",
+    "en": "SPAGNA",
+    "fr": "SPAGNA",
+    "de": "SPAGNA"
+   }
+  },
+  "ENG": {
+   "names": {
+    "it": "INGHILTERRA",
+    "en": "INGHILTERRA",
+    "fr": "INGHILTERRA",
+    "de": "INGHILTERRA"
+   }
+  },
+  "POR": {
+   "names": {
+    "it": "PORTOGALLO",
+    "en": "PORTOGALLO",
+    "fr": "PORTOGALLO",
+    "de": "PORTOGALLO"
+   }
+  }
+ },
+ "clubs": [
+  {
+   "id": "club:esp.alfa",
+   "name": "ESP ALFA",
+   "country": "ESP",
+   "host": {
+    "file": 60,
+    "ordinal": 0
+   }
+  },
+  {
+   "id": "club:esp.beta",
+   "name": "ESP BETA",
+   "country": "ESP",
+   "host": {
+    "file": 60,
+    "ordinal": 1
+   }
+  },
+  {
+   "id": "club:esp.gamma",
+   "name": "ESP GAMMA",
+   "country": "ESP",
+   "host": {
+    "file": 60,
+    "ordinal": 2
+   }
+  },
+  {
+   "id": "club:esp.delta",
+   "name": "ESP DELTA",
+   "country": "ESP",
+   "host": {
+    "file": 60,
+    "ordinal": 3
+   }
+  },
+  {
+   "id": "club:eng.alfa",
+   "name": "ENG ALFA",
+   "country": "ENG",
+   "host": {
+    "file": 61,
+    "ordinal": 0
+   }
+  },
+  {
+   "id": "club:eng.beta",
+   "name": "ENG BETA",
+   "country": "ENG",
+   "host": {
+    "file": 61,
+    "ordinal": 1
+   }
+  },
+  {
+   "id": "club:eng.gamma",
+   "name": "ENG GAMMA",
+   "country": "ENG",
+   "host": {
+    "file": 61,
+    "ordinal": 2
+   }
+  },
+  {
+   "id": "club:eng.delta",
+   "name": "ENG DELTA",
+   "country": "ENG",
+   "host": {
+    "file": 61,
+    "ordinal": 3
+   }
+  },
+  {
+   "id": "club:por.alfa",
+   "name": "POR ALFA",
+   "country": "POR",
+   "host": {
+    "file": 70,
+    "ordinal": 0
+   }
+  },
+  {
+   "id": "club:por.beta",
+   "name": "POR BETA",
+   "country": "POR",
+   "host": {
+    "file": 70,
+    "ordinal": 1
+   }
+  },
+  {
+   "id": "club:por.gamma",
+   "name": "POR GAMMA",
+   "country": "POR",
+   "host": {
+    "file": 70,
+    "ordinal": 2
+   }
+  },
+  {
+   "id": "club:esp.epsilon",
+   "name": "ESP EPSILON",
+   "country": "ESP",
+   "host": {
+    "file": 70,
+    "ordinal": 3
+   }
+  }
+ ],
+ "competitions": [
+  {
+   "id": "tst.esp",
+   "kind": "league",
+   "level": 1,
+   "country": "ESP",
+   "names": {
+    "it": [
+     "LIGA ESP",
+     "LIGA ESP"
+    ],
+    "en": [
+     "LEAGUE ESP",
+     "LEAGUE ESP"
+    ],
+    "fr": [
+     "LEAGUE ESP",
+     "LEAGUE ESP"
+    ],
+    "de": [
+     "LEAGUE ESP",
+     "LEAGUE ESP"
+    ]
+   },
+   "participants": {
+    "count": 4,
+    "clubs": [
+     "club:esp.alfa",
+     "club:esp.beta",
+     "club:esp.gamma",
+     "club:esp.delta"
+    ]
+   },
+   "stages": [
+    {
+     "id": "table",
+     "type": "round_robin",
+     "legs": 2,
+     "tiebreakers": [
+      "points",
+      "goal_difference",
+      "goals_for",
+      "draw_lots"
+     ]
+    }
+   ],
+   "outcomes": [
+    {
+     "stage": "table",
+     "positions": "1",
+     "tag": "champion"
+    },
+    {
+     "stage": "table",
+     "positions": "1-3",
+     "tag": "continental",
+     "to": "tst.cup",
+     "season": "next"
+    }
+   ],
+   "modes": [
+    "career",
+    "season",
+    "preset",
+    "friendly"
+   ]
+  },
+  {
+   "id": "tst.eng",
+   "kind": "league",
+   "level": 1,
+   "country": "ENG",
+   "names": {
+    "it": [
+     "LIGA ENG",
+     "LIGA ENG"
+    ],
+    "en": [
+     "LEAGUE ENG",
+     "LEAGUE ENG"
+    ],
+    "fr": [
+     "LEAGUE ENG",
+     "LEAGUE ENG"
+    ],
+    "de": [
+     "LEAGUE ENG",
+     "LEAGUE ENG"
+    ]
+   },
+   "participants": {
+    "count": 4,
+    "clubs": [
+     "club:eng.alfa",
+     "club:eng.beta",
+     "club:eng.gamma",
+     "club:eng.delta"
+    ]
+   },
+   "stages": [
+    {
+     "id": "table",
+     "type": "round_robin",
+     "legs": 2,
+     "tiebreakers": [
+      "points",
+      "goal_difference",
+      "goals_for",
+      "draw_lots"
+     ]
+    }
+   ],
+   "outcomes": [
+    {
+     "stage": "table",
+     "positions": "1",
+     "tag": "champion"
+    },
+    {
+     "stage": "table",
+     "positions": "1-3",
+     "tag": "continental",
+     "to": "tst.cup",
+     "season": "next"
+    }
+   ],
+   "modes": [
+    "career",
+    "season",
+    "preset",
+    "friendly"
+   ]
+  },
+  {
+   "id": "tst.por",
+   "kind": "league",
+   "level": 1,
+   "country": "POR",
+   "names": {
+    "it": [
+     "LIGA POR",
+     "LIGA POR"
+    ],
+    "en": [
+     "LEAGUE POR",
+     "LEAGUE POR"
+    ],
+    "fr": [
+     "LEAGUE POR",
+     "LEAGUE POR"
+    ],
+    "de": [
+     "LEAGUE POR",
+     "LEAGUE POR"
+    ]
+   },
+   "participants": {
+    "count": 4,
+    "clubs": [
+     "club:por.alfa",
+     "club:por.beta",
+     "club:por.gamma",
+     "club:esp.epsilon"
+    ]
+   },
+   "stages": [
+    {
+     "id": "table",
+     "type": "round_robin",
+     "legs": 2,
+     "tiebreakers": [
+      "points",
+      "goal_difference",
+      "goals_for",
+      "draw_lots"
+     ]
+    }
+   ],
+   "outcomes": [
+    {
+     "stage": "table",
+     "positions": "1",
+     "tag": "champion"
+    },
+    {
+     "stage": "table",
+     "positions": "1-2",
+     "tag": "continental",
+     "to": "tst.cup",
+     "season": "next"
+    }
+   ],
+   "modes": [
+    "career",
+    "season",
+    "preset",
+    "friendly"
+   ]
+  },
+  {
+   "id": "tst.cup",
+   "kind": "continental",
+   "country": "ESP",
+   "names": {
+    "it": [
+     "COPPA",
+     "COPPA"
+    ],
+    "en": [
+     "CUP",
+     "CUP"
+    ],
+    "fr": [
+     "CUP",
+     "CUP"
+    ],
+    "de": [
+     "CUP",
+     "CUP"
+    ]
+   },
+   "participants": {
+    "count": 8,
+    "from": "link",
+    "source": [
+     "tst.esp",
+     "tst.eng",
+     "tst.por"
+    ]
+   },
+   "stages": [
+    {
+     "id": "groups",
+     "type": "groups",
+     "groups": 4,
+     "legs": 2,
+     "tiebreakers": [
+      "points",
+      "goal_difference",
+      "goals_for",
+      "draw_lots"
+     ],
+     "draw": {
+      "pots": "access_order",
+      "separate": [
+       "association"
+      ]
+     }
+    },
+    {
+     "id": "ko",
+     "type": "knockout",
+     "entrants": [
+      "groups#1"
+     ],
+     "rounds": [
+      {
+       "ties": 2,
+       "legs": 2,
+       "home": "better_placed_second_leg",
+       "pairing": "draw",
+       "decider": [
+        "aggregate",
+        "extra_time",
+        "penalties"
+       ]
+      },
+      {
+       "ties": 1,
+       "legs": 1,
+       "home": "neutral",
+       "pairing": "draw",
+       "decider": [
+        "extra_time",
+        "penalties"
+       ]
+      }
+     ]
+    }
+   ],
+   "outcomes": [
+    {
+     "stage": "ko",
+     "positions": "1",
+     "tag": "champion"
+    }
+   ],
+   "modes": [
+    "career",
+    "season",
+    "preset",
+    "friendly"
+   ]
+  }
+ ]
+}
