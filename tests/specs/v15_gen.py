@@ -41,10 +41,10 @@ KO16 = [r(8, 2, "seeded", ["same_group", "association"]), r(4, 2, "draw"), r(2, 
 DRAW = {"pots": "access_order", "separate": ["association"], "protect": [["RUS", "UKR"], ["KOS", "BIH"], ["KOS", "SRB"]]}
 ok, bad = {}, {}
 ok["v15_stage_cup"] = cup(UEFA32, 8, DRAW, KO16, note="swc/1.5 (synthetic): 32 clubs drawn into 8 groups of 4 by access order, associations apart, RUS-UKR / KOS-BIH / KOS-SRB never together; the top two to a seeded last 16 avoiding group rematches and associations.")
-# a chain: KOS-BIH + KOS-SRB; BIH v SRB allowed (g 2: 2 KOS... the chain's 3 countries have 4 clubs for 2 groups: fine as pairs, a merged class would refuse it)
-ok["v15_protect_chain"] = cup([("KOS",1),("BIH",2),("SRB",1),("BEL",2),("SCO",2)], 2, {"pots": "access_order", "separate": ["association"], "protect": [["KOS","BIH"],["KOS","SRB"]]},
+# a chain: KOS-BIH + KOS-SRB; BIH v SRB allowed (the chain's 3 clubs in 2 groups: fine as pairs, a merged class would refuse it)
+ok["v15_protect_chain"] = cup([("KOS",1),("BIH",1),("SRB",1),("BEL",2),("SCO",2),("NED",1)], 2, {"pots": "access_order", "separate": ["association"], "protect": [["KOS","BIH"],["KOS","SRB"]]},
                               [r(2, 2, "seeded", ["association"]), r(1, 1, "draw")],
-                              note="swc/1.5 (synthetic): a protect chain KOS-BIH + KOS-SRB with 4 clubs in 2 groups -- merged into one class it would be refused (4 > 2); as pairs BIH and SRB may share a group.")
+                              note="swc/1.5 (synthetic): a protect chain KOS-BIH + KOS-SRB, one club each, in 2 groups -- merged into one class it would be refused (3 > 2); as pairs BIH and SRB share the group KOS is not in.")
 bad["minor_14_draw"] = (cup(UEFA32, 8, DRAW, [r(8, 2, "seeded"), r(4, 2, "draw"), r(2, 2, "draw"), r(1, 1, "draw")], schema="swc/1.4"),
                         "'draw' is swc/1.5: this spec says \"swc/1.4\"")
 bad["minor_14_avoid"] = (cup(UEFA32, 8, None, KO16, schema="swc/1.4"), "a round's 'avoid' is swc/1.5: this spec says \"swc/1.4\"")

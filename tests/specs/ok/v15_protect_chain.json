@@ -2,7 +2,7 @@
  "schema": "swc/1.5",
  "id": "test.v15-cup",
  "host_world": 9,
- "_note": "swc/1.5 (synthetic): a protect chain KOS-BIH + KOS-SRB with 4 clubs in 2 groups -- merged into one class it would be refused (4 > 2); as pairs BIH and SRB may share a group.",
+ "_note": "swc/1.5 (synthetic): a protect chain KOS-BIH + KOS-SRB, one club each, in 2 groups -- merged into one class it would be refused (3 > 2); as pairs BIH and SRB share the group KOS is not in.",
  "languages": [
   "it",
   "en",
@@ -49,6 +49,14 @@
     "fr": "SCOZIA",
     "de": "SCOZIA"
    }
+  },
+  "NED": {
+   "names": {
+    "it": "OLANDA",
+    "en": "OLANDA",
+    "fr": "OLANDA",
+    "de": "OLANDA"
+   }
   }
  },
  "clubs": [
@@ -68,15 +76,6 @@
    "host": {
     "file": 61,
     "ordinal": 0
-   }
-  },
-  {
-   "id": "club:bih.beta",
-   "name": "BIH BETA",
-   "country": "BIH",
-   "host": {
-    "file": 61,
-    "ordinal": 1
    }
   },
   {
@@ -123,6 +122,15 @@
     "file": 64,
     "ordinal": 1
    }
+  },
+  {
+   "id": "club:ned.alfa",
+   "name": "NED ALFA",
+   "country": "NED",
+   "host": {
+    "file": 65,
+    "ordinal": 0
+   }
   }
  ],
  "competitions": [
@@ -153,12 +161,12 @@
     "clubs": [
      "club:kos.alfa",
      "club:bih.alfa",
-     "club:bih.beta",
      "club:srb.alfa",
      "club:bel.alfa",
      "club:bel.beta",
      "club:sco.alfa",
-     "club:sco.beta"
+     "club:sco.beta",
+     "club:ned.alfa"
     ]
    },
    "stages": [
