@@ -155,7 +155,7 @@ static int32_t kn_geo(u16 *idx, int32_t n, int32_t block, const sr_kn_work *w, u
 
 /* A drawn round's sides into out[first ..): the previous round's winners (their zones) and this round's joiners,
    drawn within each zone (or all as one); under home "joiner" each joiner against a club of the earlier round. The
-   ties made; -1 they do not fit. */
+   ties made; -1 they do not fit, or a club is twice in the pool. */
 static int32_t kn_draw(const sr_kn_round *rd, int32_t r, const sr_kn_entry *join, uint32_t *rng, sr_kn_work *w,
                        sr_kn_tie *out)
 {
@@ -170,6 +170,15 @@ static int32_t kn_draw(const sr_kn_round *rd, int32_t r, const sr_kn_entry *join
         const sr_kn_entry *e = &join[rd[r].jfirst + k];
         if (m >= SR_KN_NUMBERS) return -1;
         w->pool[m] = e->club; w->pnum[m] = 0; w->pzone[m] = e->zone; w->pjoin[m++] = rd[r].home == SR_KN_JOINER;
+    }
+    for (int32_t i = 0; i < m; i++) {               /* (a club twice in the pool -- a club in two chains, a
+                                                       joiner already through: refused, never a tie with itself) */
+        if (w->pool[i] >= SR_KN_CLUBS) return -1;
+        w->taken[w->pool[i]] = 0;
+    }
+    for (int32_t i = 0; i < m; i++) {
+        if (w->taken[w->pool[i]]) return -1;
+        w->taken[w->pool[i]] = 1;
     }
     if (rd[r].pairing == SR_KN_PAIR_GEO) {          /* (M2b: neighbours, in the order's pairs) */
         u16 *idx = w->cand;

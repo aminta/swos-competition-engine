@@ -783,7 +783,8 @@ typedef struct { uint16_t home, away, nhome, naway, winner, nwin; uint8_t legs, 
 typedef int32_t (*sr_kn_play_fn)(void *ctx, int32_t round, int32_t tie, const sr_kn_tie *t);
 int32_t sr_kn_bracket(const sr_kn_round *rd, int32_t nr, const sr_kn_pair *pairs, const uint16_t *numbers,
                       int32_t nn, const uint8_t *swap, uint32_t *rng, sr_kn_play_fn play, void *ctx, sr_kn_tie *out);
-/* The same with drawn rounds (w: the caller's work area; join: the rounds' joiners). */
+/* The same with drawn rounds (w: the caller's work area; join: the rounds' joiners); -1 also a club twice in a drawn
+ * round's pool (a club in two chains). */
 int32_t sr_kn_cup(const sr_kn_round *rd, int32_t nr, const sr_kn_pair *pairs, const uint16_t *numbers, int32_t nn,
                   const sr_kn_entry *join, const uint8_t *swap, uint32_t *rng, sr_kn_play_fn play, void *ctx,
                   sr_kn_work *w, sr_kn_tie *out);

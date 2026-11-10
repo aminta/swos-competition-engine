@@ -105,6 +105,10 @@ $(OUT)/s2ko_gen.h: tests/rules/s2ko.py tests/specs/ok/v14_ita_cups.json tests/ru
 $(OUT)/s2ko: tests/rules/s2ko.c $(OUT)/s2ko_gen.h rules/sr_kn.c rules/swosrules.h | $(OUT)
 	$(CC) -std=c11 -O1 -g -Wall -Wextra -Wno-missing-field-initializers $(SANITIZE) -Irules -I$(OUT) -o $@ \
 	    tests/rules/s2ko.c rules/sr_kn.c -lm
+# 42-s2ko edge cases under the sanitizers: numbers, drawn rounds with byes, the 'KN' block, the step-3 play-off
+$(OUT)/s2ko_edge: tests/rules/s2ko_edge.c rules/sr_kn.c rules/sr_pool.c rules/swosrules.h | $(OUT)
+	$(CC) -std=c11 -O1 -g -Wall -Wextra -Wno-missing-field-initializers $(SANITIZE) -Irules -o $@ \
+	    tests/rules/s2ko_edge.c rules/sr_kn.c rules/sr_pool.c rules/sr_groups.c -lm
 
 # Italy's Eccellenza: the light pool with regional + national play-offs and the cup rule (invariants + controls)
 $(OUT)/ecclp: tests/rules/ecclp.c tests/sim/ecclp_italy.h $(RULES) rules/swosrules.h | $(OUT)
@@ -140,7 +144,7 @@ sim: $(OUT)/masssim $(OUT)/italysim $(OUT)/italyfull
 	@for b in drop bteam updown regdrop regdup regdiv; do if ITALYFULL_BREAK=$$b $(OUT)/italyfull 2 3 >/dev/null; then echo "italyfull control $$b NOT caught"; exit 1; fi; done
 	@echo "italyfull controls: a club dropped, a B team in its first team's division, one too many up, a swap dropped, a slot twice, a wrong division byte -> caught"
 
-test: $(OUT)/test_format $(OUT)/swcc $(OUT)/swc_i486.o $(RULES_I486) $(OUT)/spec_check $(OUT)/team_order $(OUT)/groups_guard $(OUT)/nonleague $(OUT)/step3real $(OUT)/nlplayoff $(OUT)/ecclp $(OUT)/stage $(OUT)/bteams42 $(OUT)/cupplace $(OUT)/reg $(OUT)/s3shape $(OUT)/league_rank $(OUT)/uefa_final $(OUT)/s2ko
+test: $(OUT)/test_format $(OUT)/swcc $(OUT)/swc_i486.o $(RULES_I486) $(OUT)/spec_check $(OUT)/team_order $(OUT)/groups_guard $(OUT)/nonleague $(OUT)/step3real $(OUT)/nlplayoff $(OUT)/ecclp $(OUT)/stage $(OUT)/bteams42 $(OUT)/cupplace $(OUT)/reg $(OUT)/s3shape $(OUT)/league_rank $(OUT)/uefa_final $(OUT)/s2ko $(OUT)/s2ko_edge
 	$(OUT)/swcc compile packs/sample/world.json -o $(OUT)/sample.swc >/dev/null
 	$(OUT)/test_format $(OUT)/sample.swc
 	sh tests/run_specs.sh $(OUT)/swcc
@@ -163,6 +167,7 @@ test: $(OUT)/test_format $(OUT)/swcc $(OUT)/swc_i486.o $(RULES_I486) $(OUT)/spec
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/s3shape
 	python3 -I tests/rules/s3swc.py $(OUT)/swcc
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/s2ko
+	ASAN_OPTIONS=detect_leaks=0 $(OUT)/s2ko_edge
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/reg
 	sh tests/rules/frames.sh $(CC) $(I486) -Wno-error=frame-larger-than
 	$(OUT)/swcc compile tests/specs/ok/v14_files_one.json -o $(OUT)/files_one.swc >/dev/null
