@@ -90,6 +90,23 @@ static int dump(const char *path)
                 if (s.fixt[k].round >= g->first_round && s.fixt[k].round < g->first_round + g->nrounds)
                     printf("      round %u: %s v %s\n", s.fixt[k].round - g->first_round + 1,
                            swc_str(&s, s.clubs[s.fixt[k].home].name), swc_str(&s, s.clubs[s.fixt[k].away].name));
+            for (k = 0; k < s.ngdrw; k++)                    /* v1.5 */
+                if (s.gdrw[k].stage == c->first_stage + j) {
+                    uint32_t q;
+                    printf("      draw: pots %u, separate %u, protect", s.gdrw[k].pots, s.gdrw[k].separate);
+                    for (q = s.gdrw[k].protect; q < (uint32_t)s.gdrw[k].protect + s.gdrw[k].nprotect; q++)
+                        printf(" %s-%s", swc_str(&s, s.prot[q].a), swc_str(&s, s.prot[q].b));
+                    printf("%s\n", s.gdrw[k].nprotect ? "" : " none");
+                }
+            for (k = 0; k < s.nkent; k++)
+                if (s.kent[k].stage == c->first_stage + j)
+                    printf("      entrants: %s %s %u-%u, group %u\n", swc_str(&s, s.stages[s.kent[k].src].id),
+                           s.kent[k].kind == SWC_KE_BEST_OF ? "best of place" : "places", s.kent[k].from, s.kent[k].to,
+                           s.kent[k].group);
+            for (k = 0; k < g->nrounds; k++)
+                if (s.rounds[g->first_round + k].avoid)
+                    printf("      round %u avoids %s%s\n", k + 1, s.rounds[g->first_round + k].avoid & SWC_AV_SAME_GROUP ? "same group " : "",
+                           s.rounds[g->first_round + k].avoid & SWC_AV_ASSOCIATION ? "association" : "");
         }
     }
     return 0;
@@ -104,7 +121,7 @@ int main(int argc, char **argv)
     int i, errors;
     if (!strcmp(cmd, "dump") && argc == 3) return dump(argv[2]);
     if (strcmp(cmd, "validate") && strcmp(cmd, "compile")) {
-        fprintf(stderr, "usage (schema swc/1.3): swcc validate|compile SPEC.json [--profile P.json] [-o OUT.SWC] | swcc dump OUT.SWC\n");
+        fprintf(stderr, "usage (schema swc/1.5): swcc validate|compile SPEC.json [--profile P.json] [-o OUT.SWC] | swcc dump OUT.SWC\n");
         return 2;
     }
     for (i = 2; i < argc; i++) {
