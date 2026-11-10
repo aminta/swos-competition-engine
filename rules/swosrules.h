@@ -674,6 +674,34 @@ int32_t sr_best_placed(const sr_group *g, int32_t ng, int32_t place, int32_t win
 enum { SR_PAIR_DRAW = 0, SR_PAIR_SEEDED, SR_PAIR_BRACKET, SR_PAIR_FIXED };
 int32_t sr_ko_pairs(int32_t mode, int32_t n, const uint8_t *avoid, uint32_t seed, uint8_t *out);
 
+/* ---- sr_stled.c: a groups stage's state in a save, the ledger item 'ST' (layout in sr_stled.c) ----
+ * A stage of n clubs (0 .. n-1 in seeding order, as sr_group_draw) in g groups (sr_group_sizes), legs 1..4,
+ * keyed by the season (its low 16 bits) and the stage's purpose (SwcStage.purpose). */
+#define SR_ST_VERSION 1
+/* The block's bytes for that shape (the ledger item's fixed size): 16 + n + the groups' matches; -1 refused. */
+int32_t sr_st_size(int32_t n, int32_t g, int32_t legs);
+/* A new block: the draw (sr_group_draw with assoc and seed: the stage's own, P4) and no result yet; word[0 .. n) the
+ * entrants' team words in seeding order (the key). Its size; -1 a shape refused, room short or no words, -2 the draw
+ * refused (sr_group_draw). */
+int32_t sr_st_begin(uint8_t *st, int32_t room, int32_t n, int32_t g, int32_t legs, uint32_t season, uint32_t purpose,
+                    const uint16_t *word, const uint8_t *assoc, uint32_t seed);
+/* After a load: 1 this stage's block, valid (its groups the shape's sizes, every result 0xFF or two goals 0..14);
+ * 0 not this stage's (zeroed: an older save, the item absent; another season, stage, shape or entrants): not
+ * started, the caller begins it; 2 an 'ST' block of another layout version (the caller begins it: the same groups,
+ * the results so far lost); -1 this stage's key with a broken body (the caller begins it too); -2 a shape refused,
+ * room short or no words. */
+int32_t sr_st_check(const uint8_t *st, int32_t room, int32_t n, int32_t g, int32_t legs, uint32_t season,
+                    uint32_t purpose, const uint16_t *word);
+/* Group k of a checked block: its clubs club[0 .. s) (stage indices, ascending; club: SR_STAGE_CLUBS bytes) and its
+ * matches m[0 .. nm) --
+ * sr_rr_calendar's of s clubs (home / away 0 .. s-1 index club[]), played and goals from the block; for
+ * sr_rr_table. nm; -1 k outside the groups, room short, or a block not as sr_st_check accepts. */
+int32_t sr_st_group(const uint8_t *st, int32_t k, uint8_t *club, sr_match *m, int32_t room);
+/* A result in: the first match of their group's calendar with home at home to away not yet played gets hg-ag
+ * (each capped at 14: sr_stled.c's known limit; 3-4 legs: the pair's first unplayed match at that ground). m: the caller's work room for the group's calendar (no big locals). The match's index in
+ * the results (0 .. m); -1 none such (another group, all played, a club outside 0..n-1, room short). */
+int32_t sr_st_record(uint8_t *st, int32_t home, int32_t away, int32_t hg, int32_t ag, sr_match *m, int32_t room);
+
 /* ---- sr_reg.c: one league across N team files -- the club registry (swc/1.4 countries.<c>.files; MC
  * 42-s7reg: Italy 4.2 = file 102 Serie A + B + C, file 144 Serie D + the Eccellenza stand-ins) ----
  * A club keeps its identity (an ident, 0 .. nclub-1) and has one place, its team word file | ordinal << 8,
