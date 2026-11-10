@@ -55,10 +55,12 @@ int main(int argc, char **argv)
         }
     }
     printf("PASS: sr_group_draw_m %d shapes up to 64 clubs (%d with an association over g): every draw valid and "
-           "balanced (floor / ceil m/g a group), none refused; %d within g = sr_group_draw_p's draw\n", iters, over, same);
+           "balanced (floor / ceil m/g a group), none refused; %d within g = sr_group_draw_p's draw; %u budget hits "
+           "(reported)\n", iters, over, same, (unsigned)sr_gdraw_hits);
     /* ACL Two West: 16 clubs, 4 groups, KSA (1) 5, UAE (2) 3, QAT (3) 3, IRN (4) 2, others one each */
     uint8_t w[16] = { 1, 2, 3, 1, 4, 1, 2, 5, 3, 1, 6, 2, 7, 3, 1, 4 };
     int pairs[16][16] = { { 0 } }, shapes = 0;
+    const uint32_t hits0 = sr_gdraw_hits;                       /* (the random shapes above: some hit it) */
     for (uint32_t sd = 0; sd < 2000; sd++) {
         int r = sr_group_draw_m(16, 4, w, sd * 7919u + 1, grp);
         CHECK(r == 4 && balanced(16, 4, w, grp), "west seed %u", sd);
@@ -69,6 +71,13 @@ int main(int argc, char **argv)
     CHECK(shapes > 3, "the KSA pair is always the same two clubs (%d pairs seen)", shapes);
     printf("PASS: ACL Two West shape (KSA 5 in 4 groups): 2000 draws, one group with two KSA clubs each, %d different "
            "KSA pairs seen\n", shapes);
+    CHECK(sr_gdraw_hits == hits0, "%u budget hits in the ACL Two West draws", (unsigned)(sr_gdraw_hits - hits0));
+    /* gen.py over 7 (over.txt #20: 63 clubs, 11 groups): the budget runs out, even at 1e9 steps -- counted */
+    uint8_t hx[63] = { 0, 0, 0, 0, 0, 3, 0, 2, 2, 0, 1, 3, 0, 2, 0, 1, 1, 0, 3, 0, 2, 1, 0, 0, 2, 0, 0, 0, 2, 3, 0, 0, 1, 2, 2, 0, 0, 2, 0, 0, 2, 0, 2, 0, 3, 3, 0, 3, 0, 2, 0, 0, 2, 0, 3, 0, 0, 3, 3, 2, 0, 0, 3 };
+    uint32_t h0 = sr_gdraw_hits;
+    CHECK(sr_group_draw_m(63, 11, hx, 890786678u, grp) == 11 && sr_gdraw_hits == h0 + 1 && sr_gdraw_used == 100001u,
+          "budget hit not counted (%u, used %u)", (unsigned)(sr_gdraw_hits - h0), (unsigned)sr_gdraw_used);
+    printf("PASS: budget hits counted (none in the ACL Two West draws, one on the 'over' #20 shape)\n");
     CHECK(sr_group_draw_m(16, 4, 0, 1, grp) == -1, "assoc NULL");
     CHECK(sr_group_draw_m(65, 4, as, 1, grp) == -1, "n 65");
     printf(fails ? "FAIL: %d\n" : "PASS: -1 for assoc NULL and n 65\n", fails);
