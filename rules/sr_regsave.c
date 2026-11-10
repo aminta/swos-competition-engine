@@ -5,7 +5,8 @@
  *   +0        u8 version (SR_REGSAVE_VERSION), u8 nfiles
  *   +2        u16 season (the one the map was last written in)
  *   +4        u32 layout (sr_reg_layout: the files' shape and nclub -- another pack reads as absent)
- *   +8        u16 flags (the caller's: SR_REGSAVE_IMPORTED, SR_REGSAVE_PENDING)
+ *   +8        u16 flags (the caller's: SR_REGSAVE_IMPORTED, SR_REGSAVE_PENDING; sr_reg_save writes 0, the caller sets
+ *             them after it -- swe_st_save's order)
  *   +10       u16 rows (the files' rows, all of them)
  *   +12       the identity map: every row's ident, file order then ordinal order, 10 bits each, low bit first
  *
@@ -23,6 +24,20 @@ typedef uint16_t u16;
 typedef uint32_t u32;
 
 enum { HDR = SR_REGSAVE_HDR };
+typedef char idents_fit_10_bits[SR_REG_CLUBS <= 1024 ? 1 : -1];   /* (C99: no _Static_assert) */
+
+/* nclub within the arrays and every file's rows = its divisions' sizes + its pool (sr_reg_load fills by those) */
+static int shape_ok(const sr_registry *r)
+{
+    if (r->nclub < 0 || r->nclub > SR_REG_CLUBS || r->nfiles < 0 || r->nfiles > SR_REG_FILES) return 0;
+    for (int32_t i = 0; i < r->nfiles; i++) {
+        int32_t n = r->f[i].pool;
+        if (r->f[i].ndiv < 0 || r->f[i].ndiv > SR_DIVS) return 0;
+        for (int32_t d = 0; d < r->f[i].ndiv; d++) n += r->f[i].size[d];
+        if (n != r->rows[i] || n > 256) return 0;
+    }
+    return 1;
+}
 
 static u32 fnv(u32 h, u32 v, int bytes)
 {
@@ -57,7 +72,7 @@ int32_t sr_reg_save_size(const sr_registry *r)
 int32_t sr_reg_save(const sr_registry *r, uint32_t layout, uint16_t season, uint8_t *out, int32_t room)
 {
     const int32_t size = sr_reg_save_size(r);
-    if (size < 0 || !out || room < size || sr_reg_check(r)) return -1;
+    if (size < 0 || !out || room < size || !shape_ok(r) || sr_reg_check(r)) return -1;
     const int32_t rows = total_rows(r);
     out[0] = SR_REGSAVE_VERSION; out[1] = (u8)r->nfiles;
     out[2] = (u8)season; out[3] = (u8)(season >> 8);
@@ -86,7 +101,7 @@ int32_t sr_reg_load(sr_registry *r, uint32_t layout, const uint8_t *in, int32_t 
 {
     u8 seen[SR_REG_CLUBS / 8];
     if (!r || !in || len <= 0) return 0;                 /* absent */
-    if (len < HDR) return -1;
+    if (len < HDR || !shape_ok(r)) return -1;
     const u32 lay = in[4] | (u32)in[5] << 8 | (u32)in[6] << 16 | (u32)in[7] << 24;
     if (in[0] != SR_REGSAVE_VERSION || in[1] != r->nfiles || lay != layout) return 0;
     const int32_t rows = total_rows(r);
@@ -109,7 +124,7 @@ int32_t sr_reg_load(sr_registry *r, uint32_t layout, const uint8_t *in, int32_t 
             }
         }
     }
-    return sr_reg_check(r) ? -1 : 1;
+    return sr_reg_check(r) ? -1 : 1;                    /* (-1 here only: r filled -- the caller rebuilds it) */
 }
 
 /* pairs sorted by from (insertion: a few hundred at most); -1 a word twice, -2 room short */
