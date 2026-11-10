@@ -339,84 +339,199 @@ static void hash_order(u32 seed, u32 salt, i32 n, u8 *ord)
     }
 }
 
+/* The groups draw as an edge colouring: each club an edge between its pot and its association, its group the colour --
+ * one club of a pot per group, one club of an association per group; the last pot's colours the larger groups only.
+ * A whole draw exists iff no association has more clubs than there are groups (Koenig: a bipartite multigraph of
+ * degree <= g takes g colours; the short last pot padded with g - r dummy clubs of a dummy association, whose colours
+ * are then named the smaller groups). gking builds one: the witness. Each pick of the draw that differs from the
+ * witness asks gsolve, a complete search, whether the picks so far still leave a whole draw (and if so, which: the
+ * new witness). gsolve: the most constrained club (fewest groups) or slot (a pot's group with the fewest clubs that
+ * can fill it) first, a pot's clubs and an association's each matchable to groups of their own (Hall) at every node,
+ * groups whose state is the same tried once, a club's association once per slot. Its nodes have a budget for the
+ * whole draw: a pick it cannot decide in time is passed over as one that leaves no draw, so the club goes to a later
+ * group of its order -- at the latest the witness's. The draw always ends, in a bounded time. */
+enum { GBUDGET = 4000 };                                       /* gsolve's nodes in one draw */
+
 typedef struct {
-    i32 n, g; const u8 *assoc; u32 seed; const u8 *size;
-    u8 club[N], cnt[N];                                         /* the draw's order; clubs in each group */
-    u32 has[N][8];                                              /* the associations in each group (bits) */
-    u8 left[256], with[256];                                    /* an association's clubs still to draw; groups with it */
-    i32 steps;
+    i32 n, g, np, steps;
+    const u8 *assoc;
+    u8 club[N], pot[N], grp[N], wit[N];                         /* the draw's order; club c's pot; its group (FFh
+                                                                   none); the witness */
+    u32 slot[N];                                                /* per pot: the groups whose place of it is free */
+    u32 used[256];                                              /* per association: the groups holding one of its */
 } sr_gdraw;
 
-static u8 assoc_of(const sr_gdraw *d, i32 c) { return d->assoc ? d->assoc[c] : 0; }
-
-static int gfree(const sr_gdraw *d, i32 j, i32 c, i32 p)       /* group j open to club c of pot p */
+static i32 bits(u32 m) { i32 k = 0; for (; m; m &= m - 1) k++; return k; }
+static u32 gdom(const sr_gdraw *d, i32 c)                       /* the groups club c can still go to */
 {
-    const u8 a = assoc_of(d, c);
-    return d->size[j] > p && d->cnt[j] <= p && !(d->assoc && (d->has[j][a >> 5] >> (a & 31) & 1));
+    return d->slot[d->pot[c]] & ~(d->assoc ? d->used[d->assoc[c]] : 0);
+}
+static void gput(sr_gdraw *d, i32 c, i32 j)
+{
+    d->grp[c] = (u8)j; d->slot[d->pot[c]] &= ~(1u << j);
+    if (d->assoc) d->used[d->assoc[c]] |= 1u << j;
+}
+static void gtake(sr_gdraw *d, i32 c, i32 j)
+{
+    d->grp[c] = 0xFF; d->slot[d->pot[c]] |= 1u << j;
+    if (d->assoc) d->used[d->assoc[c]] &= ~(1u << j);
 }
 
-/* Kuhn's augmenting path: pot club q (of the list) to a group, moving the ones placed before it */
-static int augment(const sr_gdraw *d, const u8 *list, i32 q, i32 p, i8 *owner, u8 *seen)
+/* groups j and k interchangeable for what is left: the same free places in every pot, and every association of a club
+ * still to draw in both or in neither */
+static int gsame(const sr_gdraw *d, i32 j, i32 k)
 {
+    for (i32 p = 0; p < d->np; p++) if ((d->slot[p] >> j & 1) != (d->slot[p] >> k & 1)) return 0;
+    for (i32 c = 0; d->assoc && c < d->n; c++)
+        if (d->grp[c] == 0xFF && (d->used[d->assoc[c]] >> j & 1) != (d->used[d->assoc[c]] >> k & 1)) return 0;
+    return 1;
+}
+
+/* clubs l[0..m-1] each to a group of its own among those they can go to (Kuhn's augmenting paths) */
+static int gaug(const sr_gdraw *d, const u8 *l, i32 i, u32 *seen, i8 *by)
+{
+    const u32 m = gdom(d, l[i]) & ~*seen;
     for (i32 j = 0; j < d->g; j++) {
-        if (seen[j] || !gfree(d, j, list[q], p)) continue;
-        seen[j] = 1;
-        if (owner[j] < 0 || augment(d, list, owner[j], p, owner, seen)) { owner[j] = (i8)q; return 1; }
+        if (!(m >> j & 1)) continue;
+        *seen |= 1u << j;
+        if (by[j] < 0 || gaug(d, l, by[j], seen, by)) { by[j] = (i8)i; return 1; }
     }
     return 0;
 }
-
-/* still possible after club i: every pot's clubs not yet drawn can each take a group of their own (a matching),
- * and no association has more clubs left than groups without it */
-static int gdraw_open(const sr_gdraw *d, i32 i)
+static int gmatch(const sr_gdraw *d, const u8 *l, i32 m)
 {
-    if (d->assoc) {                                             /* (groups with room and without it) */
-        i32 room = 0;
-        for (i32 j = 0; j < d->g; j++) room += d->cnt[j] < d->size[j];
-        for (i32 a = 0; a < 256; a++) {
-            if (!d->left[a]) continue;
-            i32 open = room;
-            if (d->with[a]) for (i32 j = 0; j < d->g; j++) open -= d->cnt[j] < d->size[j] && (d->has[j][a >> 5] >> (a & 31) & 1);
-            if (d->left[a] > open) return 0;
-        }
+    i8 by[32];
+    for (i32 j = 0; j < d->g; j++) by[j] = -1;
+    for (i32 i = 0; i < m; i++) { u32 seen = 0; if (!gaug(d, l, i, &seen, by)) return 0; }
+    return 1;
+}
+/* a pot's clubs left, and an association's, each to groups of their own: the draw's two Hall conditions */
+static int ghall(const sr_gdraw *d)
+{
+    u8 l[N];
+    i32 m;
+    for (i32 p = 0; p < d->np; p++) {
+        m = 0;
+        for (i32 c = p * d->g; c < d->n && c < (p + 1) * d->g; c++) if (d->grp[c] == 0xFF) l[m++] = (u8)c;
+        if (m > 1 && !gmatch(d, l, m)) return 0;
     }
-    for (i32 p = i / d->g; p * d->g < d->n; p++) {
-        const i32 b = p * d->g > i + 1 ? p * d->g : i + 1, end = (p + 1) * d->g < d->n ? (p + 1) * d->g : d->n;
-        if (b >= end) continue;
-        u8 list[N];
-        i32 nl = 0;
-        for (i32 k = b; k < end; k++) list[nl++] = d->club[k];
-        i8 owner[N];
-        for (i32 j = 0; j < d->g; j++) owner[j] = -1;
-        for (i32 q = 0; q < nl; q++) {
-            u8 seen[N];
-            for (i32 j = 0; j < d->g; j++) seen[j] = 0;
-            if (!augment(d, list, q, p, owner, seen)) return 0;
-        }
+    if (!d->assoc) return 1;
+    u32 seen[8] = { 0 };
+    for (i32 c = 0; c < d->n; c++) {
+        const u8 a = d->assoc[c];
+        if (d->grp[c] != 0xFF || seen[a >> 5] >> (a & 31) & 1) continue;
+        seen[a >> 5] |= 1u << (a & 31);
+        m = 0;
+        for (i32 k = c; k < d->n; k++) if (d->grp[k] == 0xFF && d->assoc[k] == a) l[m++] = (u8)k;
+        if (m > 1 && !gmatch(d, l, m)) return 0;
     }
     return 1;
 }
 
-/* club i of the draw's order (pot p = i / g) into a group, the rest after it */
-static int gdraw(sr_gdraw *d, u8 *grp, i32 i)
+/* 1: the clubs left all placed (the witness written), 0: none can be, -1: the budget spent */
+static i32 gsolve(sr_gdraw *d)
 {
-    if (i == d->n) return 1;
-    if (--d->steps < 0) return 0;
-    const i32 c = d->club[i], p = i / d->g;
-    const u8 a = assoc_of(d, c);
-    u8 go[N];
-    hash_order(d->seed, 0x6D000000u + (u32)c * 64u, d->g, go);
-    for (i32 k = 0; k < d->g; k++) {
-        const i32 j = go[k];
-        if (d->cnt[j] != p || d->size[j] <= p) continue;        /* this pot's club there already, or the group full */
-        if (d->assoc && (d->has[j][a >> 5] >> (a & 31) & 1)) continue;
-        grp[c] = (u8)j; d->cnt[j]++;
-        if (d->assoc) { d->has[j][a >> 5] |= 1u << (a & 31); d->left[a]--; d->with[a]++; }
-        if (gdraw_open(d, i) && gdraw(d, grp, i + 1)) return 1;
-        if (d->assoc) { d->has[j][a >> 5] &= ~(1u << (a & 31)); d->left[a]++; d->with[a]--; }
-        d->cnt[j]--;
+    if (--d->steps < 0) return -1;
+    i32 bc = -1, bn = 99;
+    for (i32 c = 0; c < d->n; c++) {
+        if (d->grp[c] != 0xFF) continue;
+        const i32 k = bits(gdom(d, c));
+        if (!k) return 0;
+        if (k < bn) { bn = k; bc = c; }
+    }
+    if (bc < 0) { for (i32 c = 0; c < d->n; c++) d->wit[c] = d->grp[c]; return 1; }
+    if (!ghall(d)) return 0;
+    i32 bp = -1, bj = -1, sn = 99;
+    for (i32 p = 0; bn > 1 && p < d->np; p++)                   /* every free place of a pot needs a club */
+        for (i32 j = 0; j < d->g; j++) {
+            if (!(d->slot[p] >> j & 1)) continue;
+            i32 k = 0;
+            for (i32 c = p * d->g; c < d->n && c < (p + 1) * d->g; c++) k += d->grp[c] == 0xFF && (gdom(d, c) >> j & 1);
+            if (!k) return 0;
+            if (k < sn) { sn = k; bp = p; bj = j; }
+        }
+    if (sn < bn) {                                              /* the place of pot bp in group bj: which club */
+        u32 tried[8] = { 0 };
+        for (i32 c = bp * d->g; c < d->n && c < (bp + 1) * d->g; c++) {
+            if (d->grp[c] != 0xFF || !(gdom(d, c) >> bj & 1)) continue;
+            const u8 a = d->assoc ? d->assoc[c] : 0;
+            if (tried[a >> 5] >> (a & 31) & 1) continue;        /* (a club of the same association: the same) */
+            tried[a >> 5] |= 1u << (a & 31);
+            gput(d, c, bj);
+            const i32 r = gsolve(d);
+            gtake(d, c, bj);
+            if (r) return r;
+        }
+        return 0;
+    }
+    const u32 m = gdom(d, bc);                                  /* club bc: which group */
+    u32 done = 0;
+    for (i32 j = 0; j < d->g; j++) {
+        if (!(m >> j & 1)) continue;
+        i32 dup = 0;
+        for (i32 k = 0; k < d->g && !dup; k++) if (done >> k & 1) dup = gsame(d, j, k);
+        if (dup) continue;
+        done |= 1u << j;
+        gput(d, bc, j);
+        const i32 r = gsolve(d);
+        gtake(d, bc, j);
+        if (r) return r;
     }
     return 0;
+}
+
+/* edge e's pot and association (0x100 the dummy one; clubs without one each their own past it) */
+typedef struct { i32 n, g, e; const u8 *assoc; i8 col[N + 32]; } sr_gking;
+static i32 kpot(const sr_gking *k, i32 e) { return e < k->n ? e / k->g : k->n / k->g; }
+static i32 kas(const sr_gking *k, i32 e) { return e >= k->n ? 0x100 : k->assoc ? k->assoc[e] : 0x101 + e; }
+static u32 kused(const sr_gking *k, i32 pot, i32 as)            /* the colours at a pot (as < 0) or an association */
+{
+    u32 m = 0;
+    for (i32 e = 0; e < k->e; e++)
+        if (k->col[e] >= 0 && (as < 0 ? kpot(k, e) == pot : kas(k, e) == as)) m |= 1u << k->col[e];
+    return m;
+}
+static i32 kat(const sr_gking *k, i32 pot, i32 as, i32 x)       /* the edge of colour x there, -1 none */
+{
+    for (i32 e = 0; e < k->e; e++)
+        if (k->col[e] == x && (as < 0 ? kpot(k, e) == pot : kas(k, e) == as)) return e;
+    return -1;
+}
+static i32 lowbit(u32 m) { i32 j = 0; while (!(m >> j & 1)) j++; return j; }
+
+/* a whole draw into wit (-2 an association with more clubs than groups) */
+static i32 gking(i32 n, i32 g, const u8 *assoc, u8 *wit)
+{
+    sr_gking k;
+    k.n = n; k.g = g; k.assoc = assoc; k.e = n % g ? n + g - n % g : n;
+    for (i32 e = 0; e < k.e; e++) k.col[e] = -1;
+    const u32 all = g < 32 ? (1u << g) - 1 : 0xFFFFFFFFu;
+    for (i32 e = 0; e < k.e; e++) {
+        const i32 p = kpot(&k, e), as = kas(&k, e);
+        const u32 fu = all & ~kused(&k, p, -1), fv = all & ~kused(&k, 0, as);
+        if (!fv) return -2;
+        const i32 x = lowbit(fu), y = lowbit(fv);               /* (a pot has g edges: x is there) */
+        if (!(fv >> x & 1)) {                                   /* swap x / y on the path from as that starts on x:
+                                                                   it never reaches pot p (bipartite), x stays free */
+            i32 onpot = 0, c = x;
+            for (i32 f = kat(&k, 0, as, x); f >= 0; onpot = !onpot) {
+                c = c == x ? y : x;
+                const i32 nf = onpot ? kat(&k, 0, kas(&k, f), c) : kat(&k, kpot(&k, f), -1, c);
+                k.col[f] = (i8)c;
+                f = nf;
+            }
+        }
+        k.col[e] = (i8)x;
+    }
+    u8 name[32];                                                /* the dummies' colours: the smaller groups */
+    u32 dm = 0;
+    for (i32 e = n; e < k.e; e++) dm |= 1u << k.col[e];
+    for (i32 j = 0, big = 0, small = 0; j < g; j++) {
+        if (dm >> j & 1) name[j] = (u8)(g - (k.e - n) + small++);
+        else name[j] = (u8)big++;
+    }
+    for (i32 c = 0; c < n; c++) wit[c] = name[k.col[c]];
+    return 1;
 }
 
 i32 sr_group_draw(i32 n, i32 g, const u8 *assoc, u32 seed, u8 *grp)
@@ -424,17 +539,36 @@ i32 sr_group_draw(i32 n, i32 g, const u8 *assoc, u32 seed, u8 *grp)
     u8 size[N];
     if (n > N || sr_group_sizes(n, g, size) < 0) return -1;
     sr_gdraw d;
-    d.n = n; d.g = g; d.assoc = assoc; d.seed = seed; d.size = size; d.steps = BUDGET;
-    for (i32 j = 0; j < g; j++) { d.cnt[j] = 0; for (i32 w = 0; w < 8; w++) d.has[j][w] = 0; }
-    for (i32 a = 0; a < 256; a++) d.left[a] = d.with[a] = 0;
-    for (i32 c = 0; assoc && c < n; c++) d.left[assoc[c]]++;
-    for (i32 p = 0; p * g < n; p++) {                           /* pot by pot, each pot in hashed order */
+    d.n = n; d.g = g; d.np = (n + g - 1) / g; d.assoc = assoc; d.steps = GBUDGET;
+    for (i32 p = 0; p < d.np; p++) {                           /* pot by pot, each pot in hashed order */
         const i32 b = p * g, len = n - b < g ? n - b : g;
         u8 o[N];
         hash_order(seed, 0x90700000u + (u32)p * 64u, len, o);
         for (i32 k = 0; k < len; k++) d.club[b + k] = (u8)(b + o[k]);
+        d.slot[p] = 0;
+        for (i32 j = 0; j < g; j++) if (size[j] > p) d.slot[p] |= 1u << j;
     }
-    return gdraw(&d, grp, 0) ? g : -2;
+    for (i32 c = 0; c < n; c++) { d.pot[c] = (u8)(c / g); d.grp[c] = 0xFF; }
+    for (i32 a = 0; a < 256; a++) d.used[a] = 0;
+    i32 r = gking(n, g, assoc, d.wit);
+    if (r < 0) return r;
+    for (i32 i = 0; i < n; i++) {                               /* each club to the first group, in an order hashed
+                                                                   from the seed and the club, that leaves a draw */
+        const i32 c = d.club[i];
+        u8 go[N];
+        hash_order(seed, 0x6D000000u + (u32)c * 64u, g, go);
+        for (i32 k = 0; k < g; k++) {
+            const i32 j = go[k];
+            if (!(gdom(&d, c) >> j & 1)) continue;
+            gput(&d, c, j);
+            r = d.wit[c] == j ? 1 : gsolve(&d);
+            if (r > 0) break;
+            gtake(&d, c, j);                                    /* (no draw that way, or undecided in the budget) */
+        }
+        if (r <= 0) return -2;                                  /* (not reached: the witness's group is one) */
+    }
+    for (i32 c = 0; c < n; c++) grp[c] = d.grp[c];
+    return g;
 }
 
 i32 sr_best_placed(const sr_group *g, i32 ng, i32 place, i32 win, i32 draw, i32 loss, const u8 *tieb, u32 seed,

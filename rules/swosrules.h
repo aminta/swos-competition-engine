@@ -642,8 +642,11 @@ int32_t sr_group_sizes(int32_t n, int32_t g, uint8_t *size);
  * = none): two clubs with one value never in one group. The draw goes pot by pot, the pot's clubs in an order hashed
  * from the seed, each to the first group (in an order hashed from the seed and the club) that still leaves a whole
  * draw possible -- UEFA's computer draw. grp[c] = club c's group. Returns g; -1 sizes refused (sr_group_sizes);
- * -2 no draw keeps the clubs of one association apart -- or none found within the search's 200000 steps: an
- * association with nearly a club per group (the fuzzer's shapes; ~1-5 s on an M1 before it gives up). */
+ * -2 no draw keeps the clubs of one association apart: exactly when an association has more clubs than there are
+ * groups (decided at once). Otherwise it always ends with a draw: the check after a pick is a search with a budget
+ * (4000 nodes a draw, ~40 ms on an M1 for the worst shapes the fuzzer found); a pick it cannot decide in time is
+ * passed over, the club going to a later group of its order (one known to leave a draw). Real shapes never reach
+ * the budget: there the draw is UEFA's exactly. */
 int32_t sr_group_draw(int32_t n, int32_t g, const uint8_t *assoc, uint32_t seed, uint8_t *grp);
 
 /* One group of a groups stage, for sr_best_placed: its clubs (0..n-1 inside it), its matches, its final table. */

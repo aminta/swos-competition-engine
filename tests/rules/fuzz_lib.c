@@ -17,6 +17,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 static const uint8_t *in, *end;
 static uint32_t U8(void) { return in < end ? *in++ : 0; }
@@ -220,8 +221,19 @@ static void t_stage(void)
         for (int i = 0; i < g; i++) tot += size[i];
         CHECK(tot == n, "group_sizes %d in %d: %d", n, g, tot);
         const int with_assoc = (int)(U8() & 1);
+        const clock_t t0 = clock();
         const int32_t r = sr_group_draw(n, g, with_assoc ? assoc : NULL, seed, grp);
-        CHECK(r == g || r == -1 || r == -2, "group_draw %d", r);
+        const double t = (double)(clock() - t0) / CLOCKS_PER_SEC;
+        /* the draw's time: its search has a budget (~40 ms at -O2 on an M1 for the worst shapes found) */
+        CHECK(t < 1.0, "group_draw %d clubs in %d groups: %.2f s", n, g, t);
+        int most = 0;                                           /* a draw exists iff no association has more clubs
+                                                                   than there are groups */
+        for (int i = 0; with_assoc && i < n; i++) {
+            int k = 0;
+            for (int j = 0; j < n; j++) k += assoc[j] == assoc[i];
+            if (k > most) most = k;
+        }
+        CHECK(r == (most > g ? -2 : g), "group_draw %d clubs in %d groups, an association of %d: %d", n, g, most, r);
         if (r == g) {
             ok[3]++;
             int cnt[SR_STAGE_CLUBS] = { 0 };
@@ -557,16 +569,23 @@ int main(int argc, char **argv)
         if (sr_ko_pairs(SR_PAIR_DRAW, 64, av, 7, out) != -2) { printf("FAIL: sr_ko_pairs, 33 of one class of 64\n"); return 1; }
     }
     {   /* sr_group_draw: a draw that exists refused (the fuzzer's: 59 clubs in 22 groups, 21 of association 255) --
-           the search spent its 200000 steps (0.8 s on an M1, 50 M steps found one) and answered -2: the check after
-           each pick counted the groups without the association, full ones too */
+           the search spent its 200000 steps (0.8 s on an M1, 50 M steps found one) and answered -2. Now the witness
+           (gking) shows one at once; the fuzzer's slow shapes are in fuzz_regress_lib (gdraw_*.fz). */
         static const uint8_t av[59] = { 192, 3, 0, 160, 10, 126, 4, 2, 10, 0, 57, 252, 2, 10, 0, 255, 252, 133, 0, 7, 39,
             212, 21, 1, 255, 117, 11, 247, 110, 1, 0, 0, 0, 255, 255, 8, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
             65, 255, 255, 255, 255, 255, 255, 255, 1, 33, 1, 241, 1 };
-        uint8_t gr[59];
+        uint8_t gr[64], a2[64];
         if (sr_group_draw(59, 22, av, 84214021u, gr) != 22) { printf("FAIL: sr_group_draw, a draw that exists refused\n"); return 1; }
         for (int i = 0; i < 59; i++)
             for (int j = 0; j < i; j++)
                 if (gr[i] == gr[j] && av[i] == av[j]) { printf("FAIL: sr_group_draw, one association twice in a group\n"); return 1; }
+        /* 64 clubs in 30 groups (the last pot's 4 in groups 0..3): association 7 = 29 of pot 1 and one of the last
+           pot, a club in every group -- exists (pot 1's other club in that larger group); one more of it: none */
+        for (int i = 0; i < 64; i++) a2[i] = (uint8_t)(i >= 30 && i < 59 ? 7 : 100 + i);
+        a2[61] = 7;
+        if (sr_group_draw(64, 30, a2, 1u, gr) != 30 || gr[61] > 3) { printf("FAIL: sr_group_draw, 30 of one association in 30 groups\n"); return 1; }
+        a2[0] = 7;
+        if (sr_group_draw(64, 30, a2, 1u, gr) != -2) { printf("FAIL: sr_group_draw, 31 of one association in 30 groups\n"); return 1; }
     }
     uint32_t r = 2026;
     for (int k = 0; k < it; k++) {
