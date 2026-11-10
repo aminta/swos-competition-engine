@@ -52,7 +52,8 @@ for s in secs:
             v = S_ + A if info & 0xFF == 1 else S_ + A - P
             struct.pack_into('<I', img, P - BASE, v & 0xFFFFFFFF)
 PAIRS = bool(os.environ.get('PAIRS'))     # (swc/1.5: shapes with protect pairs, sr_group_draw_p)
-fn = dict(syms)['sr_group_draw_p' if PAIRS else 'sr_group_draw']
+CAP = int(os.environ.get('CAP', '0'))      # (swc/1.6: sr_group_draw_k with this cap, no pairs)
+fn = dict(syms)['sr_group_draw_k' if CAP else 'sr_group_draw_p' if PAIRS else 'sr_group_draw']
 text = sum(secs[i]['size'] for i in addr if secs[i]['type'] == 1)
 uc = Uc(UC_ARCH_X86, UC_MODE_32)
 uc.mem_map(BASE, (len(img) + 0xFFFF) & ~0xFFFF); uc.mem_write(BASE, bytes(img))
@@ -78,7 +79,9 @@ for k in ks:
     uc.mem_write(0x900000, bytes(a) + b'\0' * (64 - n)); uc.mem_write(0x900100, b'\0' * 64)
     uc.mem_write(0x900200, bytes(p) + b'\0' * (128 - len(p)))
     esp = STACK_TOP - 0x100
-    if PAIRS:
+    if CAP:
+        uc.mem_write(esp, struct.pack('<9I', RET, n, g, 0x900000, 0, 0, CAP, seed & 0xFFFFFFFF, 0x900100))
+    elif PAIRS:
         uc.mem_write(esp, struct.pack('<8I', RET, n, g, 0x900000, 0x900200, len(p) // 2, seed & 0xFFFFFFFF, 0x900100))
     else:
         uc.mem_write(esp, struct.pack('<6I', RET, n, g, 0x900000, seed & 0xFFFFFFFF, 0x900100))

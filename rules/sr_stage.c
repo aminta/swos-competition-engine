@@ -372,13 +372,15 @@ static void hash_order(u32 seed, u32 salt, i32 n, u8 *ord)
  * whose state is the same tried once, a club's association once per slot. Its nodes have a budget for the whole draw:
  * a pick it cannot decide in time is passed over as one that leaves no draw, so the club goes to a later group of its
  * order -- at the latest the witness's. The draw always ends, in a bounded time. */
-enum { GBUDGET = 100000, GBUDGET_P = 25000 };                 /* gsolve's nodes + matching steps in one draw
+enum { GBUDGET = 100000, GBUDGET_P = 25000, GBUDGET_C = 40000 };   /* gsolve's nodes + matching steps in one draw
                                                                    (~200 i486 instructions a step: ~20 M); with
-                                                                   protect pairs ~750 a step (T2 re-run): 25000 */
+                                                                   protect pairs ~750 a step (T2 re-run): 25000;
+                                                                   cap 2 ~400 a step (64 clubs): 40000 */
 
 typedef struct {
-    i32 n, g, np, steps, nprot, witok;                          /* (witok 0: the witness not a draw yet -- a
-                                                                   protect chain's first search) */
+    i32 n, g, np, steps, nprot, witok, cap;                     /* (witok 0: the witness not a draw yet -- a
+                                                                   protect chain's first search; cap: an
+                                                                   association's clubs per group, 1 or 2) */
     const u8 *assoc, *prot;                                     /* (prot: nprot pairs of assoc values never in one
                                                                    group -- swc/1.5's protect chains) */
     u8 club[N], pot[N], grp[N], wit[N];                         /* the draw's order; club c's pot; its group (FFh
@@ -386,7 +388,8 @@ typedef struct {
     u32 slot[N];                                                /* per pot: the groups whose place of it is free */
     u32 used[256];                                              /* per association: the groups holding one of its */
     u32 blk[256];                                               /* (with protect pairs) per association: its
-                                                                   used plus its partners', kept by gput / gtake */
+                                                                   used plus its partners', kept by gput / gtake;
+                                                                   (cap 2, no pairs) the groups holding two */
 } sr_gdraw;
 
 static i32 bits(u32 m) { i32 k = 0; for (; m; m &= m - 1) k++; return k; }
@@ -394,7 +397,7 @@ static u32 gblk(const sr_gdraw *d, i32 c)                       /* the groups cl
                                                                    a protect partner's */
 {
     if (!d->assoc) return 0;
-    return d->nprot ? d->blk[d->assoc[c]] : d->used[d->assoc[c]];
+    return d->nprot || d->cap > 1 ? d->blk[d->assoc[c]] : d->used[d->assoc[c]];
 }
 static void gfix(sr_gdraw *d, i32 a, i32 j)                     /* association a's blk, group j's bit, again */
 {
@@ -418,12 +421,14 @@ static u32 gdom(const sr_gdraw *d, i32 c)                       /* the groups cl
 static void gput(sr_gdraw *d, i32 c, i32 j)
 {
     d->grp[c] = (u8)j; d->slot[d->pot[c]] &= ~(1u << j);
+    if (d->assoc && d->cap > 1 && d->used[d->assoc[c]] >> j & 1) { d->blk[d->assoc[c]] |= 1u << j; return; }
     if (d->assoc) d->used[d->assoc[c]] |= 1u << j;
     if (d->nprot) gblks(d, d->assoc[c], j);
 }
 static void gtake(sr_gdraw *d, i32 c, i32 j)
 {
     d->grp[c] = 0xFF; d->slot[d->pot[c]] |= 1u << j;
+    if (d->assoc && d->cap > 1 && d->blk[d->assoc[c]] >> j & 1) { d->blk[d->assoc[c]] &= ~(1u << j); return; }
     if (d->assoc) d->used[d->assoc[c]] &= ~(1u << j);
     if (d->nprot) gblks(d, d->assoc[c], j);
 }
@@ -434,7 +439,8 @@ static int gsame(const sr_gdraw *d, i32 j, i32 k)
 {
     for (i32 p = 0; p < d->np; p++) if ((d->slot[p] >> j & 1) != (d->slot[p] >> k & 1)) return 0;
     for (i32 c = 0; d->assoc && c < d->n; c++)
-        if (d->grp[c] == 0xFF && (gblk(d, c) >> j & 1) != (gblk(d, c) >> k & 1)) return 0;
+        if (d->grp[c] == 0xFF && ((gblk(d, c) >> j & 1) != (gblk(d, c) >> k & 1) ||
+                                  (d->cap > 1 && (d->used[d->assoc[c]] >> j & 1) != (d->used[d->assoc[c]] >> k & 1)))) return 0;
     return 1;
 }
 
@@ -455,6 +461,28 @@ static int gmatch(sr_gdraw *d, const u8 *l, i32 m)
     i8 by[32];
     for (i32 j = 0; j < d->g; j++) by[j] = -1;
     for (i32 i = 0; i < m; i++) { u32 seen = 0; if (!gaug(d, l, i, &seen, by)) return 0; }
+    return 1;
+}
+/* (cap 2) an association's clubs left l[0..m-1] into the groups' room for it: group j twice (j, j + g) while it holds
+ * none of the association, once while it holds one */
+static int gaug2(sr_gdraw *d, const u8 *l, i32 i, u32 *seen, i8 *by)   /* (seen[0]: the first places, [1] the
+                                                                   second ones: no 64-bit shifts, no libcalls) */
+{
+    if (--d->steps < 0) return 1;
+    const u32 m = gdom(d, l[i]), v0 = m & ~seen[0], v1 = m & ~d->used[d->assoc[l[i]]] & ~seen[1];
+    for (i32 t = 0; t < 2 * d->g; t++) {
+        const i32 j = t < d->g ? t : t - d->g, s = t >= d->g;
+        if (!((s ? v1 : v0) >> j & 1)) continue;
+        seen[s] |= 1u << j;
+        if (by[t] < 0 || gaug2(d, l, by[t], seen, by)) { by[t] = (i8)i; return 1; }
+    }
+    return 0;
+}
+static int gmatch2(sr_gdraw *d, const u8 *l, i32 m)
+{
+    i8 by[64];
+    for (i32 j = 0; j < 2 * d->g; j++) by[j] = -1;
+    for (i32 i = 0; i < m; i++) { u32 seen[2] = { 0, 0 }; if (!gaug2(d, l, i, seen, by)) return 0; }
     return 1;
 }
 /* a pot's clubs left, and an association's, each to groups of their own: the draw's two Hall conditions -- checked
@@ -485,7 +513,7 @@ static __attribute__((noinline)) int ghall(sr_gdraw *d, i32 last)   /* (its arra
         seen[a >> 5] |= 1u << (a & 31);
         m = 0;
         for (i32 k = 0; k < d->n; k++) if (d->grp[k] == 0xFF && d->assoc[k] == a) l[m++] = (u8)k;
-        if (m > 1 && !gmatch(d, l, m)) return 0;
+        if (m > 1 && !(d->cap > 1 ? gmatch2(d, l, m) : gmatch(d, l, m))) return 0;
     }
     return 1;
 }
@@ -496,7 +524,10 @@ static u16 gsig(const sr_gdraw *d, i32 j)
     u32 h = 2166136261u;
     for (i32 p = 0; p < d->np; p++) h = (h ^ (d->slot[p] >> j & 1)) * 16777619u;
     for (i32 c = 0; d->assoc && c < d->n; c++)
-        if (d->grp[c] == 0xFF) h = (h ^ (gblk(d, c) >> j & 1)) * 16777619u;
+        if (d->grp[c] == 0xFF) {
+            h = (h ^ (gblk(d, c) >> j & 1)) * 16777619u;
+            if (d->cap > 1) h = (h ^ (d->used[d->assoc[c]] >> j & 1)) * 16777619u;
+        }
     return (u16)(h ^ h >> 16);
 }
 
@@ -516,6 +547,14 @@ static i32 gsolve(sr_gdraw *d, i32 last)
                                                                    left: they complete the draw (the witness keeps
                                                                    them apart among themselves) */
     for (i32 c = 0; c < d->n && fits; c++) fits = d->witok && (d->grp[c] != 0xFF || (gdom(d, c) >> d->wit[c] & 1));
+    for (i32 c = 0; d->cap > 1 && c < d->n && fits; c++) {    /* (cap 2: the drawn and the witness's left of an
+                                                                   association in one group, two at most -- only
+                                                                   a group already holding one of it can go over:
+                                                                   the witness has two at most, gdom none full) */
+        if (d->grp[c] != 0xFF || !(d->used[d->assoc[c]] >> d->wit[c] & 1)) continue;
+        for (i32 x = c + 1; x < d->n && fits; x++)
+            fits = !(d->grp[x] == 0xFF && d->assoc[x] == d->assoc[c] && d->wit[x] == d->wit[c]);
+    }
     if (fits) { for (i32 c = 0; c < d->n; c++) if (d->grp[c] != 0xFF) d->wit[c] = d->grp[c]; return 1; }
     if (last >= 0 && !ghall(d, last)) return 0;                 /* (last < 0: the first witness's search) */
     i32 bp = -1, bj = -1, sn = 99;
@@ -705,11 +744,19 @@ i32 sr_group_draw(i32 n, i32 g, const u8 *assoc, u32 seed, u8 *grp)
 
 i32 sr_group_draw_p(i32 n, i32 g, const u8 *assoc, const u8 *prot, i32 nprot, u32 seed, u8 *grp)
 {
+    return sr_group_draw_k(n, g, assoc, prot, nprot, 1, seed, grp);
+}
+
+i32 sr_group_draw_k(i32 n, i32 g, const u8 *assoc, const u8 *prot, i32 nprot, i32 cap, u32 seed, u8 *grp)
+{
     u8 size[N], cls[N], fp[2 * SR_PROT_PAIRS];
-    if (n > N || sr_group_sizes(n, g, size) < 0 || nprot < 0 || nprot > SR_PROT_PAIRS || (nprot && (!assoc || !prot)))
+    if (n > N || sr_group_sizes(n, g, size) < 0 || nprot < 0 || nprot > SR_PROT_PAIRS || (nprot && (!assoc || !prot)) ||
+        cap < 1 || cap > 2 || (cap > 1 && nprot))
         return -1;
     sr_gdraw d;
     d.n = n; d.g = g; d.np = (n + g - 1) / g; d.assoc = assoc; d.steps = GBUDGET; d.nprot = 0; d.prot = fp; d.witok = 1;
+    d.cap = assoc ? cap : 1;
+    if (d.cap > 1) d.steps = GBUDGET_C;
     if (nprot) { d.nprot = gclasses(n, assoc, prot, nprot, cls, fp); d.assoc = cls; if (d.nprot) d.steps = GBUDGET_P; }
     for (i32 p = 0; p < d.np; p++) {                           /* pot by pot, each pot in hashed order */
         const i32 b = p * g, len = n - b < g ? n - b : g;
@@ -721,7 +768,20 @@ i32 sr_group_draw_p(i32 n, i32 g, const u8 *assoc, const u8 *prot, i32 nprot, u3
     }
     for (i32 c = 0; c < n; c++) { d.pot[c] = (u8)(c / g); d.grp[c] = 0xFF; }
     for (i32 a = 0; a < 256; a++) d.used[a] = d.blk[a] = 0;
-    i32 r = gking(n, g, d.assoc, d.wit);
+    if (d.cap > 1) {                                            /* (cap 2: the first witness by König on each
+                                                                   association split in two classes, its clubs
+                                                                   alternately -- a class over g: the association
+                                                                   over 2g, no draw) */
+        u8 v[N], h[N];
+        i32 nv = 0;
+        for (i32 c = 0; c < n; c++) {
+            i32 k = 0;
+            while (k < nv && v[k] != assoc[c]) k++;
+            if (k == nv) { v[nv] = assoc[c]; h[nv] = 0; nv++; }
+            cls[c] = (u8)(2 * k + h[k]); h[k] ^= 1;
+        }
+    }
+    i32 r = gking(n, g, d.cap > 1 ? cls : d.assoc, d.wit);
     if (r < 0) return r;
     if (!gwit_ok(&d)) {                                         /* a protect chain: the first witness by the search */
         d.witok = 0;

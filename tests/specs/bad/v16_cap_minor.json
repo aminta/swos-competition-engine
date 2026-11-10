@@ -1,0 +1,342 @@
+{
+ "schema": "swc/1.5",
+ "id": "test.v15-cup",
+ "host_world": 9,
+ "_note": "",
+ "languages": [
+  "it",
+  "en",
+  "fr",
+  "de"
+ ],
+ "countries": {
+  "EGY": {
+   "names": {
+    "it": "EGITTO",
+    "en": "EGITTO",
+    "fr": "EGITTO",
+    "de": "EGITTO"
+   }
+  },
+  "MAR": {
+   "names": {
+    "it": "MAROCCO",
+    "en": "MAROCCO",
+    "fr": "MAROCCO",
+    "de": "MAROCCO"
+   }
+  },
+  "TUN": {
+   "names": {
+    "it": "TUNISIA",
+    "en": "TUNISIA",
+    "fr": "TUNISIA",
+    "de": "TUNISIA"
+   }
+  },
+  "ALG": {
+   "names": {
+    "it": "ALGERIA",
+    "en": "ALGERIA",
+    "fr": "ALGERIA",
+    "de": "ALGERIA"
+   }
+  },
+  "RSA": {
+   "names": {
+    "it": "SUDAFRICA",
+    "en": "SUDAFRICA",
+    "fr": "SUDAFRICA",
+    "de": "SUDAFRICA"
+   }
+  },
+  "NGA": {
+   "names": {
+    "it": "NIGERIA",
+    "en": "NIGERIA",
+    "fr": "NIGERIA",
+    "de": "NIGERIA"
+   }
+  },
+  "ANG": {
+   "names": {
+    "it": "ANGOLA",
+    "en": "ANGOLA",
+    "fr": "ANGOLA",
+    "de": "ANGOLA"
+   }
+  }
+ },
+ "clubs": [
+  {
+   "id": "club:egy.alfa",
+   "name": "EGY ALFA",
+   "country": "EGY",
+   "host": {
+    "file": 60,
+    "ordinal": 0
+   }
+  },
+  {
+   "id": "club:egy.beta",
+   "name": "EGY BETA",
+   "country": "EGY",
+   "host": {
+    "file": 60,
+    "ordinal": 1
+   }
+  },
+  {
+   "id": "club:egy.gamma",
+   "name": "EGY GAMMA",
+   "country": "EGY",
+   "host": {
+    "file": 60,
+    "ordinal": 2
+   }
+  },
+  {
+   "id": "club:egy.delta",
+   "name": "EGY DELTA",
+   "country": "EGY",
+   "host": {
+    "file": 60,
+    "ordinal": 3
+   }
+  },
+  {
+   "id": "club:egy.epsilon",
+   "name": "EGY EPSILON",
+   "country": "EGY",
+   "host": {
+    "file": 60,
+    "ordinal": 4
+   }
+  },
+  {
+   "id": "club:mar.alfa",
+   "name": "MAR ALFA",
+   "country": "MAR",
+   "host": {
+    "file": 61,
+    "ordinal": 0
+   }
+  },
+  {
+   "id": "club:mar.beta",
+   "name": "MAR BETA",
+   "country": "MAR",
+   "host": {
+    "file": 61,
+    "ordinal": 1
+   }
+  },
+  {
+   "id": "club:mar.gamma",
+   "name": "MAR GAMMA",
+   "country": "MAR",
+   "host": {
+    "file": 61,
+    "ordinal": 2
+   }
+  },
+  {
+   "id": "club:tun.alfa",
+   "name": "TUN ALFA",
+   "country": "TUN",
+   "host": {
+    "file": 62,
+    "ordinal": 0
+   }
+  },
+  {
+   "id": "club:tun.beta",
+   "name": "TUN BETA",
+   "country": "TUN",
+   "host": {
+    "file": 62,
+    "ordinal": 1
+   }
+  },
+  {
+   "id": "club:alg.alfa",
+   "name": "ALG ALFA",
+   "country": "ALG",
+   "host": {
+    "file": 63,
+    "ordinal": 0
+   }
+  },
+  {
+   "id": "club:alg.beta",
+   "name": "ALG BETA",
+   "country": "ALG",
+   "host": {
+    "file": 63,
+    "ordinal": 1
+   }
+  },
+  {
+   "id": "club:rsa.alfa",
+   "name": "RSA ALFA",
+   "country": "RSA",
+   "host": {
+    "file": 64,
+    "ordinal": 0
+   }
+  },
+  {
+   "id": "club:rsa.beta",
+   "name": "RSA BETA",
+   "country": "RSA",
+   "host": {
+    "file": 64,
+    "ordinal": 1
+   }
+  },
+  {
+   "id": "club:nga.alfa",
+   "name": "NGA ALFA",
+   "country": "NGA",
+   "host": {
+    "file": 65,
+    "ordinal": 0
+   }
+  },
+  {
+   "id": "club:ang.alfa",
+   "name": "ANG ALFA",
+   "country": "ANG",
+   "host": {
+    "file": 66,
+    "ordinal": 0
+   }
+  }
+ ],
+ "competitions": [
+  {
+   "id": "tst.cup",
+   "kind": "continental",
+   "country": "EGY",
+   "names": {
+    "it": [
+     "COPPA",
+     "COPPA"
+    ],
+    "en": [
+     "CUP",
+     "CUP"
+    ],
+    "fr": [
+     "CUP",
+     "CUP"
+    ],
+    "de": [
+     "CUP",
+     "CUP"
+    ]
+   },
+   "participants": {
+    "count": 16,
+    "clubs": [
+     "club:egy.alfa",
+     "club:egy.beta",
+     "club:egy.gamma",
+     "club:egy.delta",
+     "club:egy.epsilon",
+     "club:mar.alfa",
+     "club:mar.beta",
+     "club:mar.gamma",
+     "club:tun.alfa",
+     "club:tun.beta",
+     "club:alg.alfa",
+     "club:alg.beta",
+     "club:rsa.alfa",
+     "club:rsa.beta",
+     "club:nga.alfa",
+     "club:ang.alfa"
+    ]
+   },
+   "stages": [
+    {
+     "id": "groups",
+     "type": "groups",
+     "groups": 4,
+     "legs": 2,
+     "tiebreakers": [
+      "points",
+      "goal_difference",
+      "goals_for",
+      "draw_lots"
+     ],
+     "draw": {
+      "pots": "access_order",
+      "separate": [
+       "association"
+      ],
+      "max_per_group": 2
+     }
+    },
+    {
+     "id": "ko",
+     "type": "knockout",
+     "entrants": [
+      "groups#1",
+      "groups#2"
+     ],
+     "rounds": [
+      {
+       "ties": 4,
+       "legs": 2,
+       "home": "better_placed_second_leg",
+       "pairing": "seeded",
+       "decider": [
+        "aggregate",
+        "extra_time",
+        "penalties"
+       ],
+       "avoid": [
+        "same_group"
+       ]
+      },
+      {
+       "ties": 2,
+       "legs": 2,
+       "home": "better_placed_second_leg",
+       "pairing": "draw",
+       "decider": [
+        "aggregate",
+        "extra_time",
+        "penalties"
+       ]
+      },
+      {
+       "ties": 1,
+       "legs": 1,
+       "home": "neutral",
+       "pairing": "draw",
+       "decider": [
+        "extra_time",
+        "penalties"
+       ]
+      }
+     ]
+    }
+   ],
+   "outcomes": [
+    {
+     "stage": "ko",
+     "positions": "1",
+     "tag": "champion"
+    }
+   ],
+   "modes": [
+    "career",
+    "season",
+    "preset",
+    "friendly"
+   ]
+  }
+ ],
+ "_expect": "'max_per_group' is swc/1.6: this spec says \"swc/1.5\""
+}

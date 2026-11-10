@@ -10,6 +10,19 @@ for _ in range(N):
         a = []; c = 0
         while len(a) < n: a += [c] * min(random.choice([1, 1, 2, 2, 3, 4, 5]), g); c += 1
         a = a[:n]; random.shuffle(a)
+    elif kind == 'cap2':    # swc/1.6 (CAP=2, BENCH_CAP=2): 16..64 clubs, associations of 1..2g clubs (a few over)
+        n = random.randint(12, 64); g = random.randint(2, max(2, n // 3))
+        a = []; c = 0
+        while len(a) < n: a += [c] * random.randint(1, 2 * g + (random.random() < 0.05)); c += 1
+        a = a[:n]; random.shuffle(a)
+        print(random.randrange(1 << 32), n, g, *a)
+        continue
+    elif kind == 'caf':     # swc/1.6 (MC): CAF-like, 16 clubs in 4 groups, one association with up to 4 clubs
+        a = [0] * random.randint(2, 4); c = 1
+        while len(a) < 16: a += [c] * random.randint(1, 3); c += 1
+        a = a[:16]; random.shuffle(a)
+        print(random.randrange(1 << 32), 16, 4, *a)
+        continue
     elif kind == 'uefa32':  # v15_stage_cup: ESP ENG ITA GER 4, FRA POR 3, RUS UKR NED 2, KOS BIH SRB SCO 1, access order
         cnt = [4, 4, 4, 4, 3, 3, 2, 2, 2, 1, 1, 1, 1]
         a = [t for t, c in enumerate(cnt) for _ in range(c)]

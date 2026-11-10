@@ -1,0 +1,310 @@
+{
+ "schema": "swc/1.6",
+ "id": "test.v15-cup",
+ "host_world": 9,
+ "_note": "",
+ "languages": [
+  "it",
+  "en",
+  "fr",
+  "de"
+ ],
+ "countries": {
+  "EGY": {
+   "names": {
+    "it": "EGITTO",
+    "en": "EGITTO",
+    "fr": "EGITTO",
+    "de": "EGITTO"
+   }
+  },
+  "MAR": {
+   "names": {
+    "it": "MAROCCO",
+    "en": "MAROCCO",
+    "fr": "MAROCCO",
+    "de": "MAROCCO"
+   }
+  },
+  "TUN": {
+   "names": {
+    "it": "TUNISIA",
+    "en": "TUNISIA",
+    "fr": "TUNISIA",
+    "de": "TUNISIA"
+   }
+  }
+ },
+ "clubs": [
+  {
+   "id": "club:egy.alfa",
+   "name": "EGY ALFA",
+   "country": "EGY",
+   "host": {
+    "file": 60,
+    "ordinal": 0
+   }
+  },
+  {
+   "id": "club:egy.beta",
+   "name": "EGY BETA",
+   "country": "EGY",
+   "host": {
+    "file": 60,
+    "ordinal": 1
+   }
+  },
+  {
+   "id": "club:egy.gamma",
+   "name": "EGY GAMMA",
+   "country": "EGY",
+   "host": {
+    "file": 60,
+    "ordinal": 2
+   }
+  },
+  {
+   "id": "club:egy.delta",
+   "name": "EGY DELTA",
+   "country": "EGY",
+   "host": {
+    "file": 60,
+    "ordinal": 3
+   }
+  },
+  {
+   "id": "club:egy.epsilon",
+   "name": "EGY EPSILON",
+   "country": "EGY",
+   "host": {
+    "file": 60,
+    "ordinal": 4
+   }
+  },
+  {
+   "id": "club:egy.zeta",
+   "name": "EGY ZETA",
+   "country": "EGY",
+   "host": {
+    "file": 60,
+    "ordinal": 5
+   }
+  },
+  {
+   "id": "club:egy.eta",
+   "name": "EGY ETA",
+   "country": "EGY",
+   "host": {
+    "file": 60,
+    "ordinal": 6
+   }
+  },
+  {
+   "id": "club:egy.theta",
+   "name": "EGY THETA",
+   "country": "EGY",
+   "host": {
+    "file": 60,
+    "ordinal": 7
+   }
+  },
+  {
+   "id": "club:egy.iota",
+   "name": "EGY IOTA",
+   "country": "EGY",
+   "host": {
+    "file": 60,
+    "ordinal": 8
+   }
+  },
+  {
+   "id": "club:mar.alfa",
+   "name": "MAR ALFA",
+   "country": "MAR",
+   "host": {
+    "file": 61,
+    "ordinal": 0
+   }
+  },
+  {
+   "id": "club:mar.beta",
+   "name": "MAR BETA",
+   "country": "MAR",
+   "host": {
+    "file": 61,
+    "ordinal": 1
+   }
+  },
+  {
+   "id": "club:mar.gamma",
+   "name": "MAR GAMMA",
+   "country": "MAR",
+   "host": {
+    "file": 61,
+    "ordinal": 2
+   }
+  },
+  {
+   "id": "club:tun.alfa",
+   "name": "TUN ALFA",
+   "country": "TUN",
+   "host": {
+    "file": 62,
+    "ordinal": 0
+   }
+  },
+  {
+   "id": "club:tun.beta",
+   "name": "TUN BETA",
+   "country": "TUN",
+   "host": {
+    "file": 62,
+    "ordinal": 1
+   }
+  },
+  {
+   "id": "club:tun.gamma",
+   "name": "TUN GAMMA",
+   "country": "TUN",
+   "host": {
+    "file": 62,
+    "ordinal": 2
+   }
+  },
+  {
+   "id": "club:tun.delta",
+   "name": "TUN DELTA",
+   "country": "TUN",
+   "host": {
+    "file": 62,
+    "ordinal": 3
+   }
+  }
+ ],
+ "competitions": [
+  {
+   "id": "tst.cup",
+   "kind": "continental",
+   "country": "EGY",
+   "names": {
+    "it": [
+     "COPPA",
+     "COPPA"
+    ],
+    "en": [
+     "CUP",
+     "CUP"
+    ],
+    "fr": [
+     "CUP",
+     "CUP"
+    ],
+    "de": [
+     "CUP",
+     "CUP"
+    ]
+   },
+   "participants": {
+    "count": 16,
+    "clubs": [
+     "club:egy.alfa",
+     "club:egy.beta",
+     "club:egy.gamma",
+     "club:egy.delta",
+     "club:egy.epsilon",
+     "club:egy.zeta",
+     "club:egy.eta",
+     "club:egy.theta",
+     "club:egy.iota",
+     "club:mar.alfa",
+     "club:mar.beta",
+     "club:mar.gamma",
+     "club:tun.alfa",
+     "club:tun.beta",
+     "club:tun.gamma",
+     "club:tun.delta"
+    ]
+   },
+   "stages": [
+    {
+     "id": "groups",
+     "type": "groups",
+     "groups": 4,
+     "legs": 2,
+     "tiebreakers": [
+      "points",
+      "goal_difference",
+      "goals_for",
+      "draw_lots"
+     ],
+     "draw": {
+      "pots": "access_order",
+      "separate": [
+       "association"
+      ],
+      "max_per_group": 2
+     }
+    },
+    {
+     "id": "ko",
+     "type": "knockout",
+     "entrants": [
+      "groups#1",
+      "groups#2"
+     ],
+     "rounds": [
+      {
+       "ties": 4,
+       "legs": 2,
+       "home": "better_placed_second_leg",
+       "pairing": "seeded",
+       "decider": [
+        "aggregate",
+        "extra_time",
+        "penalties"
+       ],
+       "avoid": [
+        "same_group"
+       ]
+      },
+      {
+       "ties": 2,
+       "legs": 2,
+       "home": "better_placed_second_leg",
+       "pairing": "draw",
+       "decider": [
+        "aggregate",
+        "extra_time",
+        "penalties"
+       ]
+      },
+      {
+       "ties": 1,
+       "legs": 1,
+       "home": "neutral",
+       "pairing": "draw",
+       "decider": [
+        "extra_time",
+        "penalties"
+       ]
+      }
+     ]
+    }
+   ],
+   "outcomes": [
+    {
+     "stage": "ko",
+     "positions": "1",
+     "tag": "champion"
+    }
+   ],
+   "modes": [
+    "career",
+    "season",
+    "preset",
+    "friendly"
+   ]
+  }
+ ],
+ "_expect": "association EGY has 9 clubs for 4 groups (max_per_group 2: never three in one group)"
+}

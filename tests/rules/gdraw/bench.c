@@ -11,7 +11,8 @@ static int valid(int n, int g, const uint8_t *a, const uint8_t *gr) {
     for (int k = 0; k < np_; k++) for (int i = 0; i < n; i++) for (int j = 0; j < n; j++)
         if (gr[i] == gr[j] && a[i] == pr_[2 * k] && a[j] == pr_[2 * k + 1]) return 0;
     uint8_t sz[64]; if (sr_group_sizes(n, g, sz) < 0) return 0; int c[64] = {0};
-    for (int i = 0; i < n; i++) { if (gr[i] >= g) return 0; c[gr[i]]++; for (int j = 0; j < i; j++) if (gr[i] == gr[j] && a[i] == a[j]) return 0; }
+    for (int i = 0; i < n; i++) { if (gr[i] >= g) return 0; c[gr[i]]++; int same = 0; for (int j = 0; j < i; j++) same += gr[i] == gr[j] && a[i] == a[j];
+        if (same >= (getenv("BENCH_CAP") ? atoi(getenv("BENCH_CAP")) : 1)) return 0; }   /* (BENCH_CAP: that many of an association per group) */
     for (int i = 0; i < g; i++) if (c[i] != sz[i]) return 0;
     for (int i = 0; i < n; i++) for (int j = 0; j < i; j++) if (i / g == j / g && gr[i] == gr[j]) return 0;   /* one per pot */
     return 1; }
@@ -23,7 +24,7 @@ int main(int argc, char **argv) {
         uint8_t a[64], gr[64]; for (int i = 0; i < n; i++) { unsigned x; fscanf(f, "%u", &x); a[i] = (uint8_t)x; }
         np_ = 0;
         if (getenv("BENCH_PAIRS")) { fscanf(f, "%d", &np_); for (int i = 0; i < 2 * np_; i++) { unsigned x; fscanf(f, "%u", &x); pr_[i] = (uint8_t)x; } }
-        double t = now(); int r = np_ ? sr_group_draw_p(n, g, a, pr_, np_, s, gr) : sr_group_draw(n, g, a, s, gr); t = now() - t; tot += t; if (t > worst) worst = t;
+        double t = now(); int r = getenv("BENCH_CAP") ? sr_group_draw_k(n, g, a, 0, 0, atoi(getenv("BENCH_CAP")), s, gr) : np_ ? sr_group_draw_p(n, g, a, pr_, np_, s, gr) : sr_group_draw(n, g, a, s, gr); t = now() - t; tot += t; if (t > worst) worst = t;
         if (r == g) { cnt[0]++; if (!valid(n, g, a, gr)) bad++; } else if (r == -2) cnt[1]++; else if (r == -3) cnt[2]++; else cnt[3]++;
         if (argc > 2 && argv[2][0] == 100) { printf("%d %d", k, r); if (r == g) for (int i = 0; i < n; i++) printf(" %d", gr[i]); printf("\n"); } else if (argc > 2) printf("%d: n %d g %d -> %d %.3fs\n", k, n, g, r, t);
         k++; }

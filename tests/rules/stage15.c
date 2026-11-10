@@ -78,13 +78,13 @@ int main(int argc, char **argv)
         for (int j = 0; j < nc; j++) { if (cty[j] == s.prot[dr->protect + i].a) x = j; if (cty[j] == s.prot[dr->protect + i].b) y = j; }
         if (x >= 0 && y >= 0) { prot[2 * np] = (uint8_t)x; prot[2 * np + 1] = (uint8_t)y; np++; }
     }
-    const int sep = dr->separate & SWC_SEP_ASSOCIATION;
-    int bad = 0, champions = 0, together = 0, matches = 0;
+    const int sep = dr->separate & SWC_SEP_ASSOCIATION, cap = dr->separate & SWC_SEP_CAP2 ? 2 : 1;   /* (v1.6: 2) */
+    int bad = 0, champions = 0, together = 0, matches = 0, twice = 0;
     char why[200] = "";
     for (int se = 0; se < seasons; se++) {
         rs = 777u + (uint32_t)se * 2654435761u;
         uint8_t grp[64], size[64];
-        if (sr_group_draw_p(n, g, sep ? as : NULL, prot, np, (uint32_t)se * 2246822519u + 3, grp) != g) {
+        if (sr_group_draw_k(n, g, sep ? as : NULL, prot, np, cap, (uint32_t)se * 2246822519u + 3, grp) != g) {
             bad++; snprintf(why, sizeof why, "season %d: no draw", se); continue;
         }
         sr_group_sizes(n, g, size);
@@ -93,7 +93,10 @@ int main(int argc, char **argv)
         for (int k = 0; k < n; k++)
             for (int j = 0; j < k; j++) {
                 if (grp[k] != grp[j]) continue;
-                int b = sep && as[k] == as[j];
+                int b = 0, same = 0;
+                for (int i = 0; sep && i < n; i++) same += grp[i] == grp[k] && as[i] == as[k];
+                b = sep && as[k] == as[j] && same > cap;
+                twice += sep && as[k] == as[j];
                 for (int i = 0; i < np; i++)
                     b |= (prot[2 * i] == as[k] && prot[2 * i + 1] == as[j]) || (prot[2 * i] == as[j] && prot[2 * i + 1] == as[k]);
                 if (b) { bad++; snprintf(why, sizeof why, "season %d: clubs %d and %d drawn together", se, j, k); }
@@ -159,10 +162,11 @@ int main(int argc, char **argv)
                     together += ck && cj;
                 }
     }
-    if (bad || champions != seasons) { printf("FAIL: %s: %d bad (%s), %d champions of %d\n", argv[1], bad, why, champions, seasons); return 1; }
+    if (bad || champions != seasons || (cap > 1 && !twice)) { printf("FAIL: %s: %d bad (%s), %d champions of %d, %d pairs of one association together\n", argv[1], bad, why, champions, seasons, twice); return 1; }
     printf("PASS: %s end to end from the .SWC: %d seasons of %d clubs drawn into %d groups (GDRW: separate %d, %d protect pairs; "
            "clubs of two protect countries no pair forbids together: %d times), groups played, KENT entrants, %u rounds "
-           "with their avoid -- no constraint broken, one champion each (%d matches); the reader refuses a PROT pair a == b and a KENT src not earlier\n",
-           argv[1], seasons, n, g, sep, np, together, ko->nrounds, matches);
+           "with their avoid -- no constraint broken, one champion each (%d matches); the reader refuses a PROT pair a == b and a KENT src not earlier%s\n",
+           argv[1], seasons, n, g, sep, np, together, ko->nrounds, matches, cap > 1 ? "; max_per_group 2: two of one association in a group" : "");
+    if (cap > 1) printf("  (max_per_group 2: %d pairs of one association drawn together, never three)\n", twice);
     return 0;
 }

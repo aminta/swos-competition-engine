@@ -74,7 +74,7 @@ typedef struct {
     Buf strs, names, club, comp, stag, entr, tieb, deci, roun, outc, reg, meta, fixt, grps, srce, tols, prnt, sect, secf;
     Buf gdrw, prot, kent;       /* v1.5 */
     uint32_t arena;
-    int engine_min;             /* 2 when a v1.5 draw construct is compiled (GDRW, KENT, a round's avoid), else 1 */
+    int engine_min;             /* 2 when a v1.5 draw construct is compiled (GDRW, KENT, a round's avoid), 3 for v1.6 max_per_group 2, else 1 */
 } C;
 
 static void diag(C *c, JNode *at, int error, const char *path, const char *fmt, ...)
@@ -90,7 +90,8 @@ static void diag(C *c, JNode *at, int error, const char *path, const char *fmt, 
     bput(&c->diag, line, (size_t)(k < (int)sizeof line ? k : (int)sizeof line - 1));
     if (error) c->errors++; else c->warnings++;
 }
-#define SWC_MINOR 5         /* the schema's minor version: swc/1.5 (1.5 = 1.4 + draws, compiled entrants, round avoid) */
+#define SWC_MINOR 6         /* the schema's minor version: swc/1.6 (1.5 = 1.4 + draws, compiled entrants, round avoid;
+                               1.6 = 1.5 + a draw's max_per_group) */
 #define ERR(at, path, ...)  diag(c, at, 1, path, __VA_ARGS__)
 #define WARN(at, path, ...) diag(c, at, 0, path, __VA_ARGS__)
 
@@ -1043,9 +1044,18 @@ static void draw_of(C *c, JNode *st, const char *sp, int stage, int g, int first
         }
     }
     d.nprotect = (uint16_t)np;
+    if ((v = opt(c, dr, "max_per_group", J_NUM, dp))) {   /* v1.6: CAF CL / CC regulations art. 17 */
+        long k = 0;
+        need_minor(c, v, dp, 6, "'max_per_group'");
+        if (int_in(c, v, "max_per_group", dp, 1, 2, &k)) {
+            if (!(d.separate & SWC_SEP_ASSOCIATION)) ERR(v, dp, "'max_per_group' needs \"separate\": [\"association\"]");
+            else if (k == 2 && np) ERR(v, dp, "'max_per_group' 2 with 'protect': not supported");
+            else if (k == 2) d.separate |= SWC_SEP_CAP2;
+        }
+    }
     unknown_keys(c, dr, dp);
     bput(&c->gdrw, &d, sizeof d);
-    c->engine_min = 2;
+    c->engine_min = d.separate & SWC_SEP_CAP2 ? 3 : c->engine_min > 2 ? c->engine_min : 2;
     if (!first || !rec->nentr || !d.separate || g < 1) return;
     for (i = 0; i < rec->nentr; i++) {          /* the clubs per country (fixed participants: exact) */
         uint16_t ix, ct;
@@ -1065,7 +1075,9 @@ static void draw_of(C *c, JNode *st, const char *sp, int stage, int g, int first
         cnt[j]++;
     }
     for (j = 0; j < nc; j++)
-        if (cnt[j] > g) ERR(dr, dp, "association %s has %d clubs for %d groups (separate: never two in one group)", code[j], cnt[j], g);
+        if (d.separate & SWC_SEP_CAP2 ? cnt[j] > 2 * g : cnt[j] > g)
+            ERR(dr, dp, "association %s has %d clubs for %d groups (%s)", code[j], cnt[j], g,
+                d.separate & SWC_SEP_CAP2 ? "max_per_group 2: never three in one group" : "separate: never two in one group");
     for (j = 0; j < nc; j++) comp[j] = j;           /* protect components (union-find over the countries in it) */
     for (i = 0; i < np; i++) {
         int a = -1, b = -1;
@@ -1420,7 +1432,7 @@ static void do_comp(C *c, int ci, StageInfo *all_st, int *nall)
                 if (ok && !kebad && same && gsrc >= 0) ent_stage = gsrc;
                 if (ok && !kebad && nke && c->minor >= 5 && (t == SWC_ST_KNOCKOUT || t == SWC_ST_PLAYOFF)) {
                     bput(&c->kent, ke, (size_t)nke * sizeof ke[0]);
-                    c->engine_min = 2;
+                    if (c->engine_min < 2) c->engine_min = 2;
                 }
                 if (!ok) s.teams = 0;              /* (unknown: no round counts) */
                 else if (gsrc >= 0) {
@@ -1753,7 +1765,7 @@ static void do_comp(C *c, int ci, StageInfo *all_st, int *nall)
                             ERR(av, rp, "avoid with two keys needs the pairing \"seeded\" (seeded v unseeded: an exact matching)");
                         if ((rr.avoid & SWC_AV_SAME_GROUP) && (ent_stage < 0 || all_st[ent_stage].type != SWC_ST_GROUPS || all_st[ent_stage].groups < 2))
                             ERR(av, rp, "avoid \"same_group\": the stage's entrants must come from one groups stage of 2 or more groups");
-                        if (rr.avoid) c->engine_min = 2;
+                        if (rr.avoid && c->engine_min < 2) c->engine_min = 2;
                     }
                     unknown_keys(c, r, rp);
                     bput(&c->roun, &rr, sizeof rr);
@@ -2592,9 +2604,10 @@ static void check_draw_links(C *c)
                 }
             }
             bnd[j] = sum < all ? sum : all;
-            if (bnd[j] > g)
-                ERR(c->comps[ci], swc_str(&sv, cm[ci].id), "association %s can have up to %d clubs for %d groups (the places its competitions give this one; separate: never two in one group)",
-                    swc_strs_at(c, cty[j]), bnd[j], g);
+            if (dw[i].separate & SWC_SEP_CAP2 ? bnd[j] > 2 * g : bnd[j] > g)
+                ERR(c->comps[ci], swc_str(&sv, cm[ci].id), "association %s can have up to %d clubs for %d groups (the places its competitions give this one; %s)",
+                    swc_strs_at(c, cty[j]), bnd[j], g,
+                    dw[i].separate & SWC_SEP_CAP2 ? "max_per_group 2: never three in one group" : "separate: never two in one group");
         }
         for (j = 0; j < nc; j++) comp[j] = j;       /* protect components: a clique's bounds summed (draw_of's rule) */
         for (k = 0; k < dw[i].nprotect; k++) {
@@ -2732,7 +2745,7 @@ int swcc_compile(const char *spec, size_t len, const char *name, const char *pro
         if (c->root->type != J_OBJ) ERR(c->root, "", "the spec is a JSON object");
         else {
             c->minor = SWC_MINOR;
-            c->schema = "swc/1.5";
+            c->schema = "swc/1.6";
             if ((v = need(c, c->root, "schema", J_STR, ""))) {
                 c->schema = v->str;
                 if (!strcmp(v->str, "swc/1") || !strcmp(v->str, "swc/1.1")) c->minor = 1;
@@ -2740,8 +2753,9 @@ int swcc_compile(const char *spec, size_t len, const char *name, const char *pro
                 else if (!strcmp(v->str, "swc/1.3")) c->minor = 3;
                 else if (!strcmp(v->str, "swc/1.4")) c->minor = 4;
                 else if (!strcmp(v->str, "swc/1.5")) c->minor = 5;
+                else if (!strcmp(v->str, "swc/1.6")) c->minor = 6;
                 else
-                    ERR(v, "", "schema \"%s\": this compiler reads \"swc/1\" (= 1.1, the M1 schema), \"swc/1.1\", \"swc/1.2\", \"swc/1.3\", \"swc/1.4\" and \"swc/1.5\"", v->str);
+                    ERR(v, "", "schema \"%s\": this compiler reads \"swc/1\" (= 1.1, the M1 schema), \"swc/1.1\", \"swc/1.2\", \"swc/1.3\", \"swc/1.4\", \"swc/1.5\" and \"swc/1.6\"", v->str);
             }
             if ((v = need(c, c->root, "id", J_STR, "")) && !id_ok(v->str, NULL)) ERR(v, "", "world id \"%s\": lower-case words joined by '.', '-' or '_'", v->str);
             int_in(c, opt(c, c->root, "host_world", J_NUM, ""), "host_world", "", 0, 65535, &world);

@@ -70,6 +70,8 @@ $(OUT)/stage_st: tests/rules/stage_st.c rules/sr_stled.c rules/sr_stage.c rules/
 # swc/1.5 draws: protect pairs (chains), a round's two keys (P5, MC 2026-11-10)
 $(OUT)/draw15: tests/rules/draw15.c rules/sr_stage.c rules/swosrules.h | $(OUT)
 	$(CC) -std=c99 -O1 -g -Wall -Wextra $(SANITIZE) -Irules -o $@ tests/rules/draw15.c rules/sr_stage.c
+$(OUT)/draw16: tests/rules/draw16.c rules/sr_stage.c rules/swosrules.h | $(OUT)
+	$(CC) -std=c99 -O1 -g -Wall -Wextra $(SANITIZE) -Irules -o $@ tests/rules/draw16.c rules/sr_stage.c
 $(OUT)/stage15: tests/rules/stage15.c rules/sr_stage.c rules/swosrules.h $(FORMAT) format/swc_format.h | $(OUT)
 	$(CC) -std=c99 -O1 -g -Wall -Wextra $(SANITIZE) -Irules -Iformat -o $@ tests/rules/stage15.c rules/sr_stage.c format/swc_format.c
 
@@ -204,7 +206,7 @@ sim: $(OUT)/masssim $(OUT)/italysim $(OUT)/italyfull
 
 sim-italy: | $(OUT) ; $(CC) $(CFLAGS) -Irules -o $(OUT)/simdrv tests/sim/simdrv.c rules/sr_stage.c rules/sr_dplay.c rules/sr_gplay.c rules/sr_post.c rules/sr_check.c rules/sr_pool.c rules/sr_groups.c rules/sr_reg.c -lm && $(OUT)/simdrv 100000 && for b in pts order move cout; do if SIMDRV_BREAK=$$b $(OUT)/simdrv 3 >/dev/null; then echo "simdrv control $$b NOT caught"; exit 1; fi; done && SIMDRV_CGAP=9 $(OUT)/simdrv 100000 >/dev/null || { echo "simdrv SIMDRV_CGAP=9 broke: the C play-outs and cup_out not on one gap"; exit 1; }
 
-test: $(OUT)/test_format $(OUT)/swcc $(OUT)/swc_i486.o $(RULES_I486) $(OUT)/spec_check $(OUT)/team_order $(OUT)/groups_guard $(OUT)/nonleague $(OUT)/step3real $(OUT)/nlplayoff $(OUT)/ecclp $(OUT)/stage $(OUT)/stage_swc $(OUT)/stage_st $(OUT)/bteams42 $(OUT)/cupplace $(OUT)/reg $(OUT)/reg_save $(OUT)/s3shape $(OUT)/league_rank $(OUT)/uefa_final $(OUT)/s2ko $(OUT)/s2ko_edge $(OUT)/s2ko_glue $(OUT)/fuzz_rules $(OUT)/fuzz_swcc $(OUT)/fuzz_lib $(OUT)/draw15 $(OUT)/stage15
+test: $(OUT)/test_format $(OUT)/swcc $(OUT)/swc_i486.o $(RULES_I486) $(OUT)/spec_check $(OUT)/team_order $(OUT)/groups_guard $(OUT)/nonleague $(OUT)/step3real $(OUT)/nlplayoff $(OUT)/ecclp $(OUT)/stage $(OUT)/stage_swc $(OUT)/stage_st $(OUT)/bteams42 $(OUT)/cupplace $(OUT)/reg $(OUT)/reg_save $(OUT)/s3shape $(OUT)/league_rank $(OUT)/uefa_final $(OUT)/s2ko $(OUT)/s2ko_edge $(OUT)/s2ko_glue $(OUT)/fuzz_rules $(OUT)/fuzz_swcc $(OUT)/fuzz_lib $(OUT)/draw15 $(OUT)/draw16 $(OUT)/stage15
 	$(OUT)/swcc compile packs/sample/world.json -o $(OUT)/sample.swc >/dev/null
 	$(OUT)/test_format $(OUT)/sample.swc
 	sh tests/run_specs.sh $(OUT)/swcc
@@ -244,7 +246,8 @@ test: $(OUT)/test_format $(OUT)/swcc $(OUT)/swc_i486.o $(RULES_I486) $(OUT)/spec
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/stage_swc $(OUT)/stage_cup.swc 300
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/stage_st $(OUT)/stage_cup.swc 200
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/draw15 30000
-	for s in v15_stage_cup v15_protect_chain; do $(OUT)/swcc compile tests/specs/ok/$$s.json -o $(OUT)/$$s.swc >/dev/null && \
+	ASAN_OPTIONS=detect_leaks=0 $(OUT)/draw16 30000
+	for s in v15_stage_cup v15_protect_chain v16_caf_cup; do $(OUT)/swcc compile tests/specs/ok/$$s.json -o $(OUT)/$$s.swc >/dev/null && \
 	    ASAN_OPTIONS=detect_leaks=0 $(OUT)/stage15 $(OUT)/$$s.swc 1000 || exit 1; done
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/league_rank
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/uefa_final

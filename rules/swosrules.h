@@ -668,6 +668,12 @@ int32_t sr_group_draw(int32_t n, int32_t g, const uint8_t *assoc, uint32_t seed,
 #define SR_PROT_PAIRS 64
 int32_t sr_group_draw_p(int32_t n, int32_t g, const uint8_t *assoc, const uint8_t *prot, int32_t nprot, uint32_t seed,
                         uint8_t *grp);
+/* swc/1.6: sr_group_draw_p with cap = an association's clubs per group, 1 or 2 (CAF CL / CC regulations art. 17: "A
+ * national association cannot have more than 2 teams from its country in the same group"). cap 1 = sr_group_draw_p,
+ * the same draws. cap 2: -2 when an association has more than 2g clubs (exact: König on each association split in two
+ * classes gives the first witness); protect pairs with cap 2 are refused (-1). */
+int32_t sr_group_draw_k(int32_t n, int32_t g, const uint8_t *assoc, const uint8_t *prot, int32_t nprot, int32_t cap,
+                        uint32_t seed, uint8_t *grp);
 
 /* One group of a groups stage, for sr_best_placed: its clubs (0..n-1 inside it), its matches, its final table. */
 typedef struct { const sr_match *m; int32_t nm, n; const sr_srow *table; } sr_group;

@@ -5,9 +5,10 @@ sr_lp_table_sp 620
 sr_lp_cross_sp 4280
 sr_lp_season_cross 2532
 sr_rr_table 1540
-sr_group_draw_p 2948
+sr_group_draw_k 3012
 sr_best_placed 1672
 # sr_best_placed: 1664 -> 1672 (42-S1, MC 09/11: the table context carries the results block and the names' order for sr_league_rank, +8 B; host-only, not in the exe path)
 # sr_group_draw: 2872 -> 1808 -> 1724 (fuzz round 3: the witness draw; 3b: gking / gkempe / ghall noinline, gsolve 148 B a level)
 # sr_group_draw_p (swc/1.5, sr_group_draw's body now): 1724 + 200 (the classes per club and the chain pairs kept)
 # sr_group_draw_p, T2 re-run: + 1024 (blk[256], the protect pairs' closed groups kept by gput / gtake: with GBUDGET_P 25000: chain shapes 75 M -> 19 M, under the 20 M gate)
+# sr_group_draw_k (swc/1.6, sr_group_draw_p's body now; _p = cap 1): 2948 + 64 (the cap-2 witness's split classes)

@@ -4,7 +4,8 @@ E = sys.argv[1] if len(sys.argv) > 1 else "."
 GREEK = ["ALFA","BETA","GAMMA","DELTA","EPSILON","ZETA","ETA","THETA","IOTA","KAPPA","LAMBDA","MU","NU","XI","OMICRON","PI"]
 NAMES = {"ESP":"SPAGNA","ENG":"INGHILTERRA","ITA":"ITALIA","GER":"GERMANIA","FRA":"FRANCIA","RUS":"RUSSIA","UKR":"UCRAINA",
          "POR":"PORTOGALLO","NED":"OLANDA","KOS":"KOSOVO","BIH":"BOSNIA","SRB":"SERBIA","SCO":"SCOZIA","ARM":"ARMENIA",
-         "AZE":"AZERBAIGIAN","BEL":"BELGIO"}
+         "AZE":"AZERBAIGIAN","BEL":"BELGIO","EGY":"EGITTO","MAR":"MAROCCO","TUN":"TUNISIA","ALG":"ALGERIA",
+         "RSA":"SUDAFRICA","NGA":"NIGERIA","ANG":"ANGOLA","TAN":"TANZANIA","SUD":"SUDAN","COD":"CONGO RD"}
 def countries(codes):
     return {c: {"names": {l: NAMES[c] for l in ("it","en","fr","de")}} for c in codes}
 def clubs(per):          # [(code, n)] -> club list, file per country
@@ -134,3 +135,24 @@ b2 = linked([lg("ESP", c3[:4], "1"), lg("ENG", c3[4:8], "1-2"), lg("FRA", c3[8:]
             dict(SEP, protect=[["ESP", "ENG"]]), "")
 b2["_expect"] = "protect: ESP and the countries kept apart from it can have 3 clubs for 2 groups"
 json.dump(b2, open(f"{E}/tests/specs/bad/v151_linked_clique.json", "w"), indent=1, ensure_ascii=False)
+# swc/1.6: max_per_group (CAF CL / CC regulations art. 17: no more than 2 clubs of one association in a group)
+CAF16 = [("EGY",5),("MAR",3),("TUN",2),("ALG",2),("RSA",2),("NGA",1),("ANG",1)]   # (EGY 5 > 4 groups: only with 2 per group)
+CAPD = {"pots": "access_order", "separate": ["association"], "max_per_group": 2}
+KO8 = [r(4, 2, "seeded", ["same_group"]), r(2, 2, "draw"), r(1, 1, "draw")]
+v16 = cup(CAF16, 4, CAPD, KO8, schema="swc/1.6",
+          note="swc/1.6 (synthetic, CAF-shaped): 16 clubs drawn into 4 groups by access order, at most 2 clubs of one association per group (CAF CL / CC regulations art. 17); the top two to seeded quarter-finals avoiding group rematches.")
+v16["id"] = "test.v16-caf"
+json.dump(v16, open(f"{E}/tests/specs/ok/v16_caf_cup.json", "w"), indent=1, ensure_ascii=False)
+b16 = {
+ "v16_cap_too_big": (cup([("EGY",9),("MAR",3),("TUN",4)], 4, CAPD, KO8, schema="swc/1.6"),
+                     "association EGY has 9 clubs for 4 groups (max_per_group 2: never three in one group)"),
+ "v16_cap_minor": (cup(CAF16, 4, CAPD, KO8, schema="swc/1.5"), "'max_per_group' is swc/1.6: this spec says \"swc/1.5\""),
+ "v16_cap_no_separate": (cup(CAF16, 4, {"pots": "access_order", "max_per_group": 2}, KO8, schema="swc/1.6"),
+                         "'max_per_group' needs \"separate\": [\"association\"]"),
+ "v16_cap_protect": (cup(CAF16, 4, dict(CAPD, protect=[["NGA","ANG"]]), KO8, schema="swc/1.6"),
+                     "'max_per_group' 2 with 'protect': not supported"),
+ "v16_cap_three": (cup(CAF16, 4, dict(CAPD, max_per_group=3), KO8, schema="swc/1.6"), "max_per_group"),
+}
+for k, (v, exp) in b16.items():
+    v = copy.deepcopy(v); v["_expect"] = exp
+    json.dump(v, open(f"{E}/tests/specs/bad/{k}.json", "w"), indent=1, ensure_ascii=False)

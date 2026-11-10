@@ -14,10 +14,11 @@
 #include <stddef.h>
 
 
-#define SWC_VERSION        0x0002          /* reader version (engine_min in a spec header must be <= this; 2: swc/1.5's
+#define SWC_VERSION        0x0003          /* reader version (engine_min in a spec header must be <= this; 2: swc/1.5's
                                               GDRW / PROT / KENT and SwcRound.avoid -- swcc writes engine_min 2 only
                                               for a spec that uses one, so an older reader refuses it, never draws
-                                              it without its constraints) */
+                                              it without its constraints; 3: swc/1.6's GDRW separate bit 1, two
+                                              clubs of an association per group at most) */
 #define SWC_FORMAT         2               /* binary spec format (2: big-endian; 1 was little-endian, S0 only) */
 
 /* ---- status (stable numbers) ------------------------------------------------------------------------------------ */
@@ -191,12 +192,13 @@ typedef struct { uint16_t country, highest; } SwcSecondTeams;      /* STRS count
 /* v1.5: a groups stage's draw (GDRW, at most one per stage). Pots: 1 = access order (the stage's clubs in entrant
    order, pot k = clubs k*g .. k*g+g-1: sr_group_draw's input); 2 = coefficient (game data: refused for a profile
    that does not supply it). separate bit 0: two clubs of one association never in one group (classes: König's
-   bound). PROT[protect .. protect+nprotect-1]: country pairs whose clubs never share a group -- kept as PAIRS, never
+   bound); v1.6 bit 1 (with bit 0): two at most instead of one (CAF CL / CC regulations art. 17; engine_min 3). PROT[protect .. protect+nprotect-1]: country pairs whose clubs never share a group -- kept as PAIRS, never
    merged into classes (UEFA's clashes are chains: KOS-BIH and KOS-SRB do not forbid BIH v SRB; MC 2026-11-10). */
 typedef struct { uint16_t stage; uint8_t pots, separate; uint16_t protect, nprotect; } SwcDraw;
 #define SWC_POTS_ACCESS_ORDER 1
 #define SWC_POTS_COEFFICIENT  2
 #define SWC_SEP_ASSOCIATION   1
+#define SWC_SEP_CAP2          2           /* v1.6: an association's clubs per group: 2 at most */
 typedef struct { uint16_t a, b; } SwcProtect;                      /* CLUB.country's dense indices, a < b */
 /* v1.5: one record per item of a stage's `entrants` list, in list order = the seeding order: item by item; within an
    item place by place, then group by group (A..H). kind 1: places from..to of src (1..127, or 128 + N = N-th from
