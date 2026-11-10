@@ -238,7 +238,9 @@ SwcStatus swc_spec_open(SwcSpec *s, const void *bin, uint32_t len, SwcArena *a)
         if (s->sect[i].country >= s->nstrs) return SWC_E_TRUNC;
     for (i = 0; i < s->ngdrw; i++)
         if (s->gdrw[i].stage >= s->nstages || (uint32_t)s->gdrw[i].protect + s->gdrw[i].nprotect > s->nprot ||
-            (s->gdrw[i].separate & ~(SWC_SEP_ASSOCIATION | SWC_SEP_CAP2)) ||       /* (v1.6: bit 1 needs bit 0, */
+            (s->gdrw[i].separate & ~(SWC_SEP_ASSOCIATION | SWC_SEP_CAP2 | SWC_SEP_MIN)) ||   /* (v1.6: bit 1 needs bit 0, */
+            ((s->gdrw[i].separate & SWC_SEP_MIN) && (!(s->gdrw[i].separate & SWC_SEP_ASSOCIATION) ||   /* v1.7 bit 2 */
+                (s->gdrw[i].separate & SWC_SEP_CAP2) || s->gdrw[i].nprotect)) ||
             ((s->gdrw[i].separate & SWC_SEP_CAP2) && (!(s->gdrw[i].separate & SWC_SEP_ASSOCIATION) ||   /* and no pairs) */
                                                        s->gdrw[i].nprotect)))
             return SWC_E_TRUNC;

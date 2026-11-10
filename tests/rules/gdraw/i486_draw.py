@@ -53,7 +53,8 @@ for s in secs:
             struct.pack_into('<I', img, P - BASE, v & 0xFFFFFFFF)
 PAIRS = bool(os.environ.get('PAIRS'))     # (swc/1.5: shapes with protect pairs, sr_group_draw_p)
 CAP = int(os.environ.get('CAP', '0'))      # (swc/1.6: sr_group_draw_k with this cap, no pairs)
-fn = dict(syms)['sr_group_draw_k' if CAP else 'sr_group_draw_p' if PAIRS else 'sr_group_draw']
+MIN = bool(os.environ.get('MIN'))    # (swc/1.7: sr_group_draw_m, the fewest of an association a group)
+fn = dict(syms)['sr_group_draw_m' if MIN else 'sr_group_draw_k' if CAP else 'sr_group_draw_p' if PAIRS else 'sr_group_draw']
 text = sum(secs[i]['size'] for i in addr if secs[i]['type'] == 1)
 uc = Uc(UC_ARCH_X86, UC_MODE_32)
 uc.mem_map(BASE, (len(img) + 0xFFFF) & ~0xFFFF); uc.mem_write(BASE, bytes(img))

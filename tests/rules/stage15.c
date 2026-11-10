@@ -84,7 +84,9 @@ int main(int argc, char **argv)
     for (int se = 0; se < seasons; se++) {
         rs = 777u + (uint32_t)se * 2654435761u;
         uint8_t grp[64], size[64];
-        if (sr_group_draw_k(n, g, sep ? as : NULL, prot, np, cap, (uint32_t)se * 2246822519u + 3, grp) != g) {
+        const int mn = dr->separate & SWC_SEP_MIN;                 /* (v1.7: the fewest, sr_group_draw_m) */
+        if ((mn ? sr_group_draw_m(n, g, as, (uint32_t)se * 2246822519u + 3, grp)
+                : sr_group_draw_k(n, g, sep ? as : NULL, prot, np, cap, (uint32_t)se * 2246822519u + 3, grp)) != g) {
             bad++; snprintf(why, sizeof why, "season %d: no draw", se); continue;
         }
         sr_group_sizes(n, g, size);
@@ -95,7 +97,12 @@ int main(int argc, char **argv)
                 if (grp[k] != grp[j]) continue;
                 int b = 0, same = 0;
                 for (int i = 0; sep && i < n; i++) same += grp[i] == grp[k] && as[i] == as[k];
-                b = sep && as[k] == as[j] && same > cap;
+                if (mn) {                                       /* (the fewest: ceil(m / g) of an association) */
+                    int m = 0;
+                    for (int i = 0; i < n; i++) m += as[i] == as[k];
+                    b = as[k] == as[j] && same > (m + g - 1) / g;
+                } else
+                    b = sep && as[k] == as[j] && same > cap;
                 twice += sep && as[k] == as[j];
                 for (int i = 0; i < np; i++)
                     b |= (prot[2 * i] == as[k] && prot[2 * i + 1] == as[j]) || (prot[2 * i] == as[j] && prot[2 * i + 1] == as[k]);

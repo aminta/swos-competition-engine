@@ -747,6 +747,37 @@ i32 sr_group_draw_p(i32 n, i32 g, const u8 *assoc, const u8 *prot, i32 nprot, u3
     return sr_group_draw_k(n, g, assoc, prot, nprot, 1, seed, grp);
 }
 
+i32 sr_group_draw_m(i32 n, i32 g, const u8 *assoc, u32 seed, u8 *grp)
+{
+    if (n > N || n < 0 || !assoc || g < 1)
+        return -1;
+    u8 cnt[256];                                                /* (n <= 64: a byte each) */
+    i32 over = 0;
+    for (i32 a = 0; a < 256; a++) cnt[a] = 0;                  /* (a loop, not = { 0 }: no memset in the i486 object) */
+    for (i32 c = 0; c < n; c++) cnt[assoc[c]]++;
+    for (i32 a = 0; a < 256; a++) over |= cnt[a] > g;
+    if (!over)                                                  /* (every association within g: sr_group_draw_p's
+                                                                   draw, the same) */
+        return sr_group_draw_p(n, g, assoc, 0, 0, seed, grp);
+    u8 cls[N], fresh[N];
+    i32 nf = 0;
+    for (i32 v = 255; v >= 0 && nf < N; v--) if (!cnt[v]) fresh[nf++] = (u8)v;
+    for (i32 c = 0; c < n; c++) cls[c] = assoc[c];
+    for (i32 a = 0; a < 256; a++) {                             /* an association over g: its clubs, in an order
+                                                                   hashed from the seed, in classes of g */
+        if (cnt[a] <= g) continue;
+        u8 m[N], o[N];
+        i32 k = 0;
+        for (i32 c = 0; c < n; c++) if (assoc[c] == a) m[k++] = (u8)c;
+        hash_order(seed, 0x4D490000u + (u32)a * 64u, k, o);
+        for (i32 i = g; i < k; i++) {                           /* (the first class keeps the association's value) */
+            if (i % g == 0) nf--;
+            cls[m[o[i]]] = fresh[nf];
+        }
+    }
+    return sr_group_draw_p(n, g, cls, 0, 0, seed, grp);
+}
+
 i32 sr_group_draw_k(i32 n, i32 g, const u8 *assoc, const u8 *prot, i32 nprot, i32 cap, u32 seed, u8 *grp)
 {
     u8 size[N], cls[N], fp[2 * SR_PROT_PAIRS];

@@ -1,0 +1,341 @@
+{
+ "schema": "swc/1.7",
+ "id": "test.v15-cup",
+ "host_world": 9,
+ "_note": "",
+ "languages": [
+  "it",
+  "en",
+  "fr",
+  "de"
+ ],
+ "countries": {
+  "KSA": {
+   "names": {
+    "it": "ARABIA SAUDITA",
+    "en": "ARABIA SAUDITA",
+    "fr": "ARABIA SAUDITA",
+    "de": "ARABIA SAUDITA"
+   }
+  },
+  "UAE": {
+   "names": {
+    "it": "EMIRATI ARABI",
+    "en": "EMIRATI ARABI",
+    "fr": "EMIRATI ARABI",
+    "de": "EMIRATI ARABI"
+   }
+  },
+  "QAT": {
+   "names": {
+    "it": "QATAR",
+    "en": "QATAR",
+    "fr": "QATAR",
+    "de": "QATAR"
+   }
+  },
+  "IRN": {
+   "names": {
+    "it": "IRAN",
+    "en": "IRAN",
+    "fr": "IRAN",
+    "de": "IRAN"
+   }
+  },
+  "UZB": {
+   "names": {
+    "it": "UZBEKISTAN",
+    "en": "UZBEKISTAN",
+    "fr": "UZBEKISTAN",
+    "de": "UZBEKISTAN"
+   }
+  },
+  "IRQ": {
+   "names": {
+    "it": "IRAQ",
+    "en": "IRAQ",
+    "fr": "IRAQ",
+    "de": "IRAQ"
+   }
+  },
+  "JOR": {
+   "names": {
+    "it": "GIORDANIA",
+    "en": "GIORDANIA",
+    "fr": "GIORDANIA",
+    "de": "GIORDANIA"
+   }
+  }
+ },
+ "clubs": [
+  {
+   "id": "club:ksa.alfa",
+   "name": "KSA ALFA",
+   "country": "KSA",
+   "host": {
+    "file": 60,
+    "ordinal": 0
+   }
+  },
+  {
+   "id": "club:ksa.beta",
+   "name": "KSA BETA",
+   "country": "KSA",
+   "host": {
+    "file": 60,
+    "ordinal": 1
+   }
+  },
+  {
+   "id": "club:ksa.gamma",
+   "name": "KSA GAMMA",
+   "country": "KSA",
+   "host": {
+    "file": 60,
+    "ordinal": 2
+   }
+  },
+  {
+   "id": "club:ksa.delta",
+   "name": "KSA DELTA",
+   "country": "KSA",
+   "host": {
+    "file": 60,
+    "ordinal": 3
+   }
+  },
+  {
+   "id": "club:ksa.epsilon",
+   "name": "KSA EPSILON",
+   "country": "KSA",
+   "host": {
+    "file": 60,
+    "ordinal": 4
+   }
+  },
+  {
+   "id": "club:uae.alfa",
+   "name": "UAE ALFA",
+   "country": "UAE",
+   "host": {
+    "file": 61,
+    "ordinal": 0
+   }
+  },
+  {
+   "id": "club:uae.beta",
+   "name": "UAE BETA",
+   "country": "UAE",
+   "host": {
+    "file": 61,
+    "ordinal": 1
+   }
+  },
+  {
+   "id": "club:uae.gamma",
+   "name": "UAE GAMMA",
+   "country": "UAE",
+   "host": {
+    "file": 61,
+    "ordinal": 2
+   }
+  },
+  {
+   "id": "club:qat.alfa",
+   "name": "QAT ALFA",
+   "country": "QAT",
+   "host": {
+    "file": 62,
+    "ordinal": 0
+   }
+  },
+  {
+   "id": "club:qat.beta",
+   "name": "QAT BETA",
+   "country": "QAT",
+   "host": {
+    "file": 62,
+    "ordinal": 1
+   }
+  },
+  {
+   "id": "club:qat.gamma",
+   "name": "QAT GAMMA",
+   "country": "QAT",
+   "host": {
+    "file": 62,
+    "ordinal": 2
+   }
+  },
+  {
+   "id": "club:irn.alfa",
+   "name": "IRN ALFA",
+   "country": "IRN",
+   "host": {
+    "file": 63,
+    "ordinal": 0
+   }
+  },
+  {
+   "id": "club:irn.beta",
+   "name": "IRN BETA",
+   "country": "IRN",
+   "host": {
+    "file": 63,
+    "ordinal": 1
+   }
+  },
+  {
+   "id": "club:uzb.alfa",
+   "name": "UZB ALFA",
+   "country": "UZB",
+   "host": {
+    "file": 64,
+    "ordinal": 0
+   }
+  },
+  {
+   "id": "club:irq.alfa",
+   "name": "IRQ ALFA",
+   "country": "IRQ",
+   "host": {
+    "file": 65,
+    "ordinal": 0
+   }
+  },
+  {
+   "id": "club:jor.alfa",
+   "name": "JOR ALFA",
+   "country": "JOR",
+   "host": {
+    "file": 66,
+    "ordinal": 0
+   }
+  }
+ ],
+ "competitions": [
+  {
+   "id": "tst.cup",
+   "kind": "continental",
+   "country": "KSA",
+   "names": {
+    "it": [
+     "COPPA",
+     "COPPA"
+    ],
+    "en": [
+     "CUP",
+     "CUP"
+    ],
+    "fr": [
+     "CUP",
+     "CUP"
+    ],
+    "de": [
+     "CUP",
+     "CUP"
+    ]
+   },
+   "participants": {
+    "count": 16,
+    "clubs": [
+     "club:ksa.alfa",
+     "club:ksa.beta",
+     "club:ksa.gamma",
+     "club:ksa.delta",
+     "club:ksa.epsilon",
+     "club:uae.alfa",
+     "club:uae.beta",
+     "club:uae.gamma",
+     "club:qat.alfa",
+     "club:qat.beta",
+     "club:qat.gamma",
+     "club:irn.alfa",
+     "club:irn.beta",
+     "club:uzb.alfa",
+     "club:irq.alfa",
+     "club:jor.alfa"
+    ]
+   },
+   "stages": [
+    {
+     "id": "groups",
+     "type": "groups",
+     "groups": 4,
+     "legs": 2,
+     "tiebreakers": [
+      "points",
+      "goal_difference",
+      "goals_for",
+      "draw_lots"
+     ],
+     "draw": {
+      "pots": "access_order",
+      "separate": [
+       "association"
+      ]
+     }
+    },
+    {
+     "id": "ko",
+     "type": "knockout",
+     "entrants": [
+      "groups#1",
+      "groups#2"
+     ],
+     "rounds": [
+      {
+       "ties": 4,
+       "legs": 2,
+       "home": "better_placed_second_leg",
+       "pairing": "seeded",
+       "decider": [
+        "aggregate",
+        "extra_time",
+        "penalties"
+       ],
+       "avoid": [
+        "same_group"
+       ]
+      },
+      {
+       "ties": 2,
+       "legs": 2,
+       "home": "better_placed_second_leg",
+       "pairing": "draw",
+       "decider": [
+        "aggregate",
+        "extra_time",
+        "penalties"
+       ]
+      },
+      {
+       "ties": 1,
+       "legs": 1,
+       "home": "neutral",
+       "pairing": "draw",
+       "decider": [
+        "extra_time",
+        "penalties"
+       ]
+      }
+     ]
+    }
+   ],
+   "outcomes": [
+    {
+     "stage": "ko",
+     "positions": "1",
+     "tag": "champion"
+    }
+   ],
+   "modes": [
+    "career",
+    "season",
+    "preset",
+    "friendly"
+   ]
+  }
+ ],
+ "_expect": "association KSA has 5 clubs for 4 groups (separate: never two in one group)"
+}

@@ -61,7 +61,7 @@ into this binary; an engine decodes it once when it opens a world (reference rea
 | `PRNT` | club, parent club: a second team and its first team (v1.3) | `22` |
 | `SECT` | country (STRS offset of the code), level: the highest level a country's second teams play (v1.3) | `22` |
 | `SECF` | country (STRS offset of the code), level: the second teams' floor, below which a second team leaves the world (v1.4) | `22` |
-| `GDRW` | stage, pots (1 access order, 2 coefficient), separate (bit 0 association; v1.6 bit 1: two at most per group, engine_min 3), first PROT pair, PROT pairs: a groups stage's draw (v1.5) | `21122` |
+| `GDRW` | stage, pots (1 access order, 2 coefficient), separate (bit 0 association; v1.6 bit 1: two at most per group, engine_min 3; v1.7 bit 2: the fewest unless unavoidable, engine_min 4), first PROT pair, PROT pairs: a groups stage's draw (v1.5) | `21122` |
 | `PROT` | country, country (CLUB.country's dense indices, a < b): clubs never drawn together -- pairs, not merged classes (v1.5) | `22` |
 | `KENT` | stage, source stage, kind (1 places, 2 best of), group (0xFF all), from, to: a stage's entrants in seeding order (v1.5) | `221111` |
 

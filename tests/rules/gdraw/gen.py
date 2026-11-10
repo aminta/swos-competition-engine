@@ -17,6 +17,19 @@ for _ in range(N):
         a = a[:n]; random.shuffle(a)
         print(random.randrange(1 << 32), n, g, *a)
         continue
+    elif kind == 'over':    # swc/1.7 (MIN=1, BENCH_MIN=1): 12..64 clubs, associations of 1..3g clubs (AFC "unavoidable")
+        n = random.randint(12, 64); g = random.randint(2, max(2, n // 3))
+        a = []; c = 0
+        while len(a) < n: a += [c] * random.randint(1, 3 * g); c += 1
+        a = a[:n]; random.shuffle(a)
+        print(random.randrange(1 << 32), n, g, *a)
+        continue
+    elif kind == 'acl2':    # swc/1.7: one ACL Two region, 16 clubs in 4 groups, an association with 3..8 clubs
+        a = [0] * random.randint(3, 8); c = 1
+        while len(a) < 16: a += [c] * random.randint(1, 3); c += 1
+        a = a[:16]; random.shuffle(a)
+        print(random.randrange(1 << 32), 16, 4, *a)
+        continue
     elif kind == 'caf':     # swc/1.6 (MC): CAF-like, 16 clubs in 4 groups, one association with up to 4 clubs
         a = [0] * random.randint(2, 4); c = 1
         while len(a) < 16: a += [c] * random.randint(1, 3); c += 1

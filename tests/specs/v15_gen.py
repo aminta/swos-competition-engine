@@ -5,7 +5,8 @@ GREEK = ["ALFA","BETA","GAMMA","DELTA","EPSILON","ZETA","ETA","THETA","IOTA","KA
 NAMES = {"ESP":"SPAGNA","ENG":"INGHILTERRA","ITA":"ITALIA","GER":"GERMANIA","FRA":"FRANCIA","RUS":"RUSSIA","UKR":"UCRAINA",
          "POR":"PORTOGALLO","NED":"OLANDA","KOS":"KOSOVO","BIH":"BOSNIA","SRB":"SERBIA","SCO":"SCOZIA","ARM":"ARMENIA",
          "AZE":"AZERBAIGIAN","BEL":"BELGIO","EGY":"EGITTO","MAR":"MAROCCO","TUN":"TUNISIA","ALG":"ALGERIA",
-         "RSA":"SUDAFRICA","NGA":"NIGERIA","ANG":"ANGOLA","TAN":"TANZANIA","SUD":"SUDAN","COD":"CONGO RD"}
+         "RSA":"SUDAFRICA","NGA":"NIGERIA","ANG":"ANGOLA","TAN":"TANZANIA","SUD":"SUDAN","COD":"CONGO RD",
+         "KSA":"ARABIA SAUDITA","UAE":"EMIRATI ARABI","QAT":"QATAR","IRN":"IRAN","UZB":"UZBEKISTAN","IRQ":"IRAQ","JOR":"GIORDANIA"}
 def countries(codes):
     return {c: {"names": {l: NAMES[c] for l in ("it","en","fr","de")}} for c in codes}
 def clubs(per):          # [(code, n)] -> club list, file per country
@@ -154,5 +155,28 @@ b16 = {
  "v16_cap_three": (cup(CAF16, 4, dict(CAPD, max_per_group=3), KO8, schema="swc/1.6"), "max_per_group"),
 }
 for k, (v, exp) in b16.items():
+    v = copy.deepcopy(v); v["_expect"] = exp
+    json.dump(v, open(f"{E}/tests/specs/bad/{k}.json", "w"), indent=1, ensure_ascii=False)
+# swc/1.7: unavoidable "fewest" (AFC ACL Two 2026/27 art. 8.1.3 / 7.1.4.1: same-MA clubs not in one group "except in
+# cases where it is unavoidable") - one region's groups, KSA with 5 clubs for 4 groups: one group with two, never three
+ACL16 = [("KSA",5),("UAE",3),("QAT",3),("IRN",2),("UZB",1),("IRQ",1),("JOR",1)]
+FEWD = {"pots": "access_order", "separate": ["association"], "unavoidable": "fewest"}
+v17 = cup(ACL16, 4, FEWD, KO8, schema="swc/1.7",
+          note="swc/1.7 (synthetic, ACL Two West-shaped): 16 clubs drawn into 4 groups by access order, clubs of one association apart unless unavoidable, then as few in a group as can be (AFC ACL Two 2026/27 art. 8.1.3); the top two to seeded quarter-finals avoiding group rematches.")
+v17["id"] = "test.v17-acl2"
+json.dump(v17, open(f"{E}/tests/specs/ok/v17_acl2_region.json", "w"), indent=1, ensure_ascii=False)
+b17 = {
+ "v17_fewest_minor": (cup(ACL16, 4, FEWD, KO8, schema="swc/1.6"), "'unavoidable' is swc/1.7: this spec says \"swc/1.6\""),
+ "v17_fewest_no_separate": (cup(ACL16, 4, {"pots": "access_order", "unavoidable": "fewest"}, KO8, schema="swc/1.7"),
+                            "'unavoidable' needs \"separate\": [\"association\"]"),
+ "v17_fewest_protect": (cup(ACL16, 4, dict(FEWD, protect=[["IRQ","JOR"]]), KO8, schema="swc/1.7"),
+                        "'unavoidable' with 'protect': not supported"),
+ "v17_fewest_cap2": (cup(ACL16, 4, dict(FEWD, max_per_group=2), KO8, schema="swc/1.7"),
+                     "'unavoidable' with 'max_per_group' 2: not supported"),
+ "v17_fewest_value": (cup(ACL16, 4, dict(FEWD, unavoidable="relax"), KO8, schema="swc/1.7"), "'unavoidable': \"fewest\""),
+ "v17_strict_unavoidable": (cup(ACL16, 4, {"pots": "access_order", "separate": ["association"]}, KO8, schema="swc/1.7"),
+                            "association KSA has 5 clubs for 4 groups (separate: never two in one group)"),
+}
+for k, (v, exp) in b17.items():
     v = copy.deepcopy(v); v["_expect"] = exp
     json.dump(v, open(f"{E}/tests/specs/bad/{k}.json", "w"), indent=1, ensure_ascii=False)

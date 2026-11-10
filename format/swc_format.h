@@ -14,11 +14,12 @@
 #include <stddef.h>
 
 
-#define SWC_VERSION        0x0003          /* reader version (engine_min in a spec header must be <= this; 2: swc/1.5's
+#define SWC_VERSION        0x0004          /* reader version (engine_min in a spec header must be <= this; 2: swc/1.5's
                                               GDRW / PROT / KENT and SwcRound.avoid -- swcc writes engine_min 2 only
                                               for a spec that uses one, so an older reader refuses it, never draws
                                               it without its constraints; 3: swc/1.6's GDRW separate bit 1, two
-                                              clubs of an association per group at most) */
+                                              clubs of an association per group at most; 4: swc/1.7's bit 2, the
+                                              fewest of an association a group, unless unavoidable) */
 #define SWC_FORMAT         2               /* binary spec format (2: big-endian; 1 was little-endian, S0 only) */
 
 /* ---- status (stable numbers) ------------------------------------------------------------------------------------ */
@@ -199,6 +200,8 @@ typedef struct { uint16_t stage; uint8_t pots, separate; uint16_t protect, nprot
 #define SWC_POTS_COEFFICIENT  2
 #define SWC_SEP_ASSOCIATION   1
 #define SWC_SEP_CAP2          2           /* v1.6: an association's clubs per group: 2 at most */
+#define SWC_SEP_MIN           4           /* v1.7: unless unavoidable - the fewest of an association a group (bit 0 set, no
+                                             bit 1, no pairs; sr_group_draw_m) */
 typedef struct { uint16_t a, b; } SwcProtect;                      /* CLUB.country's dense indices, a < b */
 /* v1.5: one record per item of a stage's `entrants` list, in list order = the seeding order: item by item; within an
    item place by place, then group by group (A..H). kind 1: places from..to of src (1..127, or 128 + N = N-th from
