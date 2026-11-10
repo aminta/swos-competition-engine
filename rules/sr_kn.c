@@ -219,14 +219,79 @@ static int32_t kn_draw(const sr_kn_round *rd, int32_t r, const sr_kn_entry *join
     return made == rd[r].ties ? made : -1;
 }
 
+/* A fixed side's winner reference (round wr, tie wt): its count of uses over the cup -- a fixed side naming it, and
+   the drawn round after wr taking all of wr's winners. */
+static int32_t kn_uses(const sr_kn_round *rd, int32_t nr, const sr_kn_pair *pairs, int32_t wr, int32_t wt)
+{
+    int32_t n = wr + 1 < nr && rd[wr + 1].pairing != SR_KN_PAIR_FIXED;
+    const u16 ref = SR_KN_WIN(wr, wt);
+    for (int32_t r = wr + 1; r < nr; r++)
+        if (rd[r].pairing == SR_KN_PAIR_FIXED)
+            for (int32_t t = 0; t < rd[r].ties; t++)
+                n += (pairs[rd[r].first + t].a == ref) + (pairs[rd[r].first + t].b == ref);
+    return n;
+}
+
+int32_t sr_kn_cup_check(const sr_kn_round *rd, int32_t nr, const sr_kn_pair *pairs, const uint16_t *numbers,
+                        int32_t nn, const sr_kn_entry *join)
+{
+    int32_t nj = 0;
+    if (!rd || nr < 0 || nn < 0 || nn > SR_KN_NUMBERS || (nn && !numbers)) return -1;
+    for (int32_t r = 0; r < nr; r++) {
+        if (rd[r].ties < 1) return -1;
+        if (rd[r].pairing == SR_KN_PAIR_FIXED) {
+            if (rd[r].njoin || !pairs) return -1;   /* (a fixed round's joiners would never enter) */
+            for (int32_t t = 0; t < rd[r].ties; t++)
+                for (int32_t s = 0; s < 2; s++) {
+                    const u16 v = s ? pairs[rd[r].first + t].b : pairs[rd[r].first + t].a;
+                    if (v & 0x8000u) {
+                        const int32_t wr = (v >> 9) & 0x3F, wt = v & 0x1FF;
+                        if (wr >= r || wt >= rd[wr].ties || kn_uses(rd, nr, pairs, wr, wt) != 1) return -1;
+                    } else {
+                        int32_t used = 0;           /* (a number enters once) */
+                        if (v < 1 || v > nn) return -1;
+                        for (int32_t q = 0; q < nr; q++)
+                            if (rd[q].pairing == SR_KN_PAIR_FIXED)
+                                for (int32_t k = 0; k < rd[q].ties; k++)
+                                    used += (pairs[rd[q].first + k].a == v) + (pairs[rd[q].first + k].b == v);
+                        if (used != 1) return -1;
+                    }
+                }
+        } else {
+            if ((r ? rd[r - 1].ties : 0) + rd[r].njoin != 2 * rd[r].ties || (rd[r].njoin && !join)) return -1;
+            if (r && rd[r - 1].pairing == SR_KN_PAIR_FIXED)    /* (the fixed round's winners all taken here: none
+                                                                   named again by a later fixed side) */
+                for (int32_t t = 0; t < rd[r - 1].ties; t++)
+                    if (kn_uses(rd, nr, pairs, r - 1, t) != 1) return -1;
+            if (rd[r].jfirst + rd[r].njoin > nj) nj = rd[r].jfirst + rd[r].njoin;
+        }
+    }
+    for (int32_t i = 0; i < nn + nj; i++) {         /* (every club entering, numbered or joining: once) */
+        const u16 c = i < nn ? numbers[i] : join[i - nn].club;
+        int32_t joins = i < nn;
+        if (c >= SR_KN_CLUBS) return -1;
+        for (int32_t r = 0; r < nr && !joins; r++)  /* (a joiner entry no round takes is not an entrant) */
+            joins = rd[r].pairing != SR_KN_PAIR_FIXED && i - nn >= rd[r].jfirst && i - nn < rd[r].jfirst + rd[r].njoin;
+        if (!joins) continue;
+        for (int32_t k = 0; k < i; k++) {
+            int32_t kj = k < nn;
+            for (int32_t r = 0; r < nr && !kj; r++)
+                kj = rd[r].pairing != SR_KN_PAIR_FIXED && k - nn >= rd[r].jfirst && k - nn < rd[r].jfirst + rd[r].njoin;
+            if (kj && (k < nn ? numbers[k] : join[k - nn].club) == c) return -1;
+        }
+    }
+    return 0;
+}
+
 int32_t sr_kn_cup(const sr_kn_round *rd, int32_t nr, const sr_kn_pair *pairs, const uint16_t *numbers, int32_t nn,
                   const sr_kn_entry *join, const uint8_t *swap, uint32_t *rng, sr_kn_play_fn play, void *ctx,
                   sr_kn_work *w, sr_kn_tie *out)
 {
     int32_t last = -1;
+    if (sr_kn_cup_check(rd, nr, pairs, numbers, nn, join) < 0) return -2;   /* (refused before a tie is built) */
     for (int32_t r = 0; r < nr; r++) {
         const int32_t drawn = rd[r].pairing != SR_KN_PAIR_FIXED;
-        if (drawn && (!w || kn_draw(rd, r, join, rng, w, out) < 0)) return -1;
+        if (drawn && (!w || kn_draw(rd, r, join, rng, w, out) < 0)) return -2;
         for (int32_t t = 0; t < rd[r].ties; t++) {
             const int32_t p = rd[r].first + t;
             u16 club[2], num[2];
@@ -240,14 +305,14 @@ int32_t sr_kn_cup(const sr_kn_round *rd, int32_t nr, const sr_kn_pair *pairs, co
                     const u16 v = s ? pairs[p].b : pairs[p].a;
                     if (v & 0x8000u) {              /* an earlier tie's winner: its club, its entry number */
                         const int32_t wr = (v >> 9) & 0x3F, wt = v & 0x1FF;
-                        if (wr >= r || wt >= rd[wr].ties) return -1;
+                        if (wr >= r || wt >= rd[wr].ties) return -2;
                         const sr_kn_tie *pt = &out[rd[wr].first + wt];
                         club[s] = pt->winner;
                         num[s] = pt->nwin;
                         if (!(pt->flags & SR_KN_F_NEUTRAL)) was[s] = pt->winner == pt->home;
                         if (!s) zone = out[rd[wr].first + wt].zone;
                     } else {
-                        if (v < 1 || v > nn) return -1;
+                        if (v < 1 || v > nn) return -2;
                         club[s] = numbers[v - 1];
                         num[s] = v;
                     }

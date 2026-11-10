@@ -755,7 +755,9 @@ uint32_t sr_kn_work_size(void);
 /* The bracket: a side is a number 1 .. 1024 (that club enters here) or SR_KN_WIN(r, t) (round r's tie t's winner,
  * from 0). home: the swcc codes (0 draw, 3 neutral, 4 fixed, 5 lower_number, 6 lower_number_second_leg). swap[p]
  * (NULL: none): the first season's field swaps. play(ctx, round, tie, t): 0 the home side through, 1 the away
- * side, -1 stop. out[p] per pair. The last winner; -1 a bad side or a stop. */
+ * side, -1 stop. out[p] per pair. The last winner; -1 a stop (play's: the ties before it stay as built); -2 refused
+ * (sr_kn_cup_check before any tie is built and play never called; a drawn round that does not fit, before its first
+ * tie: the earlier rounds stay as played). */
 #define SR_KN_WIN(r, t) ((uint16_t)(0x8000u | (uint16_t)((r) << 9) | (uint16_t)(t)))
 #define SR_KN_DRAW      0
 #define SR_KN_NEUTRAL   3
@@ -783,11 +785,18 @@ typedef struct { uint16_t home, away, nhome, naway, winner, nwin; uint8_t legs, 
 typedef int32_t (*sr_kn_play_fn)(void *ctx, int32_t round, int32_t tie, const sr_kn_tie *t);
 int32_t sr_kn_bracket(const sr_kn_round *rd, int32_t nr, const sr_kn_pair *pairs, const uint16_t *numbers,
                       int32_t nn, const uint8_t *swap, uint32_t *rng, sr_kn_play_fn play, void *ctx, sr_kn_tie *out);
-/* The same with drawn rounds (w: the caller's work area; join: the rounds' joiners); -1 also a club twice in a drawn
+/* The same with drawn rounds (w: the caller's work area; join: the rounds' joiners); -2 also a club twice in a drawn
  * round's pool (a club in two chains). */
 int32_t sr_kn_cup(const sr_kn_round *rd, int32_t nr, const sr_kn_pair *pairs, const uint16_t *numbers, int32_t nn,
                   const sr_kn_entry *join, const uint8_t *swap, uint32_t *rng, sr_kn_play_fn play, void *ctx,
                   sr_kn_work *w, sr_kn_tie *out);
+/* The cup's entrants and bracket, results aside (the set-up's check: sr_kn_cup runs it first): every club entering,
+ * numbered (numbers[0 .. nn)) or joining a drawn round, once and < SR_KN_CLUBS; a fixed side a number 1 .. nn used
+ * once in the cup, or an earlier round's winner taken once (by one fixed side, or by the drawn round after it); a
+ * fixed round without joiners; a drawn round's pool (the previous round's winners and its joiners) 2 x its ties.
+ * 0; -1. */
+int32_t sr_kn_cup_check(const sr_kn_round *rd, int32_t nr, const sr_kn_pair *pairs, const uint16_t *numbers,
+                        int32_t nn, const sr_kn_entry *join);
 /* Zones by proximity (42-s2ko M2, the Coppa Italia Serie C's geographic groups): clubs[0 .. n) into nz zones of cap
  * clubs each, each club to its nearest centre with room, the club with the most to lose first (the regret: its
  * second-nearest room's distance less its nearest's; equal: the earlier in the list). geo[club] and the centres in
