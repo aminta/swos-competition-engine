@@ -58,6 +58,10 @@ $(OUT)/stage: tests/rules/stage.c $(RULES) rules/swosrules.h format/swc_format.h
 	$(CC) -std=c99 -O1 -g -Wall -Wextra -Wno-missing-field-initializers $(SANITIZE) -Irules -o $@ \
 	    tests/rules/stage.c rules/sr_stage.c
 
+# swc/1.5 draws: protect pairs (chains), a round's two keys (P5, MC 2026-11-10)
+$(OUT)/draw15: tests/rules/draw15.c rules/sr_stage.c rules/swosrules.h | $(OUT)
+	$(CC) -std=c99 -O1 -g -Wall -Wextra $(SANITIZE) -Irules -o $@ tests/rules/draw15.c rules/sr_stage.c
+
 # 4.2 S1: a league table ranked by its tie-breaker list (faithful_1996 = the game's sort, head to head from results)
 $(OUT)/league_rank: tests/rules/league_rank.c rules/sr_stage.c rules/swosrules.h | $(OUT)
 	$(CC) -std=c99 -O1 -g -Wall -Wextra -Wno-missing-field-initializers $(SANITIZE) -Irules -o $@ \
@@ -185,7 +189,7 @@ sim: $(OUT)/masssim $(OUT)/italysim $(OUT)/italyfull
 
 sim-italy: | $(OUT) ; $(CC) $(CFLAGS) -Irules -o $(OUT)/simdrv tests/sim/simdrv.c rules/sr_stage.c rules/sr_dplay.c rules/sr_gplay.c rules/sr_post.c rules/sr_check.c rules/sr_pool.c rules/sr_groups.c rules/sr_reg.c -lm && $(OUT)/simdrv 100000 && for b in pts order move cout; do if SIMDRV_BREAK=$$b $(OUT)/simdrv 3 >/dev/null; then echo "simdrv control $$b NOT caught"; exit 1; fi; done && SIMDRV_CGAP=9 $(OUT)/simdrv 100000 >/dev/null || { echo "simdrv SIMDRV_CGAP=9 broke: the C play-outs and cup_out not on one gap"; exit 1; }
 
-test: $(OUT)/test_format $(OUT)/swcc $(OUT)/swc_i486.o $(RULES_I486) $(OUT)/spec_check $(OUT)/team_order $(OUT)/groups_guard $(OUT)/nonleague $(OUT)/step3real $(OUT)/nlplayoff $(OUT)/ecclp $(OUT)/stage $(OUT)/bteams42 $(OUT)/cupplace $(OUT)/reg $(OUT)/s3shape $(OUT)/league_rank $(OUT)/uefa_final $(OUT)/s2ko $(OUT)/s2ko_edge $(OUT)/s2ko_glue $(OUT)/fuzz_rules $(OUT)/fuzz_swcc $(OUT)/fuzz_lib
+test: $(OUT)/test_format $(OUT)/swcc $(OUT)/swc_i486.o $(RULES_I486) $(OUT)/spec_check $(OUT)/team_order $(OUT)/groups_guard $(OUT)/nonleague $(OUT)/step3real $(OUT)/nlplayoff $(OUT)/ecclp $(OUT)/stage $(OUT)/bteams42 $(OUT)/cupplace $(OUT)/reg $(OUT)/s3shape $(OUT)/league_rank $(OUT)/uefa_final $(OUT)/s2ko $(OUT)/s2ko_edge $(OUT)/s2ko_glue $(OUT)/fuzz_rules $(OUT)/fuzz_swcc $(OUT)/fuzz_lib $(OUT)/draw15
 	$(OUT)/swcc compile packs/sample/world.json -o $(OUT)/sample.swc >/dev/null
 	$(OUT)/test_format $(OUT)/sample.swc
 	sh tests/run_specs.sh $(OUT)/swcc
@@ -219,6 +223,7 @@ test: $(OUT)/test_format $(OUT)/swcc $(OUT)/swc_i486.o $(RULES_I486) $(OUT)/spec
 	$(OUT)/swcc compile tests/specs/ok/v14_second_floor.json -o $(OUT)/files_none.swc >/dev/null
 	cmp $(OUT)/files_one.swc $(OUT)/files_none.swc && echo "PASS: one 'files' entry = no 'files': the same bytes"
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/stage 500
+	ASAN_OPTIONS=detect_leaks=0 $(OUT)/draw15 30000
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/league_rank
 	ASAN_OPTIONS=detect_leaks=0 $(OUT)/uefa_final
 	@if grep -n '(const Swc[A-Za-z]* \*)\|(const uint16_t \*)\|(const uint32_t \*)' format/*.c; then echo "the reader reads the spec buffer through a cast (big-endian rule: BE accessors only)"; exit 1; fi

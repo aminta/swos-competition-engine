@@ -658,6 +658,17 @@ int32_t sr_group_sizes(int32_t n, int32_t g, uint8_t *size);
  * worst (the search's recursion). */
 int32_t sr_group_draw(int32_t n, int32_t g, const uint8_t *assoc, uint32_t seed, uint8_t *grp);
 
+/* swc/1.5: sr_group_draw with protect pairs: prot[2i], prot[2i+1] (nprot <= SR_PROT_PAIRS) two association values
+ * whose clubs never share a group (UEFA's prohibited clashes; assoc required). The pairs stay pairs: KOS-BIH and
+ * KOS-SRB leave BIH v SRB free. A component of them that is a clique among the associations drawn (ARM-AZE alone) is
+ * one class: König's bound decides at once and the draw is sr_group_draw's (-2 that class over g). A chain's first
+ * whole draw comes from the search (its budget): -2 none exists, -3 undecided in the budget (the stage not drawn
+ * either way: the glue logs it -- a harness FAIL, never a silent relaxation). Then the same pick-then-check, the
+ * Kempe repair kept only when it leaves the pairs apart. nprot 0 = sr_group_draw. */
+#define SR_PROT_PAIRS 64
+int32_t sr_group_draw_p(int32_t n, int32_t g, const uint8_t *assoc, const uint8_t *prot, int32_t nprot, uint32_t seed,
+                        uint8_t *grp);
+
 /* One group of a groups stage, for sr_best_placed: its clubs (0..n-1 inside it), its matches, its final table. */
 typedef struct { const sr_match *m; int32_t nm, n; const sr_srow *table; } sr_group;
 
@@ -682,6 +693,15 @@ int32_t sr_best_placed(const sr_group *g, int32_t ng, int32_t place, int32_t win
  * keeps apart. */
 enum { SR_PAIR_DRAW = 0, SR_PAIR_SEEDED, SR_PAIR_BRACKET, SR_PAIR_FIXED };
 int32_t sr_ko_pairs(int32_t mode, int32_t n, const uint8_t *avoid, uint32_t seed, uint8_t *out);
+
+/* swc/1.5 round avoid: avoid = the same-group key (NULL none), assoc = the association key (NULL none) and prot its
+ * protect pairs (nprot <= SR_PROT_PAIRS, pairs of assoc values: as sr_group_draw_p's, pairs not classes). Seeded with
+ * two keys or pairs: each pick leaves a perfect matching of the free top v bottom clubs on the allowed pairs (exact,
+ * augmenting paths); -2 exactly when none exists (UEFA's last-16 draw). Draw with pairs: the search with its budget
+ * (the per-class check a necessary condition only). Draw with two keys: -1 (swcc refuses it). Otherwise
+ * sr_ko_pairs. */
+int32_t sr_ko_pairs_x(int32_t mode, int32_t n, const uint8_t *avoid, const uint8_t *assoc, const uint8_t *prot,
+                      int32_t nprot, uint32_t seed, uint8_t *out);
 
 /* ---- sr_reg.c: one league across N team files -- the club registry (swc/1.4 countries.<c>.files; MC
  * 42-s7reg: Italy 4.2 = file 102 Serie A + B + C, file 144 Serie D + the Eccellenza stand-ins) ----
