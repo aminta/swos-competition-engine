@@ -51,7 +51,8 @@ for s in secs:
             P = addr[s['info']] + off; A, = struct.unpack_from('<i', img, P - BASE)
             v = S_ + A if info & 0xFF == 1 else S_ + A - P
             struct.pack_into('<I', img, P - BASE, v & 0xFFFFFFFF)
-fn = dict(syms)['sr_group_draw']
+PAIRS = bool(os.environ.get('PAIRS'))     # (swc/1.5: shapes with protect pairs, sr_group_draw_p)
+fn = dict(syms)['sr_group_draw_p' if PAIRS else 'sr_group_draw']
 text = sum(secs[i]['size'] for i in addr if secs[i]['type'] == 1)
 uc = Uc(UC_ARCH_X86, UC_MODE_32)
 uc.mem_map(BASE, (len(img) + 0xFFFF) & ~0xFFFF); uc.mem_write(BASE, bytes(img))
@@ -62,18 +63,25 @@ toks = open(setf).read().split()
 shapes, i = [], 0
 while i < len(toks):
     seed, n, g = int(toks[i]), int(toks[i + 1]), int(toks[i + 2]); a = [int(x) for x in toks[i + 3:i + 3 + n]]; i += 3 + n
-    shapes.append((seed, n, g, a))
+    p = []
+    if PAIRS:
+        np_ = int(toks[i]); p = [int(x) for x in toks[i + 1:i + 1 + 2 * np_]]; i += 1 + 2 * np_
+    shapes.append((seed, n, g, a, p))
 nat = {int(l.split()[0]): l.split()[1:] for l in open(natf) if 'draws' not in l}
 ks = range(len(shapes)) if sel == 'all' else [int(x) for x in sel.split(',') if x]
 RET = 0x900F00
 worst_i, worst_st, same = 0, 0, 0
 print(f'{os.path.basename(src)} {opt}: .text etc {text} B, sr_group_draw at {fn:#x}')
 for k in ks:
-    seed, n, g, a = shapes[k]
+    seed, n, g, a, p = shapes[k]
     uc.mem_write(STACK_TOP - STACK, b'\xA5' * STACK)
     uc.mem_write(0x900000, bytes(a) + b'\0' * (64 - n)); uc.mem_write(0x900100, b'\0' * 64)
+    uc.mem_write(0x900200, bytes(p) + b'\0' * (128 - len(p)))
     esp = STACK_TOP - 0x100
-    uc.mem_write(esp, struct.pack('<6I', RET, n, g, 0x900000, seed & 0xFFFFFFFF, 0x900100))
+    if PAIRS:
+        uc.mem_write(esp, struct.pack('<8I', RET, n, g, 0x900000, 0x900200, len(p) // 2, seed & 0xFFFFFFFF, 0x900100))
+    else:
+        uc.mem_write(esp, struct.pack('<6I', RET, n, g, 0x900000, seed & 0xFFFFFFFF, 0x900100))
     uc.reg_write(UC_X86_REG_ESP, esp); cnt[0] = 0
     uc.emu_start(fn, RET)
     r = struct.unpack('<i', struct.pack('<I', uc.reg_read(UC_X86_REG_EAX)))[0]

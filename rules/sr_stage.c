@@ -372,8 +372,9 @@ static void hash_order(u32 seed, u32 salt, i32 n, u8 *ord)
  * whose state is the same tried once, a club's association once per slot. Its nodes have a budget for the whole draw:
  * a pick it cannot decide in time is passed over as one that leaves no draw, so the club goes to a later group of its
  * order -- at the latest the witness's. The draw always ends, in a bounded time. */
-enum { GBUDGET = 100000 };                                     /* gsolve's nodes + matching steps in one draw
-                                                                   (~200 i486 instructions a step: ~20 M) */
+enum { GBUDGET = 100000, GBUDGET_P = 25000 };                 /* gsolve's nodes + matching steps in one draw
+                                                                   (~200 i486 instructions a step: ~20 M); with
+                                                                   protect pairs ~750 a step (T2 re-run): 25000 */
 
 typedef struct {
     i32 n, g, np, steps, nprot, witok;                          /* (witok 0: the witness not a draw yet -- a
@@ -384,6 +385,8 @@ typedef struct {
                                                                    none); the witness */
     u32 slot[N];                                                /* per pot: the groups whose place of it is free */
     u32 used[256];                                              /* per association: the groups holding one of its */
+    u32 blk[256];                                               /* (with protect pairs) per association: its
+                                                                   used plus its partners', kept by gput / gtake */
 } sr_gdraw;
 
 static i32 bits(u32 m) { i32 k = 0; for (; m; m &= m - 1) k++; return k; }
@@ -391,12 +394,22 @@ static u32 gblk(const sr_gdraw *d, i32 c)                       /* the groups cl
                                                                    a protect partner's */
 {
     if (!d->assoc) return 0;
-    const u8 a = d->assoc[c];
+    return d->nprot ? d->blk[d->assoc[c]] : d->used[d->assoc[c]];
+}
+static void gfix(sr_gdraw *d, i32 a, i32 j)                     /* association a's blk, group j's bit, again */
+{
     u32 m = d->used[a];
     for (i32 i = 0; i < d->nprot; i++)
         if (d->prot[2 * i] == a) m |= d->used[d->prot[2 * i + 1]];
         else if (d->prot[2 * i + 1] == a) m |= d->used[d->prot[2 * i]];
-    return m;
+    d->blk[a] = (d->blk[a] & ~(1u << j)) | (m & 1u << j);
+}
+static __attribute__((noinline)) void gblks(sr_gdraw *d, i32 a, i32 j)   /* a's and its partners' after a change */
+{
+    gfix(d, a, j);
+    for (i32 i = 0; i < d->nprot; i++)
+        if (d->prot[2 * i] == a) gfix(d, d->prot[2 * i + 1], j);
+        else if (d->prot[2 * i + 1] == a) gfix(d, d->prot[2 * i], j);
 }
 static u32 gdom(const sr_gdraw *d, i32 c)                       /* the groups club c can still go to */
 {
@@ -406,11 +419,13 @@ static void gput(sr_gdraw *d, i32 c, i32 j)
 {
     d->grp[c] = (u8)j; d->slot[d->pot[c]] &= ~(1u << j);
     if (d->assoc) d->used[d->assoc[c]] |= 1u << j;
+    if (d->nprot) gblks(d, d->assoc[c], j);
 }
 static void gtake(sr_gdraw *d, i32 c, i32 j)
 {
     d->grp[c] = 0xFF; d->slot[d->pot[c]] |= 1u << j;
     if (d->assoc) d->used[d->assoc[c]] &= ~(1u << j);
+    if (d->nprot) gblks(d, d->assoc[c], j);
 }
 
 /* groups j and k interchangeable for what is left: the same free places in every pot, and every club still to draw
@@ -695,7 +710,7 @@ i32 sr_group_draw_p(i32 n, i32 g, const u8 *assoc, const u8 *prot, i32 nprot, u3
         return -1;
     sr_gdraw d;
     d.n = n; d.g = g; d.np = (n + g - 1) / g; d.assoc = assoc; d.steps = GBUDGET; d.nprot = 0; d.prot = fp; d.witok = 1;
-    if (nprot) { d.nprot = gclasses(n, assoc, prot, nprot, cls, fp); d.assoc = cls; }
+    if (nprot) { d.nprot = gclasses(n, assoc, prot, nprot, cls, fp); d.assoc = cls; if (d.nprot) d.steps = GBUDGET_P; }
     for (i32 p = 0; p < d.np; p++) {                           /* pot by pot, each pot in hashed order */
         const i32 b = p * g, len = n - b < g ? n - b : g;
         u8 o[N];
@@ -705,7 +720,7 @@ i32 sr_group_draw_p(i32 n, i32 g, const u8 *assoc, const u8 *prot, i32 nprot, u3
         for (i32 j = 0; j < g; j++) if (size[j] > p) d.slot[p] |= 1u << j;
     }
     for (i32 c = 0; c < n; c++) { d.pot[c] = (u8)(c / g); d.grp[c] = 0xFF; }
-    for (i32 a = 0; a < 256; a++) d.used[a] = 0;
+    for (i32 a = 0; a < 256; a++) d.used[a] = d.blk[a] = 0;
     i32 r = gking(n, g, d.assoc, d.wit);
     if (r < 0) return r;
     if (!gwit_ok(&d)) {                                         /* a protect chain: the first witness by the search */
